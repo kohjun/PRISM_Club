@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../core/current_user.dart';
 import '../features/auth/ui/login_picker_screen.dart';
 import '../features/category/ui/category_list_screen.dart';
+import '../features/knowledge/ui/contribution_composer_screen.dart';
+import '../features/knowledge/ui/curation_detail_screen.dart';
+import '../features/knowledge/ui/curation_queue_screen.dart';
+import '../features/knowledge/ui/my_contributions_screen.dart';
 import '../features/post/ui/post_composer_screen.dart';
 import '../features/post/ui/post_detail_screen.dart';
 import '../features/room/ui/room_creator_screen.dart';
@@ -66,6 +70,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/posts/:postId',
         builder: (_, st) => PostDetailScreen(
           postId: st.pathParameters['postId']!,
+        ),
+      ),
+      // Milestone 2: knowledge contributions
+      GoRoute(
+        path: '/categories/:categorySlug/contributions/new',
+        builder: (_, st) => ContributionComposerScreen(
+          categorySlug: st.pathParameters['categorySlug']!,
+          initialTargetBlockId: st.uri.queryParameters['target_block_id'],
+        ),
+      ),
+      GoRoute(path: '/me/contributions', builder: (_, _) => const MyContributionsScreen()),
+      GoRoute(path: '/curate', builder: (_, _) => const CurationQueueScreen()),
+      GoRoute(
+        path: '/curate/:id',
+        builder: (_, st) => CurationDetailScreen(
+          contributionId: st.pathParameters['id']!,
         ),
       ),
     ],

@@ -1,11 +1,14 @@
 /**
- * PRISM Club — milestone 1 seed.
+ * PRISM Club — milestones 1 + 2 seed.
  *
- * Drives the Love Content demo flow: 1 category + topic hub + 6 knowledge
- * blocks + 3 signals + 3 event cards + 3 references + 3 rooms (2 official,
- * 1 user-owned) + 3 posts + 6 replies (some 2-level).
+ * Milestone 1 (Love Content demo flow): 1 category + topic hub + knowledge
+ * blocks + signals + event cards + references + rooms + posts + replies.
  *
- * Re-runnable: uses fixed UUIDs and upserts everything.
+ * Milestone 2: adds a 4th persona (`coral`) with CURATOR role, plus three
+ * sample contributions (2 pending + 1 approved with snapshot) so the
+ * curation queue and the audit trail render with data.
+ *
+ * Re-runnable: clearAll truncates everything; UUIDs are fixed.
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -17,6 +20,7 @@ export const U = {
     minseo: '11111111-1111-1111-1111-111111111111',
     joon: '22222222-2222-2222-2222-222222222222',
     haneul: '33333333-3333-3333-3333-333333333333',
+    coral: '44444444-4444-4444-4444-444444444444', // CURATOR — milestone 2
   },
   space: {
     participant: 'aa000000-0000-0000-0000-000000000001',
@@ -61,6 +65,11 @@ export const U = {
     joonQuestion: '99000000-0000-0000-0000-000000000002',
     haneulIdea: '99000000-0000-0000-0000-000000000003',
   },
+  contribution: {
+    pendingMoodTipsEdit: 'a1000000-0000-0000-0000-000000000001',
+    pendingNewChecklist: 'a1000000-0000-0000-0000-000000000002',
+    approvedFaqEdit: 'a1000000-0000-0000-0000-000000000003',
+  },
 } as const;
 
 // Dates relative to a fixed "today" for stable seeds.
@@ -71,6 +80,7 @@ const DAYS = (n: number): Date => new Date(TODAY.getTime() + n * 86_400_000);
 
 async function clearAll(prisma: PrismaClient): Promise<void> {
   // Order matters: children before parents.
+  await prisma.knowledgeContribution.deleteMany();
   await prisma.reaction.deleteMany();
   await prisma.postAttachment.deleteMany();
   await prisma.reply.deleteMany();
@@ -97,6 +107,7 @@ async function seedUsers(prisma: PrismaClient): Promise<void> {
       { id: U.user.minseo, status: 'ACTIVE' },
       { id: U.user.joon, status: 'ACTIVE' },
       { id: U.user.haneul, status: 'ACTIVE' },
+      { id: U.user.coral, status: 'ACTIVE' },
     ],
   });
   await prisma.profile.createMany({
@@ -104,7 +115,12 @@ async function seedUsers(prisma: PrismaClient): Promise<void> {
       { userId: U.user.minseo, nickname: '민서', region: '서울', interests: [] },
       { userId: U.user.joon, nickname: 'joon', region: '서울', interests: [] },
       { userId: U.user.haneul, nickname: 'haneul', region: '서울', interests: [] },
+      { userId: U.user.coral, nickname: 'coral', region: '서울', interests: [] },
     ],
+  });
+  // Milestone 2: grant CURATOR role to coral. Others stay implicit MEMBER.
+  await prisma.userRole.create({
+    data: { userId: U.user.coral, role: 'CURATOR', source: 'seed' },
   });
 }
 
@@ -189,7 +205,14 @@ async function seedTopicHub(prisma: PrismaClient): Promise<void> {
         topicHubId: U.topicHub.loveContent,
         blockType: 'FAQ',
         title: 'FAQ',
-        body: 'Q. 처음 가도 어색하지 않을까요?\nA. 대부분 첫 만남이라 운영자가 도입부 미션을 준비합니다.',
+        // Post-approval body (see seedKnowledgeContributions:approvedFaqEdit
+        // for the snapshot of the pre-approval text — kept on the contribution
+        // row as the M2 audit trail).
+        body:
+          'Q. 처음 가도 어색하지 않을까요?\n' +
+          'A. 대부분 첫 만남이라 운영자가 도입부 미션을 준비합니다.\n\n' +
+          'Q. 따로 준비물이 필요한가요?\n' +
+          'A. 별도 준비물은 없고, 편한 복장과 가벼운 마음만 챙겨오시면 됩니다.',
         sortOrder: 5,
       },
       {
@@ -482,6 +505,74 @@ async function seedPostsAndReplies(prisma: PrismaClient): Promise<void> {
   }
 }
 
+async function seedKnowledgeContributions(prisma: PrismaClient): Promise<void> {
+  // Pending: refine MOOD_TIPS with extra context, attaching a reference as evidence.
+  await prisma.knowledgeContribution.create({
+    data: {
+      id: U.contribution.pendingMoodTipsEdit,
+      topicHubId: U.topicHub.loveContent,
+      contributorId: U.user.minseo,
+      targetBlockId: U.block.moodTips,
+      proposedBlockType: 'MOOD_TIPS',
+      proposedTitle: '분위기 팁',
+      proposedBody:
+        '도입부 5분에 어색함 완화 미션을 두면 만족도가 올라갑니다. ' +
+        '토크 중심 라운드는 음악 볼륨을 낮추고, 진행자가 직접 한두 마디를 던지면 ' +
+        '참가자가 따라오기가 쉬워집니다.',
+      evidenceType: 'REFERENCE',
+      evidenceTargetId: U.reference.selectRuleYoutube,
+      status: 'PENDING',
+    },
+  });
+
+  // Pending: propose a brand-new CHECKLIST block, with an EventCard as evidence.
+  await prisma.knowledgeContribution.create({
+    data: {
+      id: U.contribution.pendingNewChecklist,
+      topicHubId: U.topicHub.loveContent,
+      contributorId: U.user.haneul,
+      targetBlockId: null,
+      proposedBlockType: 'CHECKLIST',
+      proposedTitle: '운영 체크리스트',
+      proposedBody:
+        '1. 도입부 5분 어색함 완화 미션 준비\n' +
+        '2. 라운드별 시간표 인쇄\n' +
+        '3. 비상 대응 인력 1명 이상 확보\n' +
+        '4. 행사 후 후기 작성 안내',
+      evidenceType: 'EVENT_CARD',
+      evidenceTargetId: U.event.e002,
+      status: 'PENDING',
+    },
+  });
+
+  // Approved (already applied): demonstrates the audit-snapshot capture.
+  // The FAQ block above carries the post-approval body; the snapshot here is
+  // the pre-approval (milestone-1) text that was overwritten.
+  await prisma.knowledgeContribution.create({
+    data: {
+      id: U.contribution.approvedFaqEdit,
+      topicHubId: U.topicHub.loveContent,
+      contributorId: U.user.joon,
+      targetBlockId: U.block.faq,
+      proposedBlockType: 'FAQ',
+      proposedTitle: 'FAQ',
+      proposedBody:
+        'Q. 처음 가도 어색하지 않을까요?\n' +
+        'A. 대부분 첫 만남이라 운영자가 도입부 미션을 준비합니다.\n\n' +
+        'Q. 따로 준비물이 필요한가요?\n' +
+        'A. 별도 준비물은 없고, 편한 복장과 가벼운 마음만 챙겨오시면 됩니다.',
+      status: 'APPROVED',
+      curatorNote: '추가 질문 항목이 명확해서 그대로 반영했습니다.',
+      resolvedBy: U.user.coral,
+      resolvedAt: new Date('2026-05-15T03:00:00Z'),
+      snapshotBlockType: 'FAQ',
+      snapshotTitle: 'FAQ',
+      snapshotBody:
+        'Q. 처음 가도 어색하지 않을까요?\nA. 대부분 첫 만남이라 운영자가 도입부 미션을 준비합니다.',
+    },
+  });
+}
+
 export async function runSeed(prisma: PrismaClient): Promise<Record<string, number>> {
   await clearAll(prisma);
   await seedUsers(prisma);
@@ -490,6 +581,7 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
   await seedEventsAndReferences(prisma);
   await seedRooms(prisma);
   await seedPostsAndReplies(prisma);
+  await seedKnowledgeContributions(prisma);
 
   return {
     users: await prisma.user.count(),
@@ -505,6 +597,8 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
     posts: await prisma.post.count(),
     replies: await prisma.reply.count(),
     postAttachments: await prisma.postAttachment.count(),
+    userRoles: await prisma.userRole.count(),
+    knowledgeContributions: await prisma.knowledgeContribution.count(),
   };
 }
 

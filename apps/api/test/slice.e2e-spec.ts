@@ -24,7 +24,8 @@ describe('Milestone 1 vertical slice (e2e)', () => {
     // 2. dev users available without auth
     const devUsers = await request(server).get('/v1/dev/users');
     expect(devUsers.status).toBe(200);
-    expect(devUsers.body).toHaveLength(3);
+    // 3 in M1; 4 since M2 added the `coral` curator persona.
+    expect(devUsers.body.length).toBeGreaterThanOrEqual(3);
 
     // 3. /me without header → 401
     const meAnon = await request(server).get('/v1/me');

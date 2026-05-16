@@ -27,7 +27,8 @@ section "health & dev users"
 [[ $(curl -sS "$API/health" | j ".ok") == "true" ]] && pass "/health ok" || fail "/health"
 
 users_count=$(curl -sS "$API/dev/users" | j ".length")
-[[ "$users_count" == "3" ]] && pass "/dev/users returns 3" || fail "dev/users"
+# 3 from M1; 4 since M2 added the `coral` curator persona.
+[[ "$users_count" -ge "3" ]] && pass "/dev/users returns ${users_count}" || fail "dev/users (got $users_count)"
 
 section "topic hub bundle"
 hub=$(curl_as "$MINSEO" "$API/categories/love-content/hub")

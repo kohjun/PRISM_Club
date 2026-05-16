@@ -7,15 +7,20 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
-Milestone 1 — vertical slice. Backend + Flutter mobile client both implemented
-for the 참가자 → 연애 콘텐츠 Topic Hub → user room → post → replies flow.
+Milestone 1 — vertical slice. 참가자 → 연애 콘텐츠 Topic Hub → user room → post →
+replies flow.
+
+Milestone 2 — knowledge contribution + curation loop. Members propose edits
+or new knowledge blocks on a Topic Hub; a curator approves / rejects /
+requests changes; approved contributions update the block and capture an
+audit snapshot.
 
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 19 endpoints, stub auth, mock Events client, deterministic seed |
-| Mobile (Flutter) | Login picker, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose, Post detail with 2-level reply tree + like |
-| Tests | 18 backend unit tests + 1 e2e + 5 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` walks the full slice through HTTP |
+| Backend (NestJS + Prisma) | 25 endpoints, stub auth + role gate, mock Events client, deterministic seed with curator persona |
+| Mobile (Flutter) | Login picker, Space list (curator banner + 내 제안 entry), Category list, Topic Hub (with 정보 개선 제안 + per-block 개선 buttons), Room create, Room timeline, Post compose, Post detail with 2-level reply tree + like, Contribution composer, My contributions, Curation queue, Curation detail |
+| Tests | 33 backend unit tests + 2 e2e + 9 Flutter widget tests, all green |
+| Smoke | `scripts/smoke.sh` walks the full M1 slice through HTTP |
 
 ## Repo layout
 
@@ -108,40 +113,58 @@ flutter run -d chrome       # web target — fastest sanity check
 
 ```powershell
 # Backend
-npm run api:test          # 18 unit tests, 6 suites
-npm run api:test:e2e      # 1 e2e walking the full slice
+npm run api:test          # 33 unit tests, 7 suites (M1 + M2)
+npm run api:test:e2e      # 2 e2e: M1 slice + M2 contribution flow
 bash scripts/smoke.sh     # 19 curl-driven checks (api must be running)
 
 # Mobile
 cd apps/mobile
 flutter analyze
-flutter test
+flutter test              # 9 widget tests (M1 + M2)
 flutter build web --no-tree-shake-icons   # full compile check
 ```
 
 ## Seed personae
 
-`npm run db:seed` produces three users — pick any from the in-app login
-picker. They drive the seeded posts/replies.
+`npm run db:seed` produces four users — pick any from the in-app login
+picker. They drive the seeded posts/replies and contribution flow.
 
 | Nickname | Persona |
 |---|---|
 | 민서 (minseo) | Demo post author of the 소개팅 미션 나이트 review |
-| joon | Common replier |
+| joon | Common replier; contributor of the seeded APPROVED FAQ edit |
 | haneul | Owner of the 환승연애식 오프라인 토크 게임 (user-created) room |
+| coral | **Curator** — only persona that can approve/reject contributions |
 
 The seed also creates two `Space`s (`participant`, `planner`). Planner is
-visible but locked in the UI — milestone 1 deliberately leaves the
-access-control structure ready without surfacing the verification flow.
+visible but locked in the UI — the access-control structure is ready without
+surfacing the verification flow.
+
+## Trying the curation loop
+
+1. `npm run db:seed && npm run api:dev`, then `cd apps/mobile && flutter run -d chrome`.
+2. Sign in as **민서**. On the Topic Hub for 연애 콘텐츠 tap "정보 개선 제안" (or the
+   pencil icon next to any block) and submit a proposal with optional evidence.
+3. Sign in as **coral**. The SpaceList shows a "검수 큐로 가기" banner — tap into
+   `/curate`, open the proposal, hit **승인 / 거절 / 보완 요청**.
+4. Return to the Topic Hub — the approved proposal is reflected in the block.
+5. Sign in as 민서 again and tap "내 제안" on SpaceList — your proposal's status
+   reflects the curator's decision.
+
+The seeded data already contains 2 PENDING proposals and 1 APPROVED proposal
+(with a snapshot of the pre-approval content on the contribution row,
+demonstrating the audit trail).
 
 ## Architecture decisions
 
 - **Modular monolith** for the API (per `docs/01_TECH_STACK.md` §4). Modules:
   `shared`, `auth`, `users`, `community` (spaces/categories/rooms),
-  `knowledge` (topic hubs), `event-link`, `reference`, `posts`
+  `knowledge` (topic hubs + contributions), `event-link`, `reference`, `posts`
   (posts + replies + reactions).
-- **Stub auth via `X-User-Id`** so the slice is real but auth scope is one
-  guard swap away from JWT (see `apps/api/src/shared/guards/auth.guard.ts`).
+- **Stub auth via `X-User-Id` + role gate.** `AuthGuard` resolves the header
+  to a user and exposes roles. `RolesGuard` reads `@Roles('CURATOR','ADMIN')`
+  metadata and rejects with 403. The contract is identical to what a real
+  JWT-based guard will populate — the swap is one file.
 - **Mock Events client** (`apps/api/src/modules/event-link/clients/mock-events.client.ts`)
   hides behind the `IEventsClient` token — swap the binding to introduce the
   real Events/Contenido client without touching callers.
@@ -149,15 +172,22 @@ access-control structure ready without surfacing the verification flow.
 - **`reference_items`** table — Prisma model is `Reference`; the table is
   named `reference_items` because `references` clashes with a SQL reserved
   word.
-- **Counters maintained transactionally** on Post/Reply rows — no Redis in
-  milestone 1.
-- **Pin / attachment resolution**: `room_pins` and `post_attachments` use
+- **Counters maintained transactionally** on Post/Reply rows — no Redis yet.
+- **Pin / attachment / contribution-evidence resolution**: `room_pins`,
+  `post_attachments`, and `knowledge_contributions.evidence_target_id` use
   `(target_type, target_id)` without an FK; the server resolves targets in a
   second pass to keep the schema flexible.
+- **Contribution audit lives on the contribution row.** On APPROVE the
+  service captures `snapshot_block_type/title/body` *before* overwriting the
+  target block — both writes happen in the same Prisma transaction. No
+  separate `knowledge_block_revisions` table for now.
 
 ## What's deferred
 
-Knowledge contribution UI, search, notifications, bookmarks, moderation /
-reports / audit log, real OAuth, URL metadata scraping, real-time updates,
-image upload, the planner-only flow, and the admin web. See the plan file's
+Search, notifications, bookmarks, moderation / reports / audit-log table,
+real OAuth, URL metadata scraping, real-time updates, image upload, the
+planner verification flow, the admin web, multi-evidence per contribution,
+versioned block history beyond the per-contribution snapshot, editing a
+pending contribution before approval, concurrent-edit conflict resolution
+across approvals. See the plan file's
 §8 risks list for the full breakdown.

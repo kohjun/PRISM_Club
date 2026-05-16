@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './shared/prisma.module';
 import { AuthGuard } from './shared/guards/auth.guard';
+import { RolesGuard } from './shared/guards/roles.guard';
 import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
 import { RequestIdMiddleware } from './shared/middleware/request-id.middleware';
 
@@ -28,7 +29,10 @@ import { PostsModule } from './modules/posts/posts.module';
     PostsModule,
   ],
   providers: [
+    // Order matters: AuthGuard runs first to populate req.user, RolesGuard
+    // then enforces any @Roles() metadata.
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })

@@ -1,4 +1,4 @@
-// PRISM Club — milestone 1 schema
+// PRISM Club schema — milestones 1 + 2.
 // See docs/03_ARCHITECTURE_AND_DATA.md §5 for the full ERD this is a subset of.
 
 generator client {
@@ -26,6 +26,8 @@ model User {
   replies  Reply[]
   reactions Reaction[]
   references Reference[]
+  contributions          KnowledgeContribution[] @relation("Contributor")
+  resolvedContributions  KnowledgeContribution[] @relation("Resolver")
 
   @@map("users")
 }
@@ -103,11 +105,12 @@ model TopicHub {
   status     String   @default("PUBLISHED")
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  category    Category                  @relation(fields: [categoryId], references: [id])
-  blocks      KnowledgeBlock[]
-  signals     TopicSignal[]
-  eventLinks  TopicHubEventLink[]
-  refLinks    TopicHubReferenceLink[]
+  category      Category                  @relation(fields: [categoryId], references: [id])
+  blocks        KnowledgeBlock[]
+  signals       TopicSignal[]
+  eventLinks    TopicHubEventLink[]
+  refLinks      TopicHubReferenceLink[]
+  contributions KnowledgeContribution[]
 
   @@map("topic_hubs")
 }
@@ -124,7 +127,8 @@ model KnowledgeBlock {
   status     String   @default("PUBLISHED")
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  hub TopicHub @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
+  hub           TopicHub                @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
+  contributions KnowledgeContribution[]
 
   @@map("knowledge_blocks")
 }
@@ -330,4 +334,56 @@ model Reference {
   topicHubLinks TopicHubReferenceLink[]
 
   @@map("reference_items")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 2: Knowledge contributions
+// ---------------------------------------------------------------------------
+
+// Proposed edits or additions to a TopicHub's knowledge blocks.
+// Status state machine: PENDING → APPROVED | REJECTED | NEEDS_CHANGES | WITHDRAWN.
+// On APPROVE, the service captures the pre-change block content in the
+// snapshot_* columns and writes the proposed_* values to the target block
+// (or creates a new block when target_block_id is null) — all in one Prisma
+// transaction. The contribution row IS the audit trail for milestone 2.
+//
+// evidence_target_id has no FK (polymorphic on evidence_type), matching the
+// same pattern as room_pins and post_attachments.
+model KnowledgeContribution {
+  id                String    @id @default(uuid()) @db.Uuid
+  topicHubId        String    @map("topic_hub_id") @db.Uuid
+  contributorId    String    @map("contributor_id") @db.Uuid
+  targetBlockId    String?   @map("target_block_id") @db.Uuid
+
+  // Proposed (applied on APPROVE)
+  proposedBlockType String   @map("proposed_block_type")
+  proposedTitle     String   @map("proposed_title")
+  proposedBody      String   @map("proposed_body")
+
+  // Optional single evidence attachment — EVENT_CARD | REFERENCE
+  evidenceType     String?  @map("evidence_type")
+  evidenceTargetId String?  @map("evidence_target_id") @db.Uuid
+
+  // Curation state
+  status       String    @default("PENDING")
+  curatorNote  String?   @map("curator_note")
+  resolvedBy   String?   @map("resolved_by") @db.Uuid
+  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz(6)
+
+  // Audit snapshot of overwritten content (captured on APPROVE for edits)
+  snapshotBlockType String? @map("snapshot_block_type")
+  snapshotTitle     String? @map("snapshot_title")
+  snapshotBody      String? @map("snapshot_body")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt       @map("updated_at") @db.Timestamptz(6)
+
+  hub         TopicHub        @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
+  contributor User            @relation("Contributor", fields: [contributorId], references: [id])
+  resolver    User?           @relation("Resolver", fields: [resolvedBy], references: [id])
+  targetBlock KnowledgeBlock? @relation(fields: [targetBlockId], references: [id], onDelete: SetNull)
+
+  @@index([topicHubId, status, createdAt(sort: Desc)])
+  @@index([contributorId, createdAt(sort: Desc)])
+  @@map("knowledge_contributions")
 }

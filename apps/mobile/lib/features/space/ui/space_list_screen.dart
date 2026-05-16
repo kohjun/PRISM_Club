@@ -6,6 +6,7 @@ import '../../../app/theme.dart';
 import '../../../core/api_error.dart';
 import '../../../core/current_user.dart';
 import '../../../widgets/state_views.dart';
+import '../../auth/data/me_repository.dart';
 import '../data/space_dto.dart';
 import '../data/space_repository.dart';
 
@@ -43,14 +44,97 @@ class SpaceListScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(spaceListProvider),
         ),
         data: (items) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(spaceListProvider),
-          child: ListView.separated(
+          onRefresh: () async {
+            ref.invalidate(spaceListProvider);
+            ref.invalidate(meProvider);
+          },
+          child: ListView(
             padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, i) => _SpaceCard(space: items[i]),
+            children: [
+              const _CuratorBanner(),
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                _SpaceCard(space: items[i]),
+              ],
+              const SizedBox(height: 24),
+              const _MyContributionsTile(),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Renders a "검수 큐로 가기" banner only when the signed-in user has
+/// CURATOR or ADMIN. For regular members it collapses to nothing.
+class _CuratorBanner extends ConsumerWidget {
+  const _CuratorBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(meProvider);
+    final isCurator = me.valueOrNull?.isCurator ?? false;
+    if (!isCurator) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        color: PrismColors.soft,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: PrismColors.border),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.go('/curate'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.fact_check_outlined,
+                    color: PrismColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('검수 큐로 가기',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(color: PrismColors.primary)),
+                      const SizedBox(height: 2),
+                      const Text(
+                        '대기 중인 지식 기여 제안을 검토하세요.',
+                        style: TextStyle(color: PrismColors.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: PrismColors.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MyContributionsTile extends StatelessWidget {
+  const _MyContributionsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.history_edu_outlined,
+            color: PrismColors.primary),
+        title: const Text('내 제안'),
+        subtitle: const Text('Topic Hub에 보낸 제안 상태를 확인하세요.',
+            style: TextStyle(fontSize: 12, color: PrismColors.muted)),
+        trailing: const Icon(Icons.chevron_right, color: PrismColors.muted),
+        onTap: () => context.go('/me/contributions'),
       ),
     );
   }

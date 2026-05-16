@@ -42,11 +42,23 @@ class TopicHubScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _HubHeader(bundle: b),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () => context.go(
+                    '/categories/$categorySlug/contributions/new'),
+                icon: const Icon(Icons.edit_note),
+                label: const Text('정보 개선 제안'),
+              ),
+              const SizedBox(height: 16),
               _Section(
                 title: '핵심 정보',
                 children: b.blocks
-                    .map((block) => _KnowledgeBlockCard(block: block))
+                    .map((block) => _KnowledgeBlockCard(
+                          block: block,
+                          onPropose: () => context.go(
+                            '/categories/$categorySlug/contributions/new?target_block_id=${block.id}',
+                          ),
+                        ))
                     .toList(),
               ),
               if (b.signals.isNotEmpty) ...[
@@ -142,8 +154,9 @@ class _Section extends StatelessWidget {
 }
 
 class _KnowledgeBlockCard extends StatelessWidget {
-  const _KnowledgeBlockCard({required this.block});
+  const _KnowledgeBlockCard({required this.block, this.onPropose});
   final KnowledgeBlockDto block;
+  final VoidCallback? onPropose;
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +190,13 @@ class _KnowledgeBlockCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
+                  if (onPropose != null)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      tooltip: '이 블록 개선 제안',
+                      onPressed: onPropose,
+                    ),
                 ],
               ),
               const SizedBox(height: 8),
