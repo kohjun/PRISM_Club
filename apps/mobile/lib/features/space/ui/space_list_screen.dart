@@ -28,6 +28,11 @@ class SpaceListScreen extends ConsumerWidget {
               child: Chip(label: Text(user.nickname)),
             ),
           IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: '검색',
+            onPressed: () => context.go('/search'),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: '로그아웃',
             onPressed: () async {

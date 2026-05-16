@@ -15,12 +15,16 @@ or new knowledge blocks on a Topic Hub; a curator approves / rejects /
 requests changes; approved contributions update the block and capture an
 audit snapshot.
 
+Milestone 3 — unified search across Topic Hub, knowledge blocks, rooms,
+posts, event cards, and references. Includes "popular topics" suggestions
+that double as search-screen empty state and Topic Hub "관련 검색" chips.
+
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 25 endpoints, stub auth + role gate, mock Events client, deterministic seed with curator persona |
-| Mobile (Flutter) | Login picker, Space list (curator banner + 내 제안 entry), Category list, Topic Hub (with 정보 개선 제안 + per-block 개선 buttons), Room create, Room timeline, Post compose, Post detail with 2-level reply tree + like, Contribution composer, My contributions, Curation queue, Curation detail |
-| Tests | 33 backend unit tests + 2 e2e + 9 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` walks the full M1 slice through HTTP |
+| Backend (NestJS + Prisma) | 27 endpoints, stub auth + role gate, mock Events client, deterministic seed with curator persona, ILIKE-based search |
+| Mobile (Flutter) | Login picker, Space list (search icon + curator banner + 내 제안 entry), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선), Room create, Room timeline, Post compose, Post detail with 2-level reply tree + like, Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter |
+| Tests | 47 backend unit tests + 3 e2e + 16 Flutter widget tests, all green |
+| Smoke | `scripts/smoke.sh` — 24 curl-driven checks (M1 slice + M3 search) |
 
 ## Repo layout
 
@@ -113,14 +117,14 @@ flutter run -d chrome       # web target — fastest sanity check
 
 ```powershell
 # Backend
-npm run api:test          # 33 unit tests, 7 suites (M1 + M2)
-npm run api:test:e2e      # 2 e2e: M1 slice + M2 contribution flow
-bash scripts/smoke.sh     # 19 curl-driven checks (api must be running)
+npm run api:test          # 47 unit tests, 8 suites (M1 + M2 + M3)
+npm run api:test:e2e      # 3 e2e: M1 slice + M2 contribution + M3 search
+bash scripts/smoke.sh     # 24 curl-driven checks (api must be running)
 
 # Mobile
 cd apps/mobile
 flutter analyze
-flutter test              # 9 widget tests (M1 + M2)
+flutter test              # 16 widget tests (M1 + M2 + M3)
 flutter build web --no-tree-shake-icons   # full compile check
 ```
 
@@ -155,6 +159,21 @@ The seeded data already contains 2 PENDING proposals and 1 APPROVED proposal
 (with a snapshot of the pre-approval content on the contribution row,
 demonstrating the audit trail).
 
+## Trying search
+
+1. With the API running and the mobile app open, tap the **search icon** on
+   the SpaceList AppBar (or on any Topic Hub AppBar).
+2. The empty state offers popular topics — "환승연애", "소개팅 미션",
+   "체크리스트", "FAQ", etc. Tap a chip or type your own query.
+3. Results are grouped by entity type with a chip-row filter at the top.
+   Toggle a chip to narrow results.
+4. Tap a Topic Hub / Knowledge / Room / Post result to navigate to the
+   relevant screen. EventCard taps open a bottom-sheet detail; Reference
+   taps open the external URL via the OS browser.
+
+The Topic Hub also surfaces a small "관련 검색" chip row right under the
+header — tap a chip to land on Search pre-filled with that query.
+
 ## Architecture decisions
 
 - **Modular monolith** for the API (per `docs/01_TECH_STACK.md` §4). Modules:
@@ -181,13 +200,24 @@ demonstrating the audit trail).
   service captures `snapshot_block_type/title/body` *before* overwriting the
   target block — both writes happen in the same Prisma transaction. No
   separate `knowledge_block_revisions` table for now.
+- **Search is ILIKE-based, not FTS.** Korean tokenization in the default
+  Postgres FTS configs is a poor fit for our content; substring matching
+  with `mode: 'insensitive'` is encoding-blind, fast at this scale, and
+  trivially replaceable behind `SearchService`. `pg_trgm` indexes + GIN
+  acceleration are the documented escape hatch when content grows past a
+  few thousand rows per entity.
+- **Popular topic suggestions are hardcoded** in `SearchService` for M3 —
+  no query tracking, no analytics. The endpoint shape (`?categorySlug=`)
+  is ready when we want to swap in dynamic, per-category lists later.
 
 ## What's deferred
 
-Search, notifications, bookmarks, moderation / reports / audit-log table,
-real OAuth, URL metadata scraping, real-time updates, image upload, the
+Notifications, bookmarks, moderation / reports / audit-log table, real
+OAuth, URL metadata scraping, real-time updates, image upload, the
 planner verification flow, the admin web, multi-evidence per contribution,
 versioned block history beyond the per-contribution snapshot, editing a
 pending contribution before approval, concurrent-edit conflict resolution
-across approvals. See the plan file's
-§8 risks list for the full breakdown.
+across approvals, query history / dynamic popular queries, FTS or a Korean
+tokenizer, external search engines, search inside replies, personalized
+ranking or "for you" recommendations. See the plan file's
+§8 risks / deferred list for the full breakdown.

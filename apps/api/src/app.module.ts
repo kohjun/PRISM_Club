@@ -15,6 +15,7 @@ import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { EventLinkModule } from './modules/event-link/event-link.module';
 import { ReferenceModule } from './modules/reference/reference.module';
 import { PostsModule } from './modules/posts/posts.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PostsModule } from './modules/posts/posts.module';
     EventLinkModule,
     ReferenceModule,
     PostsModule,
+    SearchModule,
   ],
   providers: [
     // Order matters: AuthGuard runs first to populate req.user, RolesGuard

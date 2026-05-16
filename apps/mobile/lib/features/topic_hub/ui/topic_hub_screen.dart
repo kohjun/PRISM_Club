@@ -8,6 +8,7 @@ import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/state_views.dart';
 import '../../room/data/room_summary_dto.dart';
+import '../../search/data/search_repository.dart';
 import '../data/topic_hub_dto.dart';
 import '../data/topic_hub_repository.dart';
 
@@ -29,6 +30,14 @@ class TopicHubScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/spaces/participant/categories'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: '검색',
+            onPressed: () => context.go(
+                '/search?categorySlug=${Uri.encodeQueryComponent(categorySlug)}'),
+          ),
+        ],
       ),
       body: bundle.when(
         loading: () => const LoadingView(),
@@ -42,6 +51,8 @@ class TopicHubScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _HubHeader(bundle: b),
+              const SizedBox(height: 12),
+              _RelatedSearches(categorySlug: categorySlug),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () => context.go(
@@ -371,5 +382,54 @@ class _RoomTile extends StatelessWidget {
       default:
         return t;
     }
+  }
+}
+
+class _RelatedSearches extends ConsumerWidget {
+  const _RelatedSearches({required this.categorySlug});
+  final String categorySlug;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sugs = ref.watch(searchSuggestionsProvider(categorySlug));
+    return sugs.maybeWhen(
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.search,
+                    size: 14, color: PrismColors.muted),
+                const SizedBox(width: 4),
+                Text('관련 검색',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: PrismColors.muted)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: items
+                  .map(
+                    (s) => ActionChip(
+                      label: Text(s, style: const TextStyle(fontSize: 12)),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => context.go(
+                        '/search?q=${Uri.encodeQueryComponent(s)}&categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
   }
 }

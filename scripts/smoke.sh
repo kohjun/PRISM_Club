@@ -115,4 +115,28 @@ delete_code=$(curl_as "$HANEUL" -o /dev/null -w "%{http_code}" -X DELETE "$API/p
 after_get=$(curl_as "$HANEUL" -o /dev/null -w "%{http_code}" "$API/posts/$post_id")
 [[ "$after_get" == "404" ]] && pass "after delete GET -> 404" || fail "after delete: $after_get"
 
+section "search"
+# 환승연애 URL-encoded
+search_res=$(curl_as "$MINSEO" "$API/search?q=%ED%99%98%EC%8A%B9%EC%97%B0%EC%95%A0")
+group_count=$(echo "$search_res" | j ".groups.length")
+[[ "$group_count" == "6" ]] && pass "search returns 6 groups" || fail "groups=$group_count"
+
+# Sum items across all groups — should be >=4 for 환승연애 (room+post+ref+event).
+total_hits=$(echo "$search_res" | j ".groups.reduce((a,g)=>a+g.items.length,0)")
+[[ "$total_hits" -ge "4" ]] && pass "search '환승연애' total hits=$total_hits (>=4)" || fail "total_hits=$total_hits"
+
+# Type filter
+filtered=$(curl_as "$MINSEO" "$API/search?q=%ED%99%98%EC%8A%B9%EC%97%B0%EC%95%A0&types=room,post")
+room_count=$(echo "$filtered" | j ".groups.find(g=>g.type==='room').items.length")
+event_count=$(echo "$filtered" | j ".groups.find(g=>g.type==='event_card').items.length")
+[[ "$room_count" -ge "1" && "$event_count" == "0" ]] && pass "types=room,post limits to room/post groups" || fail "filter room=$room_count event=$event_count"
+
+# Empty q -> 400
+empty_code=$(curl_as "$MINSEO" -o /dev/null -w "%{http_code}" "$API/search?q=")
+[[ "$empty_code" == "400" ]] && pass "empty q -> 400" || fail "empty q code=$empty_code"
+
+# Suggestions
+sug_count=$(curl_as "$MINSEO" "$API/search/suggestions" | j ".items.length")
+[[ "$sug_count" -ge "5" ]] && pass "suggestions returns $sug_count items" || fail "suggestions=$sug_count"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"
