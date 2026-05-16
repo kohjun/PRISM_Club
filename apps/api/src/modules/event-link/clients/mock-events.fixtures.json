@@ -1,0 +1,47 @@
+[
+  {
+    "external_event_id": "evt-001",
+    "title": "PRISM 소개팅 미션 나이트",
+    "venue_name": "홍대 스튜디오",
+    "region": "서울/홍대",
+    "starts_at": "2026-04-25T19:00:00.000Z",
+    "event_status": "COMPLETED",
+    "thumbnail_url": null
+  },
+  {
+    "external_event_id": "evt-002",
+    "title": "환승연애 토크 라운드",
+    "venue_name": "성수 라운지",
+    "region": "서울/성수",
+    "starts_at": "2026-06-15T19:30:00.000Z",
+    "event_status": "UPCOMING",
+    "thumbnail_url": null
+  },
+  {
+    "external_event_id": "evt-003",
+    "title": "첫 만남 게임 워크숍",
+    "venue_name": "강남 미팅룸",
+    "region": "서울/강남",
+    "starts_at": "2026-05-30T18:00:00.000Z",
+    "event_status": "UPCOMING",
+    "thumbnail_url": null
+  },
+  {
+    "external_event_id": "evt-101",
+    "title": "환승연애식 라운지 토크",
+    "venue_name": "이태원 카페",
+    "region": "서울/이태원",
+    "starts_at": "2026-06-22T19:00:00.000Z",
+    "event_status": "UPCOMING",
+    "thumbnail_url": null
+  },
+  {
+    "external_event_id": "evt-102",
+    "title": "첫 만남 아이스브레이커 워크숍",
+    "venue_name": "강남 공유 라운지",
+    "region": "서울/강남",
+    "starts_at": "2026-07-05T15:00:00.000Z",
+    "event_status": "UPCOMING",
+    "thumbnail_url": null
+  }
+]

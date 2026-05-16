@@ -1,0 +1,61 @@
+# dependencies
+node_modules/
+.pnp.*
+
+# build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Prisma generated client
+**/prisma/generated/
+prisma/migrations/migration_lock.toml.bak
+
+# environment
+.env
+.env.*
+!.env.example
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Flutter / Dart
+.appdata/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/build/
+**/ios/.symlinks/
+**/ios/Pods/
+**/android/.gradle/
+**/android/captures/
+**/android/local.properties
+**/android/key.properties
+**/*.iml
+**/*.lock
+!package-lock.json
+!pubspec.lock
+**/coverage/
+
+# test artifacts
+.nyc_output/
+junit.xml
+
+# turbo (left here in case we add it later)
+.turbo/

@@ -1,0 +1,36 @@
+{
+  "name": "prism-club",
+  "version": "0.0.1",
+  "private": true,
+  "description": "PRISM Club — knowledge-based community app (milestone 1)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run start:dev -w api",
+    "api:build": "npm run build -w api",
+    "api:start": "npm run start:prod -w api",
+    "api:test": "npm run test -w api",
+    "api:test:e2e": "npm run test:e2e -w api",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "db:seed": "node --import tsx prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force"
+  },
+  "prisma": {
+    "seed": "node --import tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

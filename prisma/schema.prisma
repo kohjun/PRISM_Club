@@ -1,0 +1,333 @@
+// PRISM Club — milestone 1 schema
+// See docs/03_ARCHITECTURE_AND_DATA.md §5 for the full ERD this is a subset of.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  profile  Profile?
+  roles    UserRole[]
+  rooms    Room[]
+  posts    Post[]
+  replies  Reply[]
+  reactions Reaction[]
+  references Reference[]
+
+  @@map("users")
+}
+
+model Profile {
+  userId     String   @id @map("user_id") @db.Uuid
+  nickname   String   @unique
+  avatarUrl  String?  @map("avatar_url")
+  region     String?
+  interests  Json     @default("[]")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// Empty in milestone 1 seed; default MEMBER is implicit when no row.
+// Future values: MEMBER, VERIFIED_PLANNER, MODERATOR, ADMIN, CURATOR.
+model UserRole {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      String
+  source    String?
+  grantedAt DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+// ---------------------------------------------------------------------------
+// Community structure
+// ---------------------------------------------------------------------------
+
+model Space {
+  id           String   @id @default(uuid()) @db.Uuid
+  slug         String   @unique
+  name         String
+  audience     String   @default("PARTICIPANT") // PARTICIPANT | PLANNER
+  accessPolicy String   @default("PUBLIC") @map("access_policy") // PUBLIC | PLANNER_ONLY (not enforced yet)
+  status       String   @default("ACTIVE")
+
+  categories Category[]
+
+  @@map("spaces")
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  spaceId     String   @map("space_id") @db.Uuid
+  slug        String   @unique
+  name        String
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  status      String   @default("ACTIVE")
+
+  space    Space     @relation(fields: [spaceId], references: [id])
+  topicHub TopicHub?
+  rooms    Room[]
+
+  @@map("categories")
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge layer
+// ---------------------------------------------------------------------------
+
+model TopicHub {
+  id         String   @id @default(uuid()) @db.Uuid
+  categoryId String   @unique @map("category_id") @db.Uuid
+  title      String
+  summary    String
+  status     String   @default("PUBLISHED")
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  category    Category                  @relation(fields: [categoryId], references: [id])
+  blocks      KnowledgeBlock[]
+  signals     TopicSignal[]
+  eventLinks  TopicHubEventLink[]
+  refLinks    TopicHubReferenceLink[]
+
+  @@map("topic_hubs")
+}
+
+// Block types: OVERVIEW | POPULAR_FORMAT | RECOMMENDED_PARTY_SIZE | MOOD_TIPS |
+//              FAQ | CHECKLIST | WARNING
+model KnowledgeBlock {
+  id         String   @id @default(uuid()) @db.Uuid
+  topicHubId String   @map("topic_hub_id") @db.Uuid
+  blockType  String   @map("block_type")
+  title      String
+  body       String
+  sortOrder  Int      @default(0) @map("sort_order")
+  status     String   @default("PUBLISHED")
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  hub TopicHub @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
+
+  @@map("knowledge_blocks")
+}
+
+// Static in milestone 1 — populated by seed, not recomputed.
+// Signal types: POPULAR_REFERENCE_COUNT | HOT_DEBATE_TITLE | VERIFIED_REVIEW_COUNT
+model TopicSignal {
+  id            String   @id @default(uuid()) @db.Uuid
+  topicHubId    String   @map("topic_hub_id") @db.Uuid
+  signalType    String   @map("signal_type")
+  title         String
+  payload       Json
+  calculatedAt  DateTime @default(now()) @map("calculated_at") @db.Timestamptz(6)
+
+  hub TopicHub @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
+
+  @@map("topic_signals")
+}
+
+// Hub-level "related events" — independent of any single knowledge block.
+model TopicHubEventLink {
+  topicHubId  String @map("topic_hub_id") @db.Uuid
+  eventCardId String @map("event_card_id") @db.Uuid
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  hub       TopicHub  @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
+  eventCard EventCard @relation(fields: [eventCardId], references: [id], onDelete: Cascade)
+
+  @@id([topicHubId, eventCardId])
+  @@map("topic_hub_event_links")
+}
+
+// Hub-level "popular references" — independent of any single knowledge block.
+model TopicHubReferenceLink {
+  topicHubId  String @map("topic_hub_id") @db.Uuid
+  referenceId String @map("reference_id") @db.Uuid
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  hub       TopicHub  @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
+  reference Reference @relation(fields: [referenceId], references: [id], onDelete: Cascade)
+
+  @@id([topicHubId, referenceId])
+  @@map("topic_hub_reference_links")
+}
+
+// ---------------------------------------------------------------------------
+// Rooms
+// ---------------------------------------------------------------------------
+
+model Room {
+  id           String   @id @default(uuid()) @db.Uuid
+  categoryId   String   @map("category_id") @db.Uuid
+  ownerId      String?  @map("owner_id") @db.Uuid
+  slug         String   @unique
+  name         String
+  description  String?
+  rules        String?
+  origin       String   // OFFICIAL | USER
+  roomType     String   @map("room_type") // DISCUSSION | EVENT_REACTION | REFERENCE | IDEA | RECRUITMENT | SOCIAL
+  accessPolicy String   @default("PUBLIC") @map("access_policy")
+  tags         Json     @default("[]")
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  category Category  @relation(fields: [categoryId], references: [id])
+  owner    User?     @relation(fields: [ownerId], references: [id])
+  pins     RoomPin[]
+  posts    Post[]
+
+  @@index([categoryId])
+  @@map("rooms")
+}
+
+// target_type: EVENT_CARD | REFERENCE; target_id has no FK (resolved at read time).
+model RoomPin {
+  id         String   @id @default(uuid()) @db.Uuid
+  roomId     String   @map("room_id") @db.Uuid
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id") @db.Uuid
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@map("room_pins")
+}
+
+// ---------------------------------------------------------------------------
+// Posts, replies, reactions
+// ---------------------------------------------------------------------------
+
+model Post {
+  id                 String   @id @default(uuid()) @db.Uuid
+  roomId             String   @map("room_id") @db.Uuid
+  authorId           String   @map("author_id") @db.Uuid
+  postType           String   @default("GENERAL") @map("post_type")
+  body               String
+  visibility         String   @default("PUBLIC")
+  status             String   @default("VISIBLE") // VISIBLE | HIDDEN | DELETED
+  spoiler            Boolean  @default(false)
+  replyCount         Int      @default(0) @map("reply_count")
+  likeCount          Int      @default(0) @map("like_count")
+  bookmarkCount      Int      @default(0) @map("bookmark_count")
+  recruitmentFields  Json?    @map("recruitment_fields")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  room        Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  author      User             @relation(fields: [authorId], references: [id])
+  attachments PostAttachment[]
+  replies     Reply[]
+
+  @@index([roomId, createdAt(sort: Desc)])
+  @@map("posts")
+}
+
+model PostAttachment {
+  id             String @id @default(uuid()) @db.Uuid
+  postId         String @map("post_id") @db.Uuid
+  attachmentType String @map("attachment_type") // EVENT_CARD | REFERENCE
+  targetId       String @map("target_id") @db.Uuid
+  sortOrder      Int    @default(0) @map("sort_order")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("post_attachments")
+}
+
+model Reply {
+  id            String   @id @default(uuid()) @db.Uuid
+  postId        String   @map("post_id") @db.Uuid
+  parentReplyId String?  @map("parent_reply_id") @db.Uuid
+  authorId      String   @map("author_id") @db.Uuid
+  body          String
+  status        String   @default("VISIBLE")
+  likeCount     Int      @default(0) @map("like_count")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  post         Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentReply  Reply?  @relation("ReplyChildren", fields: [parentReplyId], references: [id], onDelete: SetNull)
+  childReplies Reply[] @relation("ReplyChildren")
+  author       User    @relation(fields: [authorId], references: [id])
+
+  @@index([postId, createdAt])
+  @@map("replies")
+}
+
+// Milestone 1: only LIKE is used; target_type is POST or REPLY.
+// UNIQUE constraint enforces toggle idempotency.
+model Reaction {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  targetType   String   @map("target_type") // POST | REPLY
+  targetId     String   @map("target_id") @db.Uuid
+  reactionType String   @default("LIKE") @map("reaction_type")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId, reactionType])
+  @@index([targetType, targetId])
+  @@map("reactions")
+}
+
+// ---------------------------------------------------------------------------
+// External integrations: event cards & references
+// ---------------------------------------------------------------------------
+
+model EventCard {
+  id                String   @id @default(uuid()) @db.Uuid
+  externalEventId   String   @unique @map("external_event_id")
+  title             String
+  venueName         String   @map("venue_name")
+  region            String
+  startsAt          DateTime @map("starts_at") @db.Timestamptz(6)
+  eventStatus       String   @map("event_status") // UPCOMING | COMPLETED
+  thumbnailUrl      String?  @map("thumbnail_url")
+  syncedAt          DateTime @default(now()) @map("synced_at") @db.Timestamptz(6)
+
+  topicHubLinks TopicHubEventLink[]
+
+  @@map("event_cards")
+}
+
+// Prisma model name is `Reference` but table is `reference_items` —
+// `references` is a Postgres reserved word (used in FK declarations).
+model Reference {
+  id            String   @id @default(uuid()) @db.Uuid
+  createdBy     String   @map("created_by") @db.Uuid
+  type          String   // TV_SHOW | YOUTUBE | GAME_RULE | ARTICLE | IDEA | OTHER
+  url           String
+  title         String
+  sourceName    String?  @map("source_name")
+  thumbnailUrl  String?  @map("thumbnail_url")
+  summary       String?
+  status        String   @default("VISIBLE")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  creator       User                    @relation(fields: [createdBy], references: [id])
+  topicHubLinks TopicHubReferenceLink[]
+
+  @@map("reference_items")
+}

@@ -1,0 +1,39 @@
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+
+import { PrismaModule } from './shared/prisma.module';
+import { AuthGuard } from './shared/guards/auth.guard';
+import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
+import { RequestIdMiddleware } from './shared/middleware/request-id.middleware';
+
+import { HealthModule } from './modules/health/health.module';
+import { UsersModule } from './modules/users/users.module';
+import { CommunityModule } from './modules/community/community.module';
+import { KnowledgeModule } from './modules/knowledge/knowledge.module';
+import { EventLinkModule } from './modules/event-link/event-link.module';
+import { ReferenceModule } from './modules/reference/reference.module';
+import { PostsModule } from './modules/posts/posts.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    HealthModule,
+    UsersModule,
+    CommunityModule,
+    KnowledgeModule,
+    EventLinkModule,
+    ReferenceModule,
+    PostsModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+  ],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
+  }
+}
