@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
+import { asUser, bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
 import { KnowledgeService } from './knowledge.service';
 
 describe('KnowledgeService', () => {
@@ -16,7 +16,10 @@ describe('KnowledgeService', () => {
   });
 
   test('getHubByCategorySlug returns the full bundle for love-content', async () => {
-    const bundle = await knowledge.getHubByCategorySlug('love-content');
+    const bundle = await knowledge.getHubByCategorySlug(
+      'love-content',
+      asUser(ctx.uuids.user.minseo),
+    );
     expect(bundle.category.slug).toBe('love-content');
     expect(bundle.hub).not.toBeNull();
     expect(bundle.blocks).toHaveLength(6);
@@ -27,8 +30,8 @@ describe('KnowledgeService', () => {
   });
 
   test('unknown category throws NotFound', async () => {
-    await expect(knowledge.getHubByCategorySlug('does-not-exist')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      knowledge.getHubByCategorySlug('does-not-exist', asUser(ctx.uuids.user.minseo)),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

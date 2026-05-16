@@ -15,6 +15,33 @@ class CreatePostAttachment {
       };
 }
 
+class CreateRecruitmentFields {
+  const CreateRecruitmentFields({
+    required this.role,
+    required this.schedule,
+    required this.location,
+    required this.compensation,
+    required this.capacity,
+    required this.applicationMethod,
+  });
+
+  final String role;
+  final String schedule;
+  final String location;
+  final String compensation;
+  final int capacity;
+  final String applicationMethod;
+
+  Map<String, dynamic> toJson() => {
+        'role': role,
+        'schedule': schedule,
+        'location': location,
+        'compensation': compensation,
+        'capacity': capacity,
+        'application_method': applicationMethod,
+      };
+}
+
 class PostRepository {
   PostRepository(this._ref);
   final Ref _ref;
@@ -41,6 +68,8 @@ class PostRepository {
   Future<PostDto> create(
     String roomSlug, {
     required String body,
+    String postType = 'GENERAL',
+    CreateRecruitmentFields? recruitmentFields,
     List<CreatePostAttachment> attachments = const [],
   }) async {
     try {
@@ -48,6 +77,9 @@ class PostRepository {
         '/rooms/$roomSlug/posts',
         data: {
           'body': body,
+          if (postType != 'GENERAL') 'post_type': postType,
+          if (recruitmentFields != null)
+            'recruitment_fields': recruitmentFields.toJson(),
           if (attachments.isNotEmpty)
             'attachments': attachments.map((a) => a.toJson()).toList(),
         },
@@ -79,6 +111,24 @@ class PostRepository {
       if (res.statusCode != 204) {
         throw ApiError('UNEXPECTED', 'Post delete failed', res.statusCode);
       }
+    } catch (e) {
+      throw ApiError.from(e);
+    }
+  }
+
+  /// Milestone 4: toggle a RECRUITMENT post's status (OPEN / CLOSED / FILLED).
+  /// Author-only on the server; non-author calls return 403.
+  Future<PostDto> setRecruitmentStatus(String postId, String status) async {
+    try {
+      final res = await _ref.read(dioProvider).post<dynamic>(
+        '/posts/$postId/recruitment-status',
+        data: {'status': status},
+      );
+      if (res.statusCode != 201 && res.statusCode != 200) {
+        throw ApiError(
+            'UNEXPECTED', 'Status update failed', res.statusCode);
+      }
+      return PostDto.fromJson(res.data as Map<String, dynamic>);
     } catch (e) {
       throw ApiError.from(e);
     }

@@ -1,11 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService, Viewer } from '../../shared/access-control.service';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
+  ) {}
 
-  async listBySpaceSlug(spaceSlug: string) {
+  async listBySpaceSlug(spaceSlug: string, viewer: Viewer) {
+    await this.access.assertCanReadSpaceBySlug(spaceSlug, viewer);
+
     const space = await this.prisma.space.findUnique({ where: { slug: spaceSlug } });
     if (!space) {
       throw new NotFoundException(`Space not found: ${spaceSlug}`);
@@ -24,6 +30,10 @@ export class CategoryService {
     }));
   }
 
+  /**
+   * Access-naive lookup used by other services after they've already gated
+   * the request via AccessControlService. Throws NotFound if absent.
+   */
   async findBySlug(slug: string) {
     const cat = await this.prisma.category.findUnique({ where: { slug } });
     if (!cat) {

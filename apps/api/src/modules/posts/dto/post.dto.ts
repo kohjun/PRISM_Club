@@ -13,12 +13,28 @@ export interface PostAuthorDTO {
   avatar_url: string | null;
 }
 
+export type PostType = 'GENERAL' | 'RECRUITMENT';
+
+export type RecruitmentStatus = 'OPEN' | 'CLOSED' | 'FILLED';
+
+export interface RecruitmentFieldsDTO {
+  role: string;
+  schedule: string;
+  location: string;
+  compensation: string;
+  capacity: number;
+  application_method: string;
+  status: RecruitmentStatus;
+}
+
 export interface PostDTO {
   id: string;
   room: { id: string; slug: string; name: string };
   author: PostAuthorDTO;
   body: string;
   status: string;
+  post_type: PostType;
+  recruitment_fields: RecruitmentFieldsDTO | null;
   created_at: string;
   updated_at: string;
   attachments: PostAttachmentDTO[];

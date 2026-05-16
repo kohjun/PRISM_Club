@@ -145,34 +145,23 @@ class _MyContributionsTile extends StatelessWidget {
   }
 }
 
-class _SpaceCard extends StatelessWidget {
+class _SpaceCard extends ConsumerWidget {
   const _SpaceCard({required this.space});
   final SpaceDto space;
 
   @override
-  Widget build(BuildContext context) {
-    final isPlanner = space.isPlanner;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(meProvider).valueOrNull;
+    final isPlannerSpace = space.isPlanner;
+    final isVerifiedPlanner = me?.isPlanner ?? false;
+    final locked = isPlannerSpace && !isVerifiedPlanner;
+
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          if (isPlanner) {
-            showDialog<void>(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text('준비 중'),
-                content: const Text(
-                  '기획자 커뮤니티는 인증 절차 마련 후 오픈할 예정입니다.\n'
-                  '현재 마일스톤 1에서는 참가자 커뮤니티만 사용할 수 있어요.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('확인'),
-                  ),
-                ],
-              ),
-            );
+          if (locked) {
+            _showLockDialog(context);
             return;
           }
           context.go('/spaces/${space.slug}/categories');
@@ -185,12 +174,12 @@ class _SpaceCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: isPlanner ? PrismColors.border : PrismColors.soft,
+                  color: locked ? PrismColors.border : PrismColors.soft,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  isPlanner ? Icons.lock_outline : Icons.groups_outlined,
-                  color: isPlanner ? PrismColors.muted : PrismColors.primary,
+                  locked ? Icons.lock_outline : Icons.groups_outlined,
+                  color: locked ? PrismColors.muted : PrismColors.primary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -204,7 +193,7 @@ class _SpaceCard extends StatelessWidget {
                           space.name,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        if (isPlanner) ...[
+                        if (locked) ...[
                           const SizedBox(width: 6),
                           const Icon(Icons.lock,
                               size: 14, color: PrismColors.muted),
@@ -213,9 +202,7 @@ class _SpaceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isPlanner
-                          ? '인증된 기획자만 입장 가능 (준비 중)'
-                          : '이벤트 후기와 콘텐츠 토론을 함께해요.',
+                      _subtitleFor(space, locked: locked),
                       style: const TextStyle(color: PrismColors.muted),
                     ),
                   ],
@@ -225,6 +212,35 @@ class _SpaceCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  String _subtitleFor(SpaceDto space, {required bool locked}) {
+    if (space.isPlanner) {
+      return locked
+          ? '스태프 모집, 운영 노트 · 인증 필요'
+          : '스태프 모집, 운영 노트, 콘텐츠 기획 토론';
+    }
+    return '이벤트 후기와 콘텐츠 토론을 함께해요.';
+  }
+
+  void _showLockDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('인증된 기획자만 입장할 수 있어요'),
+        content: const Text(
+          '기획자 커뮤니티는 PRISM과 협업하는 검증된 기획자/스태프를 위한 공간입니다.\n\n'
+          '이곳에서는 스태프 모집, 운영 노트, 콘텐츠 기획 토론이 진행됩니다.\n\n'
+          '권한 신청은 운영자에게 문의해 주세요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
       ),
     );
   }

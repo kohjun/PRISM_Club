@@ -14,6 +14,7 @@ import '../data/post_repository.dart';
 import '../data/reaction_repository.dart';
 import '../data/reply_dto.dart';
 import '../data/reply_repository.dart';
+import 'widgets/recruitment_post_card.dart';
 
 final _postProvider = FutureProvider.family<PostDto, String>((ref, postId) {
   return ref.read(postRepositoryProvider).getById(postId);
@@ -67,6 +68,27 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('좋아요 실패: ${e.message}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _setRecruitmentStatus(PostDto post, String status) async {
+    try {
+      await ref
+          .read(postRepositoryProvider)
+          .setRecruitmentStatus(post.id, status);
+      ref.invalidate(_postProvider(post.id));
+      ref.invalidate(timelineProvider(post.roomSlug));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('모집 상태가 $status 로 바뀌었어요.')),
+        );
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('상태 변경 실패: ${e.message}')),
         );
       }
     }
@@ -143,6 +165,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    if (p.isRecruitment && p.recruitmentFields != null) ...[
+                      RecruitmentPostCard(
+                        fields: p.recruitmentFields!,
+                        isAuthor: me?.id == p.author.id,
+                        onSetStatus: (status) =>
+                            _setRecruitmentStatus(p, status),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     _PostBody(post: p, onLike: () => _toggleLikePost(p)),
                     const SizedBox(height: 16),
                     const Divider(),

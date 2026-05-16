@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { CategoryService } from '../community/category.service';
 import { RoomService } from '../community/room.service';
 
@@ -7,11 +8,14 @@ import { RoomService } from '../community/room.service';
 export class KnowledgeService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
     private readonly categories: CategoryService,
     private readonly rooms: RoomService,
   ) {}
 
-  async getHubByCategorySlug(categorySlug: string) {
+  async getHubByCategorySlug(categorySlug: string, viewer: Viewer) {
+    await this.access.assertCanReadCategoryBySlug(categorySlug, viewer);
+
     const category = await this.categories.findBySlug(categorySlug);
 
     const hub = await this.prisma.topicHub.findUnique({
@@ -30,7 +34,7 @@ export class KnowledgeService {
       },
     });
 
-    const rooms = await this.rooms.listByCategorySlug(categorySlug);
+    const rooms = await this.rooms.listByCategorySlug(categorySlug, viewer);
 
     return {
       category: {

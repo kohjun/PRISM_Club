@@ -1,5 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService } from '../../shared/access-control.service';
+import { RequestUser } from '../../shared/decorators/current-user.decorator';
 import { PostAuthorDTO, ReplyDTO } from './dto/post.dto';
 
 export interface CreateReplyInput {
@@ -9,13 +11,20 @@ export interface CreateReplyInput {
 
 @Injectable()
 export class ReplyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
+  ) {}
 
-  async create(postId: string, input: CreateReplyInput, userId: string): Promise<ReplyDTO> {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+  async create(postId: string, input: CreateReplyInput, viewer: RequestUser): Promise<ReplyDTO> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { room: true },
+    });
     if (!post || post.status === 'DELETED') {
       throw new NotFoundException(`Post not found: ${postId}`);
     }
+    await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
 
     // Depth check: parent_reply_id may only reference a top-level reply.
     if (input.parent_reply_id) {
@@ -39,7 +48,7 @@ export class ReplyService {
         data: {
           postId,
           parentReplyId: input.parent_reply_id ?? null,
-          authorId: userId,
+          authorId: viewer.id,
           body: input.body,
         },
         include: { author: { include: { profile: true } } },
@@ -51,14 +60,18 @@ export class ReplyService {
       return reply;
     });
 
-    return this.toDTO(created, userId);
+    return this.toDTO(created, viewer.id);
   }
 
-  async listByPost(postId: string, viewerId: string): Promise<ReplyDTO[]> {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+  async listByPost(postId: string, viewer: RequestUser): Promise<ReplyDTO[]> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { room: true },
+    });
     if (!post || post.status === 'DELETED') {
       throw new NotFoundException(`Post not found: ${postId}`);
     }
+    await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
 
     const replies = await this.prisma.reply.findMany({
       where: { postId, status: { not: 'DELETED' } },
@@ -69,7 +82,7 @@ export class ReplyService {
     // Resolve liked-by-me in a single query
     const likedReplyIds = await this.prisma.reaction.findMany({
       where: {
-        userId: viewerId,
+        userId: viewer.id,
         targetType: 'REPLY',
         targetId: { in: replies.map((r) => r.id) },
         reactionType: 'LIKE',
@@ -78,15 +91,19 @@ export class ReplyService {
     });
     const likedSet = new Set(likedReplyIds.map((r) => r.targetId));
 
-    return replies.map((r) => this.toDTO(r, viewerId, likedSet.has(r.id)));
+    return replies.map((r) => this.toDTO(r, viewer.id, likedSet.has(r.id)));
   }
 
-  async softDelete(replyId: string, userId: string): Promise<void> {
-    const reply = await this.prisma.reply.findUnique({ where: { id: replyId } });
+  async softDelete(replyId: string, viewer: RequestUser): Promise<void> {
+    const reply = await this.prisma.reply.findUnique({
+      where: { id: replyId },
+      include: { post: { include: { room: true } } },
+    });
     if (!reply || reply.status === 'DELETED') {
       throw new NotFoundException(`Reply not found: ${replyId}`);
     }
-    if (reply.authorId !== userId) {
+    await this.access.assertCanReadRoomBySlug(reply.post.room.slug, viewer);
+    if (reply.authorId !== viewer.id) {
       throw new ForbiddenException('Only the author can delete this reply');
     }
     await this.prisma.$transaction(async (tx) => {

@@ -6,16 +6,37 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService } from '../../shared/access-control.service';
+import { RequestUser } from '../../shared/decorators/current-user.decorator';
 import { RoomService } from '../community/room.service';
-import { PostAttachmentDTO, PostDTO, PostAuthorDTO } from './dto/post.dto';
+import {
+  PostAttachmentDTO,
+  PostAuthorDTO,
+  PostDTO,
+  PostType,
+  RecruitmentFieldsDTO,
+  RecruitmentStatus,
+} from './dto/post.dto';
 
 export interface AttachmentInput {
   attachment_type: 'EVENT_CARD' | 'REFERENCE';
   target_id: string;
 }
 
+export interface RecruitmentFieldsInput {
+  role: string;
+  schedule: string;
+  location: string;
+  compensation: string;
+  capacity: number;
+  application_method: string;
+  status?: RecruitmentStatus;
+}
+
 export interface CreatePostInput {
   body: string;
+  post_type?: PostType;
+  recruitment_fields?: RecruitmentFieldsInput;
   attachments?: AttachmentInput[];
 }
 
@@ -31,19 +52,50 @@ const MAX_PAGE_SIZE = 50;
 export class PostService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
     private readonly rooms: RoomService,
   ) {}
 
-  async create(roomSlug: string, input: CreatePostInput, userId: string): Promise<PostDTO> {
+  async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
+    await this.access.assertCanReadRoomBySlug(roomSlug, viewer);
     const room = await this.rooms.getRoomBySlug(roomSlug);
     await this.validateAttachmentTargets(input.attachments ?? []);
+
+    const postType: PostType = input.post_type ?? 'GENERAL';
+    let recruitmentFields: RecruitmentFieldsInput | null = null;
+
+    if (postType === 'RECRUITMENT') {
+      if (room.roomType !== 'RECRUITMENT') {
+        throw new BadRequestException(
+          'Recruitment posts can only be created in RECRUITMENT rooms',
+        );
+      }
+      if (!input.recruitment_fields) {
+        throw new BadRequestException(
+          'recruitment_fields is required when post_type=RECRUITMENT',
+        );
+      }
+      recruitmentFields = {
+        ...input.recruitment_fields,
+        status: input.recruitment_fields.status ?? 'OPEN',
+      };
+    } else if (input.recruitment_fields) {
+      throw new BadRequestException(
+        'recruitment_fields is only allowed when post_type=RECRUITMENT',
+      );
+    }
 
     const post = await this.prisma.$transaction(async (tx) => {
       return tx.post.create({
         data: {
           roomId: room.id,
-          authorId: userId,
+          authorId: viewer.id,
           body: input.body,
+          postType,
+          recruitmentFields:
+            recruitmentFields === null
+              ? Prisma.JsonNull
+              : (recruitmentFields as unknown as Prisma.InputJsonValue),
           attachments:
             input.attachments && input.attachments.length > 0
               ? {
@@ -58,10 +110,40 @@ export class PostService {
       });
     });
 
-    return this.getById(post.id, userId);
+    return this.getById(post.id, viewer);
   }
 
-  async getById(postId: string, viewerId: string): Promise<PostDTO> {
+  async setRecruitmentStatus(
+    postId: string,
+    status: RecruitmentStatus,
+    viewer: RequestUser,
+  ): Promise<PostDTO> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { room: true },
+    });
+    if (!post || post.status === 'DELETED') {
+      throw new NotFoundException(`Post not found: ${postId}`);
+    }
+    await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
+    if (post.postType !== 'RECRUITMENT') {
+      throw new BadRequestException('Not a recruitment post');
+    }
+    if (post.authorId !== viewer.id && !viewer.roles.includes('ADMIN')) {
+      throw new ForbiddenException('Only the author can change recruitment status');
+    }
+
+    const current = (post.recruitmentFields as Record<string, unknown> | null) ?? {};
+    const next = { ...current, status };
+
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: { recruitmentFields: next as unknown as Prisma.InputJsonValue },
+    });
+    return this.getById(postId, viewer);
+  }
+
+  async getById(postId: string, viewer: RequestUser): Promise<PostDTO> {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
       include: {
@@ -73,10 +155,17 @@ export class PostService {
     if (!post || post.status === 'DELETED') {
       throw new NotFoundException(`Post not found: ${postId}`);
     }
-    return this.toDTO(post, viewerId);
+    await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
+    return this.toDTO(post, viewer.id);
   }
 
-  async listByRoomSlug(roomSlug: string, viewerId: string, cursor?: string, limit?: number): Promise<TimelinePage> {
+  async listByRoomSlug(
+    roomSlug: string,
+    viewer: RequestUser,
+    cursor?: string,
+    limit?: number,
+  ): Promise<TimelinePage> {
+    await this.access.assertCanReadRoomBySlug(roomSlug, viewer);
     const room = await this.rooms.getRoomBySlug(roomSlug);
     const take = Math.max(1, Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
 
@@ -99,7 +188,7 @@ export class PostService {
 
     const hasMore = posts.length > take;
     const sliced = hasMore ? posts.slice(0, take) : posts;
-    const items = await Promise.all(sliced.map((p) => this.toDTO(p, viewerId)));
+    const items = await Promise.all(sliced.map((p) => this.toDTO(p, viewer.id)));
 
     return {
       items,
@@ -107,24 +196,32 @@ export class PostService {
     };
   }
 
-  async update(postId: string, body: string, userId: string): Promise<PostDTO> {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+  async update(postId: string, body: string, viewer: RequestUser): Promise<PostDTO> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { room: true },
+    });
     if (!post || post.status === 'DELETED') {
       throw new NotFoundException(`Post not found: ${postId}`);
     }
-    if (post.authorId !== userId) {
+    await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
+    if (post.authorId !== viewer.id) {
       throw new ForbiddenException('Only the author can edit this post');
     }
     await this.prisma.post.update({ where: { id: postId }, data: { body } });
-    return this.getById(postId, userId);
+    return this.getById(postId, viewer);
   }
 
-  async softDelete(postId: string, userId: string): Promise<void> {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+  async softDelete(postId: string, viewer: RequestUser): Promise<void> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: { room: true },
+    });
     if (!post || post.status === 'DELETED') {
       throw new NotFoundException(`Post not found: ${postId}`);
     }
-    if (post.authorId !== userId) {
+    await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
+    if (post.authorId !== viewer.id) {
       throw new ForbiddenException('Only the author can delete this post');
     }
     await this.prisma.post.update({ where: { id: postId }, data: { status: 'DELETED' } });
@@ -174,11 +271,31 @@ export class PostService {
       author: this.toAuthor(post.author),
       body: post.body,
       status: post.status,
+      post_type: (post.postType as PostType) ?? 'GENERAL',
+      recruitment_fields: this.toRecruitmentFieldsDTO(post.recruitmentFields),
       created_at: post.createdAt.toISOString(),
       updated_at: post.updatedAt.toISOString(),
       attachments,
       counts: { reply_count: post.replyCount, like_count: post.likeCount },
       liked_by_me: likedByMe,
+    };
+  }
+
+  private toRecruitmentFieldsDTO(raw: Prisma.JsonValue | null): RecruitmentFieldsDTO | null {
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const r = raw as Record<string, unknown>;
+    if (typeof r.role !== 'string') return null;
+    return {
+      role: r.role,
+      schedule: String(r.schedule ?? ''),
+      location: String(r.location ?? ''),
+      compensation: String(r.compensation ?? ''),
+      capacity: typeof r.capacity === 'number' ? r.capacity : Number(r.capacity ?? 0),
+      application_method: String(r.application_method ?? ''),
+      status:
+        r.status === 'CLOSED' || r.status === 'FILLED'
+          ? (r.status as RecruitmentStatus)
+          : 'OPEN',
     };
   }
 

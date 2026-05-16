@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
+import { asUser, bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
 import { ReplyService } from './reply.service';
 import { PostService } from './post.service';
 
@@ -22,21 +22,21 @@ describe('ReplyService', () => {
     const post = await posts.create(
       'dating-event-reviews',
       { body: 'depth-test post' },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
 
-    const r1 = await replies.create(post.id, { body: 'r1' }, ctx.uuids.user.joon);
+    const r1 = await replies.create(post.id, { body: 'r1' }, asUser(ctx.uuids.user.joon));
     expect(r1.parent_reply_id).toBeNull();
 
     const r2 = await replies.create(
       post.id,
       { body: 'r2', parent_reply_id: r1.id },
-      ctx.uuids.user.haneul,
+      asUser(ctx.uuids.user.haneul),
     );
     expect(r2.parent_reply_id).toBe(r1.id);
 
     await expect(
-      replies.create(post.id, { body: 'r3', parent_reply_id: r2.id }, ctx.uuids.user.joon),
+      replies.create(post.id, { body: 'r3', parent_reply_id: r2.id }, asUser(ctx.uuids.user.joon)),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -44,17 +44,17 @@ describe('ReplyService', () => {
     const postA = await posts.create(
       'dating-event-reviews',
       { body: 'post A' },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
     const postB = await posts.create(
       'dating-event-reviews',
       { body: 'post B' },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
-    const r = await replies.create(postA.id, { body: 'rA' }, ctx.uuids.user.joon);
+    const r = await replies.create(postA.id, { body: 'rA' }, asUser(ctx.uuids.user.joon));
 
     await expect(
-      replies.create(postB.id, { body: 'cross', parent_reply_id: r.id }, ctx.uuids.user.joon),
+      replies.create(postB.id, { body: 'cross', parent_reply_id: r.id }, asUser(ctx.uuids.user.joon)),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -62,13 +62,13 @@ describe('ReplyService', () => {
     const post = await posts.create(
       'dating-event-reviews',
       { body: 'p' },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
     await expect(
       replies.create(
         post.id,
         { body: 'x', parent_reply_id: '00000000-0000-0000-0000-000000000000' },
-        ctx.uuids.user.joon,
+        asUser(ctx.uuids.user.joon),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });

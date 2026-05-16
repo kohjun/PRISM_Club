@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { z } from 'zod';
+import { CurrentUser, RequestUser } from '../../shared/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { SEARCH_TYPES, SearchEntityType } from './dto/search.dto';
 import { SearchService } from './search.service';
@@ -20,10 +21,13 @@ export class SearchController {
   constructor(private readonly search: SearchService) {}
 
   @Get('search')
-  async run(@Query(new ZodValidationPipe(querySchema)) query: SearchQuery) {
+  async run(
+    @Query(new ZodValidationPipe(querySchema)) query: SearchQuery,
+    @CurrentUser() user: RequestUser,
+  ) {
     const parsedTypes = parseTypesParam(query.types);
     const parsedLimit = query.limit ? Number(query.limit) : undefined;
-    return this.search.searchAll(query.q, parsedTypes, parsedLimit);
+    return this.search.searchAll(query.q, parsedTypes, parsedLimit, user);
   }
 
   @Get('search/suggestions')

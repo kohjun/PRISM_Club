@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { CategoryService } from './category.service';
 import { EventCardDTO, PinDTO, ReferenceDTO, RoomDetailDTO, RoomSummaryDTO } from './dto/room.dto';
 
@@ -27,12 +28,18 @@ const ALLOWED_USER_ROOM_TYPES = new Set([
 export class RoomService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
     private readonly categories: CategoryService,
   ) {}
 
   // -- Reads ---------------------------------------------------------------
 
-  async listByCategorySlug(categorySlug: string): Promise<RoomSummaryDTO[]> {
+  async listByCategorySlug(
+    categorySlug: string,
+    viewer: Viewer,
+  ): Promise<RoomSummaryDTO[]> {
+    await this.access.assertCanReadCategoryBySlug(categorySlug, viewer);
+
     const category = await this.categories.findBySlug(categorySlug);
     const rooms = await this.prisma.room.findMany({
       where: { categoryId: category.id, status: 'ACTIVE' },
@@ -42,7 +49,9 @@ export class RoomService {
     return rooms.map((r) => this.toSummary(r));
   }
 
-  async getRoomDetailBySlug(slug: string): Promise<RoomDetailDTO> {
+  async getRoomDetailBySlug(slug: string, viewer: Viewer): Promise<RoomDetailDTO> {
+    await this.access.assertCanReadRoomBySlug(slug, viewer);
+
     const room = await this.prisma.room.findUnique({
       where: { slug },
       include: {
@@ -69,6 +78,10 @@ export class RoomService {
     };
   }
 
+  /**
+   * Access-naive lookup used by other services (e.g., PostService) after they
+   * have already gated the request via AccessControlService.
+   */
   async getRoomBySlug(slug: string) {
     const room = await this.prisma.room.findUnique({ where: { slug } });
     if (!room || room.status !== 'ACTIVE') {
@@ -83,7 +96,10 @@ export class RoomService {
     categorySlug: string,
     input: CreateUserRoomInput,
     userId: string,
+    viewer: Viewer,
   ): Promise<RoomDetailDTO> {
+    await this.access.assertCanReadCategoryBySlug(categorySlug, viewer);
+
     const category = await this.categories.findBySlug(categorySlug);
 
     if (!ALLOWED_USER_ROOM_TYPES.has(input.room_type)) {
@@ -144,7 +160,7 @@ export class RoomService {
       return created;
     });
 
-    return this.getRoomDetailBySlug(room.slug);
+    return this.getRoomDetailBySlug(room.slug, viewer);
   }
 
   private async uniqueSlugFor(name: string): Promise<string> {

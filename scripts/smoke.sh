@@ -11,6 +11,8 @@ API="${API:-http://localhost:3000/v1}"
 MINSEO="11111111-1111-1111-1111-111111111111"
 JOON="22222222-2222-2222-2222-222222222222"
 HANEUL="33333333-3333-3333-3333-333333333333"
+STUDIO_LEAD="55555555-5555-5555-5555-555555555555"
+STUDIO_MATE="66666666-6666-6666-6666-666666666666"
 
 pass() { printf "  \033[32mPASS\033[0m %s\n" "$1"; }
 fail() { printf "  \033[31mFAIL\033[0m %s\n" "$1"; exit 1; }
@@ -138,5 +140,56 @@ empty_code=$(curl_as "$MINSEO" -o /dev/null -w "%{http_code}" "$API/search?q=")
 # Suggestions
 sug_count=$(curl_as "$MINSEO" "$API/search/suggestions" | j ".items.length")
 [[ "$sug_count" -ge "5" ]] && pass "suggestions returns $sug_count items" || fail "suggestions=$sug_count"
+
+section "planner access + recruitment (M4)"
+# Member is blocked from planner categories.
+mem_cats_code=$(curl_as "$MINSEO" -o /dev/null -w "%{http_code}" "$API/categories?spaceSlug=planner")
+[[ "$mem_cats_code" == "403" ]] && pass "member blocked from planner categories" || fail "got $mem_cats_code"
+
+# Verified planner sees planner-staff.
+plan_cats=$(curl_as "$STUDIO_LEAD" "$API/categories?spaceSlug=planner")
+plan_slug=$(echo "$plan_cats" | j ".items[0].slug")
+[[ "$plan_slug" == "planner-staff" ]] && pass "planner sees planner-staff category" || fail "slug=$plan_slug"
+
+# Member blocked from the planner room.
+mem_room_code=$(curl_as "$MINSEO" -o /dev/null -w "%{http_code}" "$API/rooms/planner-recruitment")
+[[ "$mem_room_code" == "403" ]] && pass "member blocked from planner room" || fail "got $mem_room_code"
+
+# studio_lead can read the planner room timeline (seeded 3 posts).
+plan_tl=$(curl_as "$STUDIO_LEAD" "$API/rooms/planner-recruitment/timeline")
+plan_tl_count=$(echo "$plan_tl" | j ".items.length")
+[[ "$plan_tl_count" -ge "3" ]] && pass "planner timeline has $plan_tl_count posts" || fail "timeline=$plan_tl_count"
+
+# Create a recruitment post.
+recruit=$(curl_as "$STUDIO_LEAD" -X POST \
+  -d "{\"body\":\"smoke recruitment\",\"post_type\":\"RECRUITMENT\",\"recruitment_fields\":{\"role\":\"진행 어시\",\"schedule\":\"smoke schedule\",\"location\":\"smoke loc\",\"compensation\":\"smoke pay\",\"capacity\":1,\"application_method\":\"DM\"}}" \
+  "$API/rooms/planner-recruitment/posts")
+recruit_id=$(echo "$recruit" | j ".id")
+recruit_status=$(echo "$recruit" | j ".recruitment_fields.status")
+[[ -n "$recruit_id" && "$recruit_status" == "OPEN" ]] && pass "recruitment post created (status=OPEN)" || fail "recruit=$recruit"
+
+# Author flips status to CLOSED.
+close=$(curl_as "$STUDIO_LEAD" -X POST -d '{"status":"CLOSED"}' "$API/posts/$recruit_id/recruitment-status")
+close_status=$(echo "$close" | j ".recruitment_fields.status")
+[[ "$close_status" == "CLOSED" ]] && pass "author flips status to CLOSED" || fail "close_status=$close_status"
+
+# Non-author cannot toggle.
+non_author_code=$(curl_as "$STUDIO_MATE" -o /dev/null -w "%{http_code}" -X POST -d '{"status":"OPEN"}' "$API/posts/$recruit_id/recruitment-status")
+[[ "$non_author_code" == "403" ]] && pass "non-author cannot toggle status" || fail "got $non_author_code"
+
+# Search filtering — member finds no planner-space post hits.
+mem_search=$(curl_as "$MINSEO" "$API/search?q=%EC%8A%A4%ED%83%9C%ED%94%84")
+mem_post_hits=$(echo "$mem_search" | j ".groups.find(g=>g.type==='post').items.length")
+[[ "$mem_post_hits" == "0" ]] && pass "member sees no planner-space post hits" || fail "mem_post_hits=$mem_post_hits"
+
+# Planner search returns recruitment posts.
+plan_search=$(curl_as "$STUDIO_LEAD" "$API/search?q=%EC%8A%A4%ED%83%9C%ED%94%84")
+plan_post_hits=$(echo "$plan_search" | j ".groups.find(g=>g.type==='post').items.length")
+[[ "$plan_post_hits" -ge "1" ]] && pass "planner search finds recruitment posts" || fail "plan_post_hits=$plan_post_hits"
+
+# planner-staff suggestions tuned.
+plan_sugg=$(curl_as "$STUDIO_LEAD" "$API/search/suggestions?categorySlug=planner-staff")
+has_staff=$(echo "$plan_sugg" | j ".items.indexOf('스태프')>=0")
+[[ "$has_staff" == "true" ]] && pass "planner-staff suggestions include '스태프'" || fail "no '스태프' in suggestions"
 
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

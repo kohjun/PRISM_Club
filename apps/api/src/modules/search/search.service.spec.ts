@@ -6,6 +6,10 @@ describe('SearchService', () => {
   let ctx: TestContext;
   let svc: SearchService;
 
+  // Reusable viewer stubs — searchAll requires one.
+  const member = { roles: ['MEMBER'] };
+  const planner = { roles: ['VERIFIED_PLANNER'] };
+
   beforeAll(async () => {
     ctx = await bootstrapTestApp();
     svc = ctx.app.get(SearchService);
@@ -18,20 +22,24 @@ describe('SearchService', () => {
   // -- query validation --------------------------------------------------
 
   test('rejects empty query', async () => {
-    await expect(svc.searchAll('', null)).rejects.toBeInstanceOf(BadRequestException);
-    await expect(svc.searchAll('   ', null)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(svc.searchAll('', null, undefined, member)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(svc.searchAll('   ', null, undefined, member)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   test('rejects oversize query', async () => {
-    await expect(svc.searchAll('a'.repeat(201), null)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      svc.searchAll('a'.repeat(201), null, undefined, member),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   // -- recall ------------------------------------------------------------
 
   test("'환승연애' finds hits in room, post, reference, and event_card", async () => {
-    const res = await svc.searchAll('환승연애', null);
+    const res = await svc.searchAll('환승연애', null, undefined, member);
     expect(res.query).toBe('환승연애');
     const byType = Object.fromEntries(res.groups.map((g) => [g.type, g.items.length]));
     expect(byType.room).toBeGreaterThanOrEqual(1);
@@ -41,14 +49,14 @@ describe('SearchService', () => {
   });
 
   test("'소개팅' finds hits in event_card and room", async () => {
-    const res = await svc.searchAll('소개팅', null);
+    const res = await svc.searchAll('소개팅', null, undefined, member);
     const byType = Object.fromEntries(res.groups.map((g) => [g.type, g.items.length]));
     expect(byType.event_card).toBeGreaterThanOrEqual(1);
     expect(byType.room).toBeGreaterThanOrEqual(1);
   });
 
   test("'FAQ' finds a knowledge_block whose block_type is FAQ", async () => {
-    const res = await svc.searchAll('FAQ', null);
+    const res = await svc.searchAll('FAQ', null, undefined, member);
     const blocks = res.groups.find((g) => g.type === 'knowledge_block')!.items;
     expect(blocks.length).toBeGreaterThanOrEqual(1);
     const ctxBlockType = (blocks[0].context as { block_type: string }).block_type;
@@ -56,7 +64,7 @@ describe('SearchService', () => {
   });
 
   test('no-match query returns all groups with empty items', async () => {
-    const res = await svc.searchAll('zzzzz-no-match-zzzzz', null);
+    const res = await svc.searchAll('zzzzz-no-match-zzzzz', null, undefined, member);
     for (const g of res.groups) {
       expect(g.items).toHaveLength(0);
     }
@@ -65,7 +73,7 @@ describe('SearchService', () => {
   // -- filter + limit ----------------------------------------------------
 
   test('type filter limits which groups have items', async () => {
-    const res = await svc.searchAll('환승연애', ['room', 'post']);
+    const res = await svc.searchAll('환승연애', ['room', 'post'], undefined, member);
     const room = res.groups.find((g) => g.type === 'room')!;
     const post = res.groups.find((g) => g.type === 'post')!;
     const other = res.groups.filter(
@@ -89,7 +97,7 @@ describe('SearchService', () => {
         },
       });
     }
-    const res = await svc.searchAll('소개팅 미션', null, 2);
+    const res = await svc.searchAll('소개팅 미션', null, 2, member);
     const post = res.groups.find((g) => g.type === 'post')!;
     expect(post.items.length).toBeLessThanOrEqual(2);
   });
@@ -122,15 +130,47 @@ describe('SearchService', () => {
         body: 'UNIQUE-SEARCH-TOKEN-12345',
       },
     });
-    let hits = await svc.searchAll('UNIQUE-SEARCH-TOKEN-12345', ['post']);
+    let hits = await svc.searchAll('UNIQUE-SEARCH-TOKEN-12345', ['post'], undefined, member);
     expect(hits.groups.find((g) => g.type === 'post')!.items.length).toBe(1);
 
     await ctx.prisma.post.update({
       where: { id: post.id },
       data: { status: 'DELETED' },
     });
-    hits = await svc.searchAll('UNIQUE-SEARCH-TOKEN-12345', ['post']);
+    hits = await svc.searchAll('UNIQUE-SEARCH-TOKEN-12345', ['post'], undefined, member);
     expect(hits.groups.find((g) => g.type === 'post')!.items.length).toBe(0);
+  });
+
+  // -- Milestone 4: planner-space filtering ------------------------------
+
+  test('non-planner viewer sees no planner-space post hits', async () => {
+    const res = await svc.searchAll('스태프', null, undefined, member);
+    const posts = res.groups.find((g) => g.type === 'post')!.items;
+    expect(posts.length).toBe(0);
+  });
+
+  test('verified planner viewer sees planner-space post hits', async () => {
+    const res = await svc.searchAll('스태프', null, undefined, planner);
+    const posts = res.groups.find((g) => g.type === 'post')!.items;
+    expect(posts.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('non-planner viewer sees no planner-space room hits', async () => {
+    const res = await svc.searchAll('모집', null, undefined, member);
+    const rooms = res.groups.find((g) => g.type === 'room')!.items;
+    expect(rooms.length).toBe(0);
+  });
+
+  test('non-planner viewer sees no planner-space knowledge_block hits', async () => {
+    const res = await svc.searchAll('스태프', null, undefined, member);
+    const blocks = res.groups.find((g) => g.type === 'knowledge_block')!.items;
+    expect(blocks.length).toBe(0);
+  });
+
+  test('non-planner viewer still sees participant-space results (regression)', async () => {
+    const res = await svc.searchAll('연애', null, undefined, member);
+    const totalHits = res.groups.reduce((sum, g) => sum + g.items.length, 0);
+    expect(totalHits).toBeGreaterThan(0);
   });
 
   // -- suggestions -------------------------------------------------------
@@ -145,5 +185,11 @@ describe('SearchService', () => {
     const res = svc.suggestionsFor('love-content');
     expect(res.items).toContain('환승연애');
     expect(res.items).toContain('소개팅 미션');
+  });
+
+  test('suggestionsFor returns planner-staff list when categorySlug is planner-staff', () => {
+    const res = svc.suggestionsFor('planner-staff');
+    expect(res.items).toContain('스태프');
+    expect(res.items).toContain('음향');
   });
 });

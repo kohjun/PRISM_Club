@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './shared/prisma.module';
+import { AccessControlModule } from './shared/access-control.module';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
@@ -21,6 +22,7 @@ import { SearchModule } from './modules/search/search.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    AccessControlModule,
     HealthModule,
     UsersModule,
     CommunityModule,

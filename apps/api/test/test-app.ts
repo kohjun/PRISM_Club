@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/shared/prisma.service';
+import { RequestUser } from '../src/shared/decorators/current-user.decorator';
 import { runSeed, U } from '../../../prisma/seed';
 
 export interface TestContext {
@@ -43,4 +44,9 @@ export function newClient(): PrismaClient {
   return new PrismaClient({
     datasources: { db: { url: process.env.DATABASE_URL } },
   });
+}
+
+/** Build a stub RequestUser for service-layer tests. */
+export function asUser(id: string, roles: string[] = ['MEMBER']): RequestUser {
+  return { id, status: 'ACTIVE', roles };
 }

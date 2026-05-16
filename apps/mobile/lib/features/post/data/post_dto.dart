@@ -1,5 +1,6 @@
 import '../../event_card/data/event_card_dto.dart';
 import '../../reference/data/reference_dto.dart';
+import 'recruitment_fields_dto.dart';
 
 class PostAuthorDto {
   const PostAuthorDto({
@@ -60,6 +61,8 @@ class PostDto {
     required this.author,
     required this.body,
     required this.status,
+    required this.postType,
+    required this.recruitmentFields,
     required this.createdAt,
     required this.updatedAt,
     required this.attachments,
@@ -75,6 +78,8 @@ class PostDto {
   final PostAuthorDto author;
   final String body;
   final String status;
+  final String postType; // GENERAL | RECRUITMENT
+  final RecruitmentFieldsDto? recruitmentFields;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<PostAttachmentDto> attachments;
@@ -82,10 +87,13 @@ class PostDto {
   final int likeCount;
   final bool likedByMe;
 
+  bool get isRecruitment => postType == 'RECRUITMENT';
+
   PostDto copyWith({
     int? likeCount,
     bool? likedByMe,
     int? replyCount,
+    RecruitmentFieldsDto? recruitmentFields,
   }) =>
       PostDto(
         id: id,
@@ -95,6 +103,8 @@ class PostDto {
         author: author,
         body: body,
         status: status,
+        postType: postType,
+        recruitmentFields: recruitmentFields ?? this.recruitmentFields,
         createdAt: createdAt,
         updatedAt: updatedAt,
         attachments: attachments,
@@ -106,6 +116,7 @@ class PostDto {
   factory PostDto.fromJson(Map<String, dynamic> json) {
     final roomMap = (json['room'] as Map).cast<String, dynamic>();
     final counts = (json['counts'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final rfRaw = json['recruitment_fields'];
     return PostDto(
       id: json['id'] as String,
       roomId: roomMap['id'] as String,
@@ -115,6 +126,10 @@ class PostDto {
           (json['author'] as Map).cast<String, dynamic>()),
       body: json['body'] as String,
       status: json['status'] as String? ?? 'VISIBLE',
+      postType: json['post_type'] as String? ?? 'GENERAL',
+      recruitmentFields: rfRaw is Map
+          ? RecruitmentFieldsDto.fromJson(rfRaw.cast<String, dynamic>())
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       attachments: (json['attachments'] as List<dynamic>)

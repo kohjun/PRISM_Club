@@ -1,11 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService } from '../../shared/access-control.service';
+import { RequestUser } from '../../shared/decorators/current-user.decorator';
 
 export type ReactionTargetType = 'POST' | 'REPLY';
 
 @Injectable()
 export class ReactionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
+  ) {}
 
   /**
    * Idempotent toggle. Returns the resulting state.
@@ -14,17 +19,17 @@ export class ReactionService {
    * UNIQUE(user_id, target_type, target_id, reaction_type) prevents duplicates.
    */
   async toggleLike(
-    userId: string,
+    viewer: RequestUser,
     targetType: ReactionTargetType,
     targetId: string,
   ): Promise<{ liked: boolean; like_count: number }> {
-    await this.ensureTargetExists(targetType, targetId);
+    await this.ensureTargetAccess(viewer, targetType, targetId);
 
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.reaction.findUnique({
         where: {
           userId_targetType_targetId_reactionType: {
-            userId,
+            userId: viewer.id,
             targetType,
             targetId,
             reactionType: 'LIKE',
@@ -39,20 +44,32 @@ export class ReactionService {
       }
 
       await tx.reaction.create({
-        data: { userId, targetType, targetId, reactionType: 'LIKE' },
+        data: { userId: viewer.id, targetType, targetId, reactionType: 'LIKE' },
       });
       const target = await this.incrementCounter(tx, targetType, targetId);
       return { liked: true, like_count: target.like_count };
     });
   }
 
-  private async ensureTargetExists(targetType: ReactionTargetType, targetId: string): Promise<void> {
+  private async ensureTargetAccess(
+    viewer: RequestUser,
+    targetType: ReactionTargetType,
+    targetId: string,
+  ): Promise<void> {
     if (targetType === 'POST') {
-      const p = await this.prisma.post.findUnique({ where: { id: targetId }, select: { id: true, status: true } });
+      const p = await this.prisma.post.findUnique({
+        where: { id: targetId },
+        select: { id: true, status: true, room: { select: { slug: true } } },
+      });
       if (!p || p.status === 'DELETED') throw new NotFoundException(`Post not found: ${targetId}`);
+      await this.access.assertCanReadRoomBySlug(p.room.slug, viewer);
     } else if (targetType === 'REPLY') {
-      const r = await this.prisma.reply.findUnique({ where: { id: targetId }, select: { id: true, status: true } });
+      const r = await this.prisma.reply.findUnique({
+        where: { id: targetId },
+        select: { id: true, status: true, post: { select: { room: { select: { slug: true } } } } },
+      });
       if (!r || r.status === 'DELETED') throw new NotFoundException(`Reply not found: ${targetId}`);
+      await this.access.assertCanReadRoomBySlug(r.post.room.slug, viewer);
     } else {
       throw new BadRequestException(`Unsupported target_type: ${String(targetType)}`);
     }

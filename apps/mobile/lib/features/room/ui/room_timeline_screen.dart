@@ -8,6 +8,7 @@ import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/state_views.dart';
+import '../../auth/data/me_repository.dart';
 import '../../post/data/post_repository.dart';
 import '../data/room_detail_dto.dart';
 import '../data/room_repository.dart';
@@ -20,6 +21,17 @@ class RoomTimelineScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(roomDetailProvider(roomSlug));
     final timeline = ref.watch(timelineProvider(roomSlug));
+    final me = ref.watch(meProvider).valueOrNull;
+    final roomType = detail.valueOrNull?.roomType;
+    final useRecruitmentComposer =
+        roomType == 'RECRUITMENT' && (me?.isPlanner ?? false);
+    final composePath = useRecruitmentComposer
+        ? '/rooms/$roomSlug/compose-recruitment'
+        : '/rooms/$roomSlug/compose';
+    final composeLabel = useRecruitmentComposer ? '모집 글쓰기' : '글쓰기';
+    final composeIcon = useRecruitmentComposer
+        ? Icons.campaign_outlined
+        : Icons.edit;
 
     return Scaffold(
       appBar: AppBar(
@@ -77,10 +89,9 @@ class RoomTimelineScreen extends ConsumerWidget {
                         child: EmptyView(
                           message: '아직 글이 없어요. 첫 글을 남겨 보세요.',
                           action: FilledButton.icon(
-                            icon: const Icon(Icons.edit),
-                            label: const Text('글쓰기'),
-                            onPressed: () =>
-                                context.go('/rooms/$roomSlug/compose'),
+                            icon: Icon(composeIcon),
+                            label: Text(composeLabel),
+                            onPressed: () => context.go(composePath),
                           ),
                         ),
                       )
@@ -103,9 +114,9 @@ class RoomTimelineScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.edit),
-        label: const Text('글쓰기'),
-        onPressed: () => context.go('/rooms/$roomSlug/compose'),
+        icon: Icon(composeIcon),
+        label: Text(composeLabel),
+        onPressed: () => context.go(composePath),
       ),
     );
   }

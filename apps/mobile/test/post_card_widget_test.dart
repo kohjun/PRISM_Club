@@ -21,6 +21,8 @@ PostDto _post({
           id: 'u-minseo', nickname: '민서', avatarUrl: null),
       body: body,
       status: 'VISIBLE',
+      postType: 'GENERAL',
+      recruitmentFields: null,
       createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
       updatedAt: DateTime.now(),
       attachments: attachments,

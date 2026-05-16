@@ -1,4 +1,5 @@
 import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
+import { CurrentUser, RequestUser } from '../../shared/decorators/current-user.decorator';
 import { SpaceService } from './space.service';
 import { CategoryService } from './category.service';
 
@@ -15,10 +16,13 @@ export class SpaceController {
   }
 
   @Get('categories')
-  async listCategories(@Query('spaceSlug') spaceSlug?: string) {
+  async listCategories(
+    @CurrentUser() user: RequestUser,
+    @Query('spaceSlug') spaceSlug?: string,
+  ) {
     if (!spaceSlug) {
       throw new BadRequestException('spaceSlug query param is required');
     }
-    return { items: await this.categories.listBySpaceSlug(spaceSlug) };
+    return { items: await this.categories.listBySpaceSlug(spaceSlug, user) };
   }
 }

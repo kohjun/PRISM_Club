@@ -20,8 +20,8 @@ export class RoomController {
   constructor(private readonly rooms: RoomService) {}
 
   @Get('categories/:slug/rooms')
-  async listInCategory(@Param('slug') slug: string) {
-    return { items: await this.rooms.listByCategorySlug(slug) };
+  async listInCategory(@Param('slug') slug: string, @CurrentUser() user: RequestUser) {
+    return { items: await this.rooms.listByCategorySlug(slug, user) };
   }
 
   @Post('categories/:slug/rooms')
@@ -31,11 +31,11 @@ export class RoomController {
     @Body(new ZodValidationPipe(createRoomSchema)) body: CreateRoomBody,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.rooms.createUserRoom(slug, body, user.id);
+    return this.rooms.createUserRoom(slug, body, user.id, user);
   }
 
   @Get('rooms/:slug')
-  async getRoom(@Param('slug') slug: string) {
-    return this.rooms.getRoomDetailBySlug(slug);
+  async getRoom(@Param('slug') slug: string, @CurrentUser() user: RequestUser) {
+    return this.rooms.getRoomDetailBySlug(slug, user);
   }
 }

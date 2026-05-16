@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import {
   SEARCH_TYPES,
   SearchEntityType,
@@ -34,18 +35,30 @@ const CATEGORY_SUGGESTIONS: Record<string, string[]> = {
     '분위기 팁',
     'FAQ',
   ],
+  'planner-staff': [
+    '스태프',
+    '음향',
+    '진행',
+    '소개팅',
+    '운영 체크리스트',
+    '환승연애',
+  ],
 };
 
 @Injectable()
 export class SearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
+  ) {}
 
   // -- /v1/search ---------------------------------------------------------
 
   async searchAll(
     rawQuery: string,
     types: SearchEntityType[] | null,
-    limit: number = DEFAULT_LIMIT,
+    limit: number | undefined,
+    viewer: Viewer,
   ): Promise<SearchResponseDTO> {
     const q = rawQuery.trim();
     if (q.length === 0) {
@@ -54,7 +67,8 @@ export class SearchService {
     if (q.length > 200) {
       throw new BadRequestException('q must be at most 200 characters');
     }
-    const cap = Math.max(1, Math.min(limit, MAX_LIMIT));
+    const cap = Math.max(1, Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT));
+    const allowed = this.access.accessPoliciesAllowedFor(viewer);
 
     // The effective type set: passed-in subset or all known types. Order is
     // preserved by the SEARCH_TYPES array so the response groups are stable.
@@ -64,7 +78,7 @@ export class SearchService {
       if (!requested.has(type)) {
         return { type, items: [] };
       }
-      const items = await this.searchOne(type, q, cap);
+      const items = await this.searchOne(type, q, cap, allowed);
       return { type, items };
     });
 
@@ -88,16 +102,17 @@ export class SearchService {
     type: SearchEntityType,
     q: string,
     limit: number,
+    allowed: string[],
   ): Promise<SearchHitDTO[]> {
     switch (type) {
       case 'topic_hub':
-        return this.searchTopicHubs(q, limit);
+        return this.searchTopicHubs(q, limit, allowed);
       case 'knowledge_block':
-        return this.searchKnowledgeBlocks(q, limit);
+        return this.searchKnowledgeBlocks(q, limit, allowed);
       case 'room':
-        return this.searchRooms(q, limit);
+        return this.searchRooms(q, limit, allowed);
       case 'post':
-        return this.searchPosts(q, limit);
+        return this.searchPosts(q, limit, allowed);
       case 'event_card':
         return this.searchEventCards(q, limit);
       case 'reference':
@@ -105,7 +120,11 @@ export class SearchService {
     }
   }
 
-  private async searchTopicHubs(q: string, limit: number): Promise<SearchHitDTO[]> {
+  private async searchTopicHubs(
+    q: string,
+    limit: number,
+    allowed: string[],
+  ): Promise<SearchHitDTO[]> {
     const rows = await this.prisma.topicHub.findMany({
       where: {
         OR: [
@@ -113,6 +132,7 @@ export class SearchService {
           { summary: { contains: q, mode: 'insensitive' } },
         ],
         status: 'PUBLISHED',
+        category: { space: { accessPolicy: { in: allowed } } },
       },
       include: { category: true },
       orderBy: { updatedAt: 'desc' },
@@ -127,7 +147,11 @@ export class SearchService {
     }));
   }
 
-  private async searchKnowledgeBlocks(q: string, limit: number): Promise<SearchHitDTO[]> {
+  private async searchKnowledgeBlocks(
+    q: string,
+    limit: number,
+    allowed: string[],
+  ): Promise<SearchHitDTO[]> {
     const rows = await this.prisma.knowledgeBlock.findMany({
       where: {
         OR: [
@@ -136,6 +160,7 @@ export class SearchService {
           { blockType: { contains: q, mode: 'insensitive' } },
         ],
         status: 'PUBLISHED',
+        hub: { category: { space: { accessPolicy: { in: allowed } } } },
       },
       include: { hub: { include: { category: true } } },
       orderBy: { updatedAt: 'desc' },
@@ -153,7 +178,11 @@ export class SearchService {
     }));
   }
 
-  private async searchRooms(q: string, limit: number): Promise<SearchHitDTO[]> {
+  private async searchRooms(
+    q: string,
+    limit: number,
+    allowed: string[],
+  ): Promise<SearchHitDTO[]> {
     const rows = await this.prisma.room.findMany({
       where: {
         OR: [
@@ -161,6 +190,7 @@ export class SearchService {
           { description: { contains: q, mode: 'insensitive' } },
         ],
         status: 'ACTIVE',
+        category: { space: { accessPolicy: { in: allowed } } },
       },
       include: {
         category: true,
@@ -183,11 +213,16 @@ export class SearchService {
     }));
   }
 
-  private async searchPosts(q: string, limit: number): Promise<SearchHitDTO[]> {
+  private async searchPosts(
+    q: string,
+    limit: number,
+    allowed: string[],
+  ): Promise<SearchHitDTO[]> {
     const rows = await this.prisma.post.findMany({
       where: {
         body: { contains: q, mode: 'insensitive' },
         status: { not: 'DELETED' },
+        room: { category: { space: { accessPolicy: { in: allowed } } } },
       },
       include: {
         room: true,

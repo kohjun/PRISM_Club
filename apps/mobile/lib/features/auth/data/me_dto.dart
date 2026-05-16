@@ -17,6 +17,9 @@ class MeDto {
 
   bool get isCurator => roles.contains('CURATOR') || roles.contains('ADMIN');
 
+  bool get isPlanner =>
+      roles.contains('VERIFIED_PLANNER') || roles.contains('ADMIN');
+
   factory MeDto.fromJson(Map<String, dynamic> json) => MeDto(
         id: json['id'] as String,
         status: json['status'] as String? ?? 'ACTIVE',

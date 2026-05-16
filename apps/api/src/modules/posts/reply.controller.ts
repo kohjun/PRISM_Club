@@ -22,11 +22,11 @@ export class ReplyController {
     @Body(new ZodValidationPipe(createReplySchema)) body: CreateReplyBody,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.replies.create(postId, body, user.id);
+    return this.replies.create(postId, body, user);
   }
 
   @Get('posts/:id/replies')
   async list(@Param('id') postId: string, @CurrentUser() user: RequestUser) {
-    return { items: await this.replies.listByPost(postId, user.id) };
+    return { items: await this.replies.listByPost(postId, user) };
   }
 }

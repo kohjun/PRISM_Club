@@ -20,6 +20,6 @@ export class ReactionController {
     @Body(new ZodValidationPipe(toggleSchema)) body: ToggleBody,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.reactions.toggleLike(user.id, body.target_type, body.target_id);
+    return this.reactions.toggleLike(user, body.target_type, body.target_id);
   }
 }

@@ -44,7 +44,7 @@ export class KnowledgeContributionController {
     @Body(new ZodValidationPipe(submitSchema)) body: SubmitBody,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.contributions.submit(slug, body, user.id);
+    return this.contributions.submit(slug, body, user);
   }
 
   @Get('me/contributions')

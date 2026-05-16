@@ -19,12 +19,20 @@ Milestone 3 — unified search across Topic Hub, knowledge blocks, rooms,
 posts, event cards, and references. Includes "popular topics" suggestions
 that double as search-screen empty state and Topic Hub "관련 검색" chips.
 
+Milestone 4 — planner community + staff recruitment. `Space.access_policy`
+is now enforced through `AccessControlService`: plain members are blocked
+from the planner space (categories, topic hub, rooms, posts, and search
+results), while seeded Verified Planners can read, write, and toggle
+recruitment-post status. Recruitment posts reuse `Post.recruitment_fields`
+(role / schedule / location / compensation / capacity / application_method
+/ status) — no schema migration.
+
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 27 endpoints, stub auth + role gate, mock Events client, deterministic seed with curator persona, ILIKE-based search |
-| Mobile (Flutter) | Login picker, Space list (search icon + curator banner + 내 제안 entry), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선), Room create, Room timeline, Post compose, Post detail with 2-level reply tree + like, Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter |
-| Tests | 47 backend unit tests + 3 e2e + 16 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` — 24 curl-driven checks (M1 slice + M3 search) |
+| Backend (NestJS + Prisma) | 28 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer |
+| Mobile (Flutter) | Login picker, Space list (curator banner + planner lock dialog + 내 제안 entry), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선), Room create, Room timeline (FAB routes to recruitment composer in RECRUITMENT rooms), Post compose, Recruitment composer, Post detail with RecruitmentPostCard + status toggle, Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter |
+| Tests | 75 backend unit tests + 4 e2e + 26 Flutter widget tests, all green |
+| Smoke | `scripts/smoke.sh` — 35 curl-driven checks (M1 slice + M3 search + M4 planner / recruitment) |
 
 ## Repo layout
 
@@ -117,21 +125,22 @@ flutter run -d chrome       # web target — fastest sanity check
 
 ```powershell
 # Backend
-npm run api:test          # 47 unit tests, 8 suites (M1 + M2 + M3)
-npm run api:test:e2e      # 3 e2e: M1 slice + M2 contribution + M3 search
-bash scripts/smoke.sh     # 24 curl-driven checks (api must be running)
+npm run api:test          # 75 unit tests, 9 suites (M1 + M2 + M3 + M4)
+npm run api:test:e2e      # 4 e2e: M1 slice + M2 contribution + M3 search + M4 planner
+bash scripts/smoke.sh     # 35 curl-driven checks (api must be running)
 
 # Mobile
 cd apps/mobile
 flutter analyze
-flutter test              # 16 widget tests (M1 + M2 + M3)
+flutter test              # 26 widget tests (M1 + M2 + M3 + M4)
 flutter build web --no-tree-shake-icons   # full compile check
 ```
 
 ## Seed personae
 
-`npm run db:seed` produces four users — pick any from the in-app login
-picker. They drive the seeded posts/replies and contribution flow.
+`npm run db:seed` produces six users — pick any from the in-app login
+picker. They drive the seeded posts/replies, contribution flow, and
+recruitment flow.
 
 | Nickname | Persona |
 |---|---|
@@ -139,10 +148,14 @@ picker. They drive the seeded posts/replies and contribution flow.
 | joon | Common replier; contributor of the seeded APPROVED FAQ edit |
 | haneul | Owner of the 환승연애식 오프라인 토크 게임 (user-created) room |
 | coral | **Curator** — only persona that can approve/reject contributions |
+| studio_lead | **Verified Planner** (M4) — owns 2 seeded recruitment posts |
+| studio_mate | **Verified Planner** (M4) — owns the 음향 어시 recruitment post |
 
-The seed also creates two `Space`s (`participant`, `planner`). Planner is
-visible but locked in the UI — the access-control structure is ready without
-surfacing the verification flow.
+The seed creates two `Space`s. `participant` is `PUBLIC` and unlocked for
+every persona. `planner` is `PLANNER_ONLY` and visible-but-locked for
+plain members; tapping its card opens the lock dialog explaining the
+verification requirement. studio_lead and studio_mate have full read/write
+access there.
 
 ## Trying the curation loop
 
@@ -173,6 +186,24 @@ demonstrating the audit trail).
 
 The Topic Hub also surfaces a small "관련 검색" chip row right under the
 header — tap a chip to land on Search pre-filled with that query.
+
+## Trying the planner community
+
+1. With the API running and the mobile app open, sign in as **민서** and tap
+   the **기획자 커뮤니티** card on SpaceList. The lock dialog explains why
+   access is restricted. Searching for `스태프` returns zero post hits because
+   non-planners cannot see planner-space content.
+2. Sign out and sign in as **studio_lead**. Tap **기획자 커뮤니티** → enter
+   `/spaces/planner/categories` → tap **스태프 / 스튜디오** → open the topic
+   hub → enter **스태프 모집 공고** room. You see 3 seeded recruitment posts
+   (2 OPEN, 1 CLOSED).
+3. Tap a recruitment post. The `RecruitmentPostCard` renders role / schedule
+   / location / compensation / capacity / application method with a status
+   chip. Author-only actions in the bottom row flip the status between
+   OPEN / CLOSED / FILLED.
+4. The room's FAB ("모집 글쓰기") opens the structured RecruitmentComposer.
+   Submit a new posting — it appears in the timeline and on Search for
+   verified planners.
 
 ## Architecture decisions
 
@@ -209,15 +240,28 @@ header — tap a chip to land on Search pre-filled with that query.
 - **Popular topic suggestions are hardcoded** in `SearchService` for M3 —
   no query tracking, no analytics. The endpoint shape (`?categorySlug=`)
   is ready when we want to swap in dynamic, per-category lists later.
+- **Access control is data-driven, not decorator-driven.** M4 added
+  `AccessControlService` (`apps/api/src/shared/access-control.service.ts`),
+  which reads `Space.access_policy` and is invoked at every read entry point
+  in community / knowledge / posts / search. Plain members get `PUBLIC` only;
+  `VERIFIED_PLANNER` and `ADMIN` additionally get `PLANNER_ONLY`. The same
+  helper threads into `SearchService` as a Prisma relation filter so denied
+  content never returns to non-planners.
+- **Recruitment posts reuse `Post.recruitment_fields` JSONB.** No new tables
+  or columns — the existing `post_type` + `recruitment_fields` slots from
+  M1 are now actually populated. Author-only status toggle lives behind
+  `POST /v1/posts/:id/recruitment-status`.
 
 ## What's deferred
 
 Notifications, bookmarks, moderation / reports / audit-log table, real
-OAuth, URL metadata scraping, real-time updates, image upload, the
-planner verification flow, the admin web, multi-evidence per contribution,
-versioned block history beyond the per-contribution snapshot, editing a
-pending contribution before approval, concurrent-edit conflict resolution
-across approvals, query history / dynamic popular queries, FTS or a Korean
-tokenizer, external search engines, search inside replies, personalized
-ranking or "for you" recommendations. See the plan file's
-§8 risks / deferred list for the full breakdown.
+OAuth, URL metadata scraping, real-time updates, image upload, real
+application forms / payment handoff for recruitment, PRISM Studio backoffice
+integration, role-grant UI (Admin → Verified Planner promotion lives only in
+the seed), the admin web, multi-evidence per contribution, versioned block
+history beyond the per-contribution snapshot, editing a pending contribution
+before approval, concurrent-edit conflict resolution across approvals, query
+history / dynamic popular queries, FTS or a Korean tokenizer, external search
+engines, search inside replies, personalized ranking or "for you"
+recommendations. See the plan file's §8 risks / deferred list for the
+full breakdown.

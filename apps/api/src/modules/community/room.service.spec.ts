@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
+import { asUser, bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
 import { RoomService } from './room.service';
 
 describe('RoomService', () => {
@@ -26,6 +26,7 @@ describe('RoomService', () => {
         pinned_reference_id: ctx.uuids.reference.firstMeetingIdeas,
       },
       ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
 
     expect(room.origin).toBe('USER');
@@ -40,11 +41,13 @@ describe('RoomService', () => {
       'love-content',
       { name: 'duplicate name', room_type: 'DISCUSSION' },
       ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
     const b = await rooms.createUserRoom(
       'love-content',
       { name: 'duplicate name', room_type: 'DISCUSSION' },
       ctx.uuids.user.joon,
+      asUser(ctx.uuids.user.joon),
     );
     expect(b.slug).not.toBe(a.slug);
   });
@@ -59,6 +62,7 @@ describe('RoomService', () => {
           pinned_event_card_id: '00000000-0000-0000-0000-000000000000',
         },
         ctx.uuids.user.minseo,
+        asUser(ctx.uuids.user.minseo),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });

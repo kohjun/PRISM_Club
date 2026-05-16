@@ -1,5 +1,5 @@
 /**
- * PRISM Club — milestones 1 + 2 seed.
+ * PRISM Club — milestones 1 + 2 + 4 seed.
  *
  * Milestone 1 (Love Content demo flow): 1 category + topic hub + knowledge
  * blocks + signals + event cards + references + rooms + posts + replies.
@@ -7,6 +7,11 @@
  * Milestone 2: adds a 4th persona (`coral`) with CURATOR role, plus three
  * sample contributions (2 pending + 1 approved with snapshot) so the
  * curation queue and the audit trail render with data.
+ *
+ * Milestone 4: activates the planner space. Adds two VERIFIED_PLANNER personas
+ * (`studio_lead`, `studio_mate`), sets the planner space access_policy to
+ * PLANNER_ONLY, and seeds a planner category + topic hub + 1 RECRUITMENT room
+ * with 3 sample recruitment posts (2 OPEN, 1 CLOSED).
  *
  * Re-runnable: clearAll truncates everything; UUIDs are fixed.
  */
@@ -21,6 +26,8 @@ export const U = {
     joon: '22222222-2222-2222-2222-222222222222',
     haneul: '33333333-3333-3333-3333-333333333333',
     coral: '44444444-4444-4444-4444-444444444444', // CURATOR — milestone 2
+    studio_lead: '55555555-5555-5555-5555-555555555555', // VERIFIED_PLANNER — milestone 4
+    studio_mate: '66666666-6666-6666-6666-666666666666', // VERIFIED_PLANNER — milestone 4
   },
   space: {
     participant: 'aa000000-0000-0000-0000-000000000001',
@@ -28,9 +35,11 @@ export const U = {
   },
   category: {
     loveContent: 'bb000000-0000-0000-0000-000000000001',
+    plannerStaff: 'bb000000-0000-0000-0000-000000000002', // milestone 4
   },
   topicHub: {
     loveContent: 'cc000000-0000-0000-0000-000000000001',
+    plannerStaff: 'cc000000-0000-0000-0000-000000000002', // milestone 4
   },
   block: {
     overview: 'cc100000-0000-0000-0000-000000000001',
@@ -39,6 +48,9 @@ export const U = {
     moodTips: 'cc100000-0000-0000-0000-000000000004',
     faq: 'cc100000-0000-0000-0000-000000000005',
     warning: 'cc100000-0000-0000-0000-000000000006',
+    plannerOverview: 'cc100000-0000-0000-0000-000000000101', // milestone 4
+    plannerFaq: 'cc100000-0000-0000-0000-000000000102', // milestone 4
+    plannerChecklist: 'cc100000-0000-0000-0000-000000000103', // milestone 4
   },
   signal: {
     popularRef: 'cc200000-0000-0000-0000-000000000001',
@@ -59,11 +71,15 @@ export const U = {
     datingReviews: 'ff000000-0000-0000-0000-000000000001',
     loveShowRefs: 'ff000000-0000-0000-0000-000000000002',
     swapTalkGame: 'ff000000-0000-0000-0000-000000000003',
+    plannerRecruitment: 'ff000000-0000-0000-0000-000000000004', // milestone 4
   },
   post: {
     minseoReview: '99000000-0000-0000-0000-000000000001',
     joonQuestion: '99000000-0000-0000-0000-000000000002',
     haneulIdea: '99000000-0000-0000-0000-000000000003',
+    recruitDatingNight: '99000000-0000-0000-0000-000000000101', // milestone 4
+    recruitTalkRound: '99000000-0000-0000-0000-000000000102', // milestone 4
+    recruitClosed: '99000000-0000-0000-0000-000000000103', // milestone 4
   },
   contribution: {
     pendingMoodTipsEdit: 'a1000000-0000-0000-0000-000000000001',
@@ -108,6 +124,8 @@ async function seedUsers(prisma: PrismaClient): Promise<void> {
       { id: U.user.joon, status: 'ACTIVE' },
       { id: U.user.haneul, status: 'ACTIVE' },
       { id: U.user.coral, status: 'ACTIVE' },
+      { id: U.user.studio_lead, status: 'ACTIVE' },
+      { id: U.user.studio_mate, status: 'ACTIVE' },
     ],
   });
   await prisma.profile.createMany({
@@ -116,11 +134,20 @@ async function seedUsers(prisma: PrismaClient): Promise<void> {
       { userId: U.user.joon, nickname: 'joon', region: '서울', interests: [] },
       { userId: U.user.haneul, nickname: 'haneul', region: '서울', interests: [] },
       { userId: U.user.coral, nickname: 'coral', region: '서울', interests: [] },
+      { userId: U.user.studio_lead, nickname: 'studio_lead', region: '서울', interests: [] },
+      { userId: U.user.studio_mate, nickname: 'studio_mate', region: '서울', interests: [] },
     ],
   });
   // Milestone 2: grant CURATOR role to coral. Others stay implicit MEMBER.
   await prisma.userRole.create({
     data: { userId: U.user.coral, role: 'CURATOR', source: 'seed' },
+  });
+  // Milestone 4: grant VERIFIED_PLANNER to the two studio personas.
+  await prisma.userRole.createMany({
+    data: [
+      { userId: U.user.studio_lead, role: 'VERIFIED_PLANNER', source: 'seed' },
+      { userId: U.user.studio_mate, role: 'VERIFIED_PLANNER', source: 'seed' },
+    ],
   });
 }
 
@@ -139,19 +166,30 @@ async function seedSpacesAndCategories(prisma: PrismaClient): Promise<void> {
         slug: 'planner',
         name: '기획자 커뮤니티',
         audience: 'PLANNER',
-        accessPolicy: 'PUBLIC',
+        accessPolicy: 'PLANNER_ONLY', // milestone 4: now enforced
       },
     ],
   });
-  await prisma.category.create({
-    data: {
-      id: U.category.loveContent,
-      spaceId: U.space.participant,
-      slug: 'love-content',
-      name: '연애 콘텐츠',
-      description: '연애 예능과 오프라인 매칭 이벤트 포맷을 모아보는 허브',
-      sortOrder: 1,
-    },
+  await prisma.category.createMany({
+    data: [
+      {
+        id: U.category.loveContent,
+        spaceId: U.space.participant,
+        slug: 'love-content',
+        name: '연애 콘텐츠',
+        description: '연애 예능과 오프라인 매칭 이벤트 포맷을 모아보는 허브',
+        sortOrder: 1,
+      },
+      // Milestone 4: planner-side staff/operations hub.
+      {
+        id: U.category.plannerStaff,
+        spaceId: U.space.planner,
+        slug: 'planner-staff',
+        name: '스태프 / 스튜디오',
+        description: '스태프 모집, 운영 노트, 콘텐츠 기획 토론이 이뤄지는 기획자 전용 공간',
+        sortOrder: 1,
+      },
+    ],
   });
 }
 
@@ -573,6 +611,139 @@ async function seedKnowledgeContributions(prisma: PrismaClient): Promise<void> {
   });
 }
 
+// -- Milestone 4: planner topic hub + recruitment ---------------------------
+
+async function seedPlannerHub(prisma: PrismaClient): Promise<void> {
+  await prisma.topicHub.create({
+    data: {
+      id: U.topicHub.plannerStaff,
+      categoryId: U.category.plannerStaff,
+      title: '스튜디오 스태프 협업 허브',
+      summary:
+        '인증된 기획자와 스태프가 모집·운영·회고를 함께 정리하는 공간입니다.',
+    },
+  });
+
+  await prisma.knowledgeBlock.createMany({
+    data: [
+      {
+        id: U.block.plannerOverview,
+        topicHubId: U.topicHub.plannerStaff,
+        blockType: 'OVERVIEW',
+        title: '커뮤니티 사용 안내',
+        body:
+          '기획자 커뮤니티는 PRISM과 협업하는 검증된 기획자/스태프를 위한 공간입니다. ' +
+          '스태프 모집 글은 모집 공지 → 상태 토글(모집 중/마감/충원 완료) 흐름으로 운영됩니다. ' +
+          '비공식 외주, 정치/특정 종교 활동 등은 금지합니다.',
+        sortOrder: 1,
+      },
+      {
+        id: U.block.plannerFaq,
+        topicHubId: U.topicHub.plannerStaff,
+        blockType: 'FAQ',
+        title: '자주 묻는 질문',
+        body:
+          'Q. 스태프 보상은 어떻게 지급되나요?\n' +
+          'A. 각 모집 글의 보상 필드를 참고하시고, 세부 지급은 운영자와 협의합니다.\n\n' +
+          'Q. 일정이 변경되면 어떻게 안내하나요?\n' +
+          'A. 본문에 변경 사항을 추가하고 상태를 마감 또는 충원 완료로 토글해 주세요.',
+        sortOrder: 2,
+      },
+      {
+        id: U.block.plannerChecklist,
+        topicHubId: U.topicHub.plannerStaff,
+        blockType: 'CHECKLIST',
+        title: '행사 준비 체크리스트',
+        body:
+          '1. 일정/장소 확정 후 모집 공지 작성\n' +
+          '2. 역할·인원·보상·지원 방법 명시\n' +
+          '3. 충원 완료 시 상태 토글\n' +
+          '4. 행사 종료 후 회고 노트 작성',
+        sortOrder: 3,
+      },
+    ],
+  });
+}
+
+async function seedPlannerRooms(prisma: PrismaClient): Promise<void> {
+  await prisma.room.create({
+    data: {
+      id: U.room.plannerRecruitment,
+      categoryId: U.category.plannerStaff,
+      ownerId: null,
+      slug: 'planner-recruitment',
+      name: '스태프 모집 공고',
+      description: '행사 진행/음향/사진 어시 등 스태프 모집 공고가 모이는 방입니다.',
+      origin: 'OFFICIAL',
+      roomType: 'RECRUITMENT',
+      tags: ['스태프', '모집'],
+    },
+  });
+}
+
+async function seedPlannerPosts(prisma: PrismaClient): Promise<void> {
+  await prisma.post.create({
+    data: {
+      id: U.post.recruitDatingNight,
+      roomId: U.room.plannerRecruitment,
+      authorId: U.user.studio_lead,
+      postType: 'RECRUITMENT',
+      body:
+        'PRISM 소개팅 미션 나이트 진행 스태프(어시) 모집합니다. 도입부 어색함 완화 미션 운영과 ' +
+        '라운드 진행 보조를 맡아 주실 분을 찾고 있어요. 운영 경험 있으신 분 우대.',
+      recruitmentFields: {
+        role: '진행 어시스턴트',
+        schedule: '5/30 19:00–22:00',
+        location: '홍대 스튜디오',
+        compensation: '8만원 + 식대',
+        capacity: 2,
+        application_method: 'DM @studio_lead',
+        status: 'OPEN',
+      },
+    },
+  });
+
+  await prisma.post.create({
+    data: {
+      id: U.post.recruitTalkRound,
+      roomId: U.room.plannerRecruitment,
+      authorId: U.user.studio_mate,
+      postType: 'RECRUITMENT',
+      body:
+        '환승연애 토크 라운드 음향 스태프(보조) 모집. 마이크 세팅, BGM 페이드, ' +
+        '간단한 라이브 믹싱 가능하신 분 우대합니다.',
+      recruitmentFields: {
+        role: '음향 어시',
+        schedule: '6/05 18:00–21:00',
+        location: '성수 라운지',
+        compensation: '10만원',
+        capacity: 1,
+        application_method: '이메일 hello@studio.example',
+        status: 'OPEN',
+      },
+    },
+  });
+
+  await prisma.post.create({
+    data: {
+      id: U.post.recruitClosed,
+      roomId: U.room.plannerRecruitment,
+      authorId: U.user.studio_lead,
+      postType: 'RECRUITMENT',
+      body: '첫 만남 게임 워크숍 사진 스태프(어시) 모집 (마감). 현장 스냅과 그룹샷 위주.',
+      recruitmentFields: {
+        role: '사진 어시',
+        schedule: '4/28 14:00–17:00',
+        location: '강남 미팅룸',
+        compensation: '5만원',
+        capacity: 1,
+        application_method: 'DM @studio_lead',
+        status: 'CLOSED',
+      },
+    },
+  });
+}
+
 export async function runSeed(prisma: PrismaClient): Promise<Record<string, number>> {
   await clearAll(prisma);
   await seedUsers(prisma);
@@ -582,6 +753,9 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
   await seedRooms(prisma);
   await seedPostsAndReplies(prisma);
   await seedKnowledgeContributions(prisma);
+  await seedPlannerHub(prisma);
+  await seedPlannerRooms(prisma);
+  await seedPlannerPosts(prisma);
 
   return {
     users: await prisma.user.count(),
@@ -599,6 +773,7 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
     postAttachments: await prisma.postAttachment.count(),
     userRoles: await prisma.userRole.count(),
     knowledgeContributions: await prisma.knowledgeContribution.count(),
+    recruitmentPosts: await prisma.post.count({ where: { postType: 'RECRUITMENT' } }),
   };
 }
 

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { CategoryService } from '../community/category.service';
 import { RoomService } from '../community/room.service';
 import {
@@ -44,6 +45,7 @@ export interface ResolveContributionInput {
 export class KnowledgeContributionService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly access: AccessControlService,
     private readonly categories: CategoryService,
     private readonly rooms: RoomService,
   ) {}
@@ -53,8 +55,10 @@ export class KnowledgeContributionService {
   async submit(
     categorySlug: string,
     input: SubmitContributionInput,
-    contributorId: string,
+    contributor: { id: string; roles: string[] },
   ): Promise<ContributionDetailDTO> {
+    await this.access.assertCanReadCategoryBySlug(categorySlug, contributor);
+
     const category = await this.categories.findBySlug(categorySlug);
     const hub = await this.prisma.topicHub.findUnique({
       where: { categoryId: category.id },
@@ -85,7 +89,7 @@ export class KnowledgeContributionService {
     const created = await this.prisma.knowledgeContribution.create({
       data: {
         topicHubId: hub.id,
-        contributorId,
+        contributorId: contributor.id,
         targetBlockId: input.target_block_id ?? null,
         proposedBlockType: input.proposed_block_type,
         proposedTitle: input.proposed_title.trim(),

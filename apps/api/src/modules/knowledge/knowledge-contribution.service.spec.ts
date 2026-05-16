@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
+import { asUser, bootstrapTestApp, teardownTestApp, TestContext } from '../../../test/test-app';
 import { KnowledgeContributionService } from './knowledge-contribution.service';
 import { KnowledgeService } from './knowledge.service';
 
@@ -36,7 +36,7 @@ describe('KnowledgeContributionService', () => {
         evidence_type: 'REFERENCE',
         evidence_target_id: ctx.uuids.reference.selectRuleYoutube,
       },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
     expect(result.status).toBe('PENDING');
     expect(result.target_block_id).toBe(ctx.uuids.block.moodTips);
@@ -55,7 +55,7 @@ describe('KnowledgeContributionService', () => {
         evidence_type: 'EVENT_CARD',
         evidence_target_id: ctx.uuids.event.e002,
       },
-      ctx.uuids.user.haneul,
+      asUser(ctx.uuids.user.haneul),
     );
     expect(result.status).toBe('PENDING');
     expect(result.target_block_id).toBeNull();
@@ -72,7 +72,7 @@ describe('KnowledgeContributionService', () => {
           proposed_title: 't',
           proposed_body: 'b',
         },
-        ctx.uuids.user.minseo,
+        asUser(ctx.uuids.user.minseo),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
@@ -86,7 +86,7 @@ describe('KnowledgeContributionService', () => {
           proposed_title: 't',
           proposed_body: 'b',
         },
-        ctx.uuids.user.minseo,
+        asUser(ctx.uuids.user.minseo),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -101,7 +101,7 @@ describe('KnowledgeContributionService', () => {
           proposed_body: 'b',
           evidence_type: 'EVENT_CARD',
         },
-        ctx.uuids.user.minseo,
+        asUser(ctx.uuids.user.minseo),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -117,7 +117,7 @@ describe('KnowledgeContributionService', () => {
           evidence_type: 'REFERENCE',
           evidence_target_id: '00000000-0000-0000-0000-000000000000',
         },
-        ctx.uuids.user.minseo,
+        asUser(ctx.uuids.user.minseo),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
@@ -133,7 +133,7 @@ describe('KnowledgeContributionService', () => {
         proposed_title: 'FAQ',
         proposed_body: 'updated body',
       },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
     await expect(svc.withdraw(c.id, ctx.uuids.user.joon)).rejects.toBeInstanceOf(
       ForbiddenException,
@@ -161,7 +161,7 @@ describe('KnowledgeContributionService', () => {
         proposed_title: '주의사항',
         proposed_body: '강화된 안전 안내 본문.',
       },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
 
     const beforeBlock = await ctx.prisma.knowledgeBlock.findUnique({
@@ -194,15 +194,21 @@ describe('KnowledgeContributionService', () => {
         proposed_title: '새 체크리스트',
         proposed_body: '신규 체크리스트 본문.',
       },
-      ctx.uuids.user.haneul,
+      asUser(ctx.uuids.user.haneul),
     );
 
-    const before = await knowledge.getHubByCategorySlug('love-content');
+    const before = await knowledge.getHubByCategorySlug(
+      'love-content',
+      asUser(ctx.uuids.user.minseo),
+    );
     const beforeCount = before.blocks.length;
 
     await svc.resolve(c.id, { decision: 'APPROVE' }, ctx.uuids.user.coral);
 
-    const after = await knowledge.getHubByCategorySlug('love-content');
+    const after = await knowledge.getHubByCategorySlug(
+      'love-content',
+      asUser(ctx.uuids.user.minseo),
+    );
     expect(after.blocks.length).toBe(beforeCount + 1);
     expect(after.blocks[after.blocks.length - 1].title).toBe('새 체크리스트');
   });
@@ -218,7 +224,7 @@ describe('KnowledgeContributionService', () => {
         proposed_title: '개요',
         proposed_body: '벼락치기 변경 시도.',
       },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
 
     const beforeBlock = await ctx.prisma.knowledgeBlock.findUnique({
@@ -248,7 +254,7 @@ describe('KnowledgeContributionService', () => {
         proposed_title: '개요',
         proposed_body: '문장 표현 개선 제안.',
       },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
     const resolved = await svc.resolve(
       c.id,
@@ -268,7 +274,7 @@ describe('KnowledgeContributionService', () => {
         proposed_title: '인기 포맷',
         proposed_body: '두 번 해결 시도.',
       },
-      ctx.uuids.user.minseo,
+      asUser(ctx.uuids.user.minseo),
     );
     await svc.resolve(c.id, { decision: 'REJECT' }, ctx.uuids.user.coral);
     await expect(

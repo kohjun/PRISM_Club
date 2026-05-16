@@ -11,6 +11,7 @@ import '../features/knowledge/ui/curation_queue_screen.dart';
 import '../features/knowledge/ui/my_contributions_screen.dart';
 import '../features/post/ui/post_composer_screen.dart';
 import '../features/post/ui/post_detail_screen.dart';
+import '../features/post/ui/recruitment_composer_screen.dart';
 import '../features/search/ui/search_screen.dart';
 import '../features/room/ui/room_creator_screen.dart';
 import '../features/room/ui/room_timeline_screen.dart';
@@ -64,6 +65,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/rooms/:roomSlug/compose',
         builder: (_, st) => PostComposerScreen(
+          roomSlug: st.pathParameters['roomSlug']!,
+        ),
+      ),
+      GoRoute(
+        path: '/rooms/:roomSlug/compose-recruitment',
+        builder: (_, st) => RecruitmentComposerScreen(
           roomSlug: st.pathParameters['roomSlug']!,
         ),
       ),
