@@ -7,6 +7,8 @@ upstream Events service. It does NOT yet mean general availability or
 production scale — see §4 *Production readiness* and §7 *Go / no-go*.
 
 > **Companion docs**
+> - [BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md) — deploy sequence, env / migration / rollback / incident response / monitoring
+> - [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md) — persona-by-persona manual QA flows for cut-over
 > - [ALPHA_RC_CHECKLIST.md](ALPHA_RC_CHECKLIST.md) — historical Alpha RC view
 > - [DEPLOYMENT.md](DEPLOYMENT.md) — env matrix + container + Flutter web build
 > - [EVENTS_INTEGRATION.md](EVENTS_INTEGRATION.md) — upstream events boundary
@@ -104,6 +106,11 @@ but documented as the manual end-to-end check.
 ---
 
 ## 3. Demo walkthrough by persona
+
+> For the **operational** version of this walkthrough — concrete tap
+> targets, expected results, curl checks, and per-step failure modes —
+> see [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md). The summary below is the
+> elevator pitch; the QA script is what to run during cut-over.
 
 All six personas are seeded by `npm run db:seed`. The dev login picker
 shows their nicknames; each `POST /v1/auth/login` exchanges the user id
@@ -268,7 +275,9 @@ or scrape the JSON directly.
 ## 7. Go / no-go checklist
 
 Run this list against the target environment immediately before tagging
-the Beta release.
+the Beta release. For the launch-day execution flow (deploy sequence,
+rollback, incident response) see
+[BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md).
 
 ### Code freeze
 
