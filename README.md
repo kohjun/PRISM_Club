@@ -7,11 +7,25 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
-**Alpha RC** — M1–M19 + hardening complete. See
+**Alpha RC** — M1–M20 + hardening complete. See
 [ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the feature map, demo
 walkthrough, fresh-start flow, and RC verification steps. See
 [NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized post-Alpha items
 (real email/push provider wiring, warehouse export).
+
+Milestone 20 — PRISM EVENT contract hardening. The `PrismEventsClient`
+now validates every upstream response with a **zod** schema
+(`PrismEventDTOSchema`) before mapping it to the local `ExternalEvent`
+shape. Rows with missing/empty required fields, unknown status values,
+or unparseable `starts_at` are dropped row-by-row with a counter
+increment — `search()` keeps returning the valid rows so a partial
+upstream payload never empties the result set. The client tracks
+cumulative `parsed_ok`, `parse_failed`, `http_errors`, `timeouts`, and
+`last_error` counters. New admin-only endpoint
+`GET /v1/admin/events-client/status` exposes them; the admin web
+console surfaces them as an "Events client" card. See
+[EVENTS_INTEGRATION](docs/EVENTS_INTEGRATION.md) §4 (schema) and §6
+(observability).
 
 Milestone 19 — lightweight analytics events pipeline. New
 `analytics_events` table backs a first-party, server-side event capture
@@ -227,9 +241,9 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 48 endpoints, role-gated guard, mock/real Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local or S3-compatible storage), first-party analytics events |
+| Backend (NestJS + Prisma) | 49 endpoints, role-gated guard, zod-validated mock/real Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local or S3-compatible storage), first-party analytics events |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 147 backend unit + 40 e2e + 53 Flutter widget + admin typecheck, all green |
+| Tests | 158 backend unit + 43 e2e + 53 Flutter widget + admin typecheck, all green |
 | Smoke | `scripts/smoke.sh` — 75 curl-driven checks (M1–M13 inclusive) |
 
 ## Repo layout

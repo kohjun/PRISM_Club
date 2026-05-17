@@ -2,6 +2,7 @@ import { Logger, Module } from '@nestjs/common';
 import { CommunityModule } from '../community/community.module';
 import { EventCardController } from './event-card.controller';
 import { EventCardService } from './event-card.service';
+import { EventsClientAdminController } from './events-client-admin.controller';
 import { MockEventsClient } from './clients/mock-events.client';
 import { PrismEventsClient } from './clients/prism-events.client';
 import { EVENTS_CLIENT } from './clients/events-client.interface';
@@ -25,7 +26,7 @@ function selectClient(): typeof MockEventsClient | typeof PrismEventsClient {
 
 @Module({
   imports: [CommunityModule],
-  controllers: [EventCardController],
+  controllers: [EventCardController, EventsClientAdminController],
   providers: [
     EventCardService,
     MockEventsClient,

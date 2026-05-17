@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
   ApiError,
+  AnalyticsSummary,
   clearSession,
+  EventsClientStatus,
+  fetchAnalyticsSummary,
+  fetchEventsClientStatus,
   fetchOpenReports,
   fetchOpsSummary,
   getSession,
@@ -121,6 +125,10 @@ function Dashboard({
 }) {
   const [summary, setSummary] = useState<OpsSummary | null>(null);
   const [reports, setReports] = useState<ReportItem[]>([]);
+  const [eventsStatus, setEventsStatus] = useState<EventsClientStatus | null>(
+    null,
+  );
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -130,12 +138,16 @@ function Dashboard({
     setLoading(true);
     setError(null);
     try {
-      const [s, r] = await Promise.all([
+      const [s, r, ec, an] = await Promise.all([
         fetchOpsSummary(),
         fetchOpenReports(),
+        fetchEventsClientStatus().catch(() => null),
+        fetchAnalyticsSummary().catch(() => null),
       ]);
       setSummary(s);
       setReports(r.items);
+      setEventsStatus(ec);
+      setAnalytics(an);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -246,6 +258,64 @@ function Dashboard({
                 <p style={{ marginTop: 8, color: 'var(--muted)' }}>{signalMsg}</p>
               )}
             </div>
+
+            {eventsStatus && (
+              <div className="card">
+                <h3>Events client</h3>
+                <div className="row">
+                  <span className="label">Mode</span>
+                  <span className="value">
+                    <span className="tag">{eventsStatus.mode}</span>
+                  </span>
+                </div>
+                <div className="row">
+                  <span className="label">Base URL</span>
+                  <span className="value">
+                    {eventsStatus.base_url_configured ? '✓ configured' : '— not set —'}
+                  </span>
+                </div>
+                <div className="row">
+                  <span className="label">parsed_ok</span>
+                  <span className="value">{eventsStatus.stats.parsed_ok}</span>
+                </div>
+                <div className="row">
+                  <span className="label">parse_failed</span>
+                  <span className="value">{eventsStatus.stats.parse_failed}</span>
+                </div>
+                <div className="row">
+                  <span className="label">http_errors</span>
+                  <span className="value">{eventsStatus.stats.http_errors}</span>
+                </div>
+                <div className="row">
+                  <span className="label">timeouts</span>
+                  <span className="value">{eventsStatus.stats.timeouts}</span>
+                </div>
+                {eventsStatus.stats.last_error && (
+                  <p style={{ marginTop: 8, color: 'var(--muted)' }}>
+                    last error: {eventsStatus.stats.last_error}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {analytics && (
+              <div className="card">
+                <h3>Analytics ({analytics.window_days}d)</h3>
+                <div className="list">
+                  {analytics.counts.length === 0 && (
+                    <div className="item" style={{ color: 'var(--muted)' }}>
+                      — 이벤트 없음 —
+                    </div>
+                  )}
+                  {analytics.counts.map((c) => (
+                    <div className="item" key={c.event_type}>
+                      <div>{c.event_type}</div>
+                      <div className="meta">{c.count}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="card">
               <h3>Recent users ({summary.recent_users.count})</h3>

@@ -136,4 +136,147 @@ describe('PrismEventsClient', () => {
     expect(res.length).toBe(1);
     expect(res[0].external_event_id).toBe('a');
   });
+
+  // --- M20: contract hardening (zod) ----------------------------------
+
+  describe('parseAndNormalize (zod contract)', () => {
+    test('accepts a fully-populated event payload', () => {
+      const client = new PrismEventsClient();
+      const out = client.parseAndNormalize({
+        id: 'e1',
+        title: 'Full event',
+        venue: { name: 'V', region: 'R' },
+        starts_at: '2026-06-01T12:00:00Z',
+        status: 'UPCOMING',
+        thumbnail_url: 'https://x/y.png',
+      });
+      expect(out).toEqual({
+        external_event_id: 'e1',
+        title: 'Full event',
+        venue_name: 'V',
+        region: 'R',
+        starts_at: '2026-06-01T12:00:00Z',
+        event_status: 'UPCOMING',
+        thumbnail_url: 'https://x/y.png',
+      });
+      expect(client.stats().parsed_ok).toBe(1);
+      expect(client.stats().parse_failed).toBe(0);
+    });
+
+    test('accepts payload with optional venue + thumbnail omitted; defaults UPCOMING', () => {
+      const client = new PrismEventsClient();
+      const out = client.parseAndNormalize({
+        id: 'e2',
+        title: 'Sparse',
+        starts_at: '2026-06-01T12:00:00Z',
+      });
+      expect(out).toEqual({
+        external_event_id: 'e2',
+        title: 'Sparse',
+        venue_name: '',
+        region: '',
+        starts_at: '2026-06-01T12:00:00Z',
+        event_status: 'UPCOMING',
+        thumbnail_url: null,
+      });
+    });
+
+    test('rejects payload missing required id', () => {
+      const client = new PrismEventsClient();
+      const out = client.parseAndNormalize({
+        title: 'No id',
+        starts_at: '2026-06-01T12:00:00Z',
+      });
+      expect(out).toBeNull();
+      expect(client.stats().parse_failed).toBe(1);
+      expect(client.stats().last_error).not.toBeNull();
+    });
+
+    test('rejects payload with empty title', () => {
+      const client = new PrismEventsClient();
+      const out = client.parseAndNormalize({
+        id: 'e3',
+        title: '',
+        starts_at: '2026-06-01T12:00:00Z',
+      });
+      expect(out).toBeNull();
+      expect(client.stats().parse_failed).toBe(1);
+    });
+
+    test('rejects payload with unknown status value', () => {
+      const client = new PrismEventsClient();
+      const out = client.parseAndNormalize({
+        id: 'e4',
+        title: 'Bad status',
+        starts_at: '2026-06-01T12:00:00Z',
+        status: 'WAFFLE',
+      });
+      expect(out).toBeNull();
+      expect(client.stats().parse_failed).toBe(1);
+    });
+
+    test('rejects unparseable starts_at', () => {
+      const client = new PrismEventsClient();
+      const out = client.parseAndNormalize({
+        id: 'e5',
+        title: 'Bad date',
+        starts_at: 'not-a-date',
+      });
+      expect(out).toBeNull();
+      expect(client.stats().last_error).toMatch(/unparseable/);
+    });
+
+    test('rejects null / non-object input', () => {
+      const client = new PrismEventsClient();
+      expect(client.parseAndNormalize(null)).toBeNull();
+      expect(client.parseAndNormalize('a string')).toBeNull();
+      expect(client.parseAndNormalize(42)).toBeNull();
+      expect(client.stats().parse_failed).toBe(3);
+    });
+
+    test('thumbnail_url=null is preserved as null', () => {
+      const client = new PrismEventsClient();
+      const out = client.parseAndNormalize({
+        id: 'e6',
+        title: 'Null thumb',
+        starts_at: '2026-06-01T12:00:00Z',
+        thumbnail_url: null,
+      });
+      expect(out?.thumbnail_url).toBeNull();
+    });
+  });
+
+  describe('diagnostic() + stats() reflect activity', () => {
+    test('records HTTP errors and timeouts into stats', async () => {
+      mockFetch(async () => new Response('boom', { status: 502 }));
+      const client = new PrismEventsClient();
+      await client.search('x');
+      const stats = client.stats();
+      expect(stats.http_errors).toBe(1);
+      expect(stats.last_error).toMatch(/502/);
+
+      mockFetch(async () => {
+        const e = new Error('aborted');
+        (e as Error & { name: string }).name = 'AbortError';
+        throw e;
+      });
+      await client.search('y');
+      expect(client.stats().timeouts).toBe(1);
+    });
+
+    test('diagnostic() echoes mode + base_url + cumulative stats', () => {
+      const client = new PrismEventsClient();
+      const d = client.diagnostic();
+      expect(d.mode).toBe('prism');
+      expect(d.base_url_configured).toBe(true);
+      expect(d.timeout_ms).toBe(4000);
+      expect(d.stats.parsed_ok).toBe(0);
+    });
+
+    test('diagnostic() reports base_url_configured=false when env missing', () => {
+      delete process.env.PRISM_EVENTS_API_BASE_URL;
+      const client = new PrismEventsClient();
+      expect(client.diagnostic().base_url_configured).toBe(false);
+    });
+  });
 });

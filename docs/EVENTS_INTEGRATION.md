@@ -70,41 +70,65 @@ Same shape as one item from the search response. Returns 404 when not found.
 
 ## 4. Mapping into `EventCard`
 
-`PrismEventsClient.normalize()` converts the remote DTO into the local
+`PrismEventsClient.parseAndNormalize()` validates the remote DTO with a
+**zod schema** (`PrismEventDTOSchema`) and converts it into the local
 `ExternalEvent` interface:
 
-| Local field | Remote source | Notes |
-|---|---|---|
-| `external_event_id` | `id` | Stored as the natural key of the EventCard snapshot. |
-| `title` | `title` | Required. Items without a title are dropped from search. |
-| `venue_name` | `venue.name` | Empty string if missing. |
-| `region` | `venue.region` | Empty string if missing. |
-| `starts_at` | `starts_at` | Required ISO 8601 string. |
-| `event_status` | `status` | `'COMPLETED'` if remote sends `COMPLETED`; otherwise `'UPCOMING'`. |
-| `thumbnail_url` | `thumbnail_url` | Nullable. |
+| Local field | Remote source | Required? | Notes |
+|---|---|---|---|
+| `external_event_id` | `id` | yes — must be non-empty string | Stored as the natural key of the EventCard snapshot. |
+| `title` | `title` | yes — must be non-empty string | Items with empty/missing title are dropped. |
+| `venue_name` | `venue.name` | no | Empty string if missing. |
+| `region` | `venue.region` | no | Empty string if missing. |
+| `starts_at` | `starts_at` | yes — must be ISO 8601 parseable by `Date.parse()` | Items with unparseable timestamps are dropped. |
+| `event_status` | `status` | no — defaults to `'UPCOMING'` | Must be exactly `'UPCOMING'` or `'COMPLETED'` if present. Unknown values reject the whole row. |
+| `thumbnail_url` | `thumbnail_url` | no — preserved as null if absent | Nullable. |
 
-The mapper SKIPS items missing required fields (id / title / starts_at)
-rather than throwing — search results stay resilient when upstream returns
-partial data.
+The mapper SKIPS rows that fail validation rather than throwing — search
+results stay resilient when upstream returns partial or malformed data.
+Each skip increments `stats.parse_failed` (see §6 below) so contract
+drift is visible without grepping logs.
 
 The upsert into `event_cards` happens via the existing
 `EventCardService.upsertByExternalEventId()` (M1). The mock and prism
 clients hit the same upsert path, so M5 EventDetail behavior is identical
 either way.
 
+### Zod schema (source of truth)
+
+```typescript
+export const PrismEventDTOSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  starts_at: z.string().min(1),
+  venue: z.object({
+    name: z.string().optional(),
+    region: z.string().optional(),
+  }).partial().optional(),
+  status: z.enum(['UPCOMING', 'COMPLETED']).optional(),
+  thumbnail_url: z.string().nullable().optional(),
+});
+```
+
+Defined alongside the client in
+`apps/api/src/modules/event-link/clients/prism-events.client.ts`.
+
 ---
 
 ## 5. Failure behavior
 
-| Failure | `search()` | `getById()` |
-|---|---|---|
-| Network error / DNS / connection refused | returns `[]` | returns `null` |
-| Timeout (`PRISM_EVENTS_TIMEOUT_MS`) | returns `[]` | returns `null` |
-| Upstream 4xx (not 404) | returns `[]` (logs warning) | returns `null` (logs warning) |
-| Upstream 404 | returns `[]` | returns `null` |
-| Upstream 5xx | returns `[]` (logs warning) | returns `null` (logs warning) |
-| Malformed JSON / missing required fields | returns `[]` (logs warning) | returns `null` |
-| `PRISM_EVENTS_API_BASE_URL` not set | returns `[]` (logs warning) | returns `null` |
+| Failure | `search()` | `getById()` | Counter incremented |
+|---|---|---|---|
+| Network error / DNS / connection refused | returns `[]` | returns `null` | `http_errors` |
+| Timeout (`PRISM_EVENTS_TIMEOUT_MS` triggers `AbortError`) | returns `[]` | returns `null` | `timeouts` |
+| Upstream 4xx (not 404) | returns `[]` (logs warning) | returns `null` (logs warning) | `http_errors` |
+| Upstream 404 | returns `[]` | returns `null` | none |
+| Upstream 5xx | returns `[]` (logs warning) | returns `null` (logs warning) | `http_errors` |
+| Malformed envelope (no `items` array) | returns `[]` (logs warning) | n/a | `parse_failed` |
+| Row missing required field (id / title / starts_at) | row skipped, others returned | returns `null` | `parse_failed` |
+| Row with unparseable `starts_at` | row skipped | returns `null` | `parse_failed` |
+| Row with unknown `status` value | row skipped | returns `null` | `parse_failed` |
+| `PRISM_EVENTS_API_BASE_URL` not set | returns `[]` (logs warning) | returns `null` | none |
 
 In every case, Club surfaces continue to render — the user sees an empty
 "no related events" state instead of a 500. Local `EventCard` snapshots
@@ -113,7 +137,48 @@ an EventCard keep working even if the upstream is down for hours.
 
 ---
 
-## 6. Local mock mode details
+## 6. Observability and admin diagnostic
+
+The `PrismEventsClient` keeps a cumulative in-memory counter of parse and
+HTTP outcomes. The admin web console reads it via:
+
+```
+GET /v1/admin/events-client/status
+Authorization: Bearer <curator-or-moderator-or-admin-jwt>
+```
+
+Response:
+
+```json
+{
+  "mode": "prism",
+  "base_url_configured": true,
+  "timeout_ms": 4000,
+  "stats": {
+    "parsed_ok": 184,
+    "parse_failed": 0,
+    "http_errors": 0,
+    "timeouts": 0,
+    "last_error": null,
+    "last_error_at": null
+  }
+}
+```
+
+When `EVENTS_CLIENT_MODE=mock` (or fallback from misconfigured prism
+mode), the response has `mode: "mock"` and a `note` explaining why. The
+counters are zeroed on process restart — there's no persistence yet, so
+for long-term tracking, scrape the endpoint into your monitoring system.
+
+The M18 admin app surfaces this as a dashboard card titled "Events
+client" so operators can spot contract drift (`parse_failed > 0`) or
+upstream incidents (`timeouts / http_errors > 0`) without grepping logs.
+
+Role gate: `CURATOR` / `MODERATOR` / `ADMIN`.
+
+---
+
+## 7. Local mock mode details
 
 `MockEventsClient` is backed by `mock-events.fixtures.json`. It:
 
@@ -127,7 +192,7 @@ existing unit test, e2e test, and `scripts/smoke.sh` run sees.
 
 ---
 
-## 7. Future work
+## 8. Future work
 
 Tracked in `NEXT_BACKLOG.md`:
 

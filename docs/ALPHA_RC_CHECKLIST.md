@@ -7,7 +7,7 @@ end to end.
 
 ---
 
-## 1. Feature map (M1–M19)
+## 1. Feature map (M1–M20)
 
 | Milestone | Surface | What's working |
 |---|---|---|
@@ -30,6 +30,7 @@ end to end.
 | M17 | Notification delivery adapters | `NOTIFICATION_DELIVERY_MODE=noop` (default; IN_APP only) OR `email`/`push` boundary stubs. Fire-and-forget; providers MUST NOT throw, they return `DeliveryAttempt[]`. |
 | M18 | Admin web console | Vite + React + TypeScript SPA at `apps/admin/`. Authenticates via `POST /v1/auth/login`, persists JWT in localStorage, renders ops summary + open-report queue + signal refresh. Role-gated to CURATOR/MODERATOR/ADMIN on both sides. `npm run admin:dev` (port 5180). |
 | M19 | Analytics events pipeline | First-party `analytics_events` table. 11 event types captured server-side fire-and-forget (AUTH_LOGIN, POST_CREATED, REPLY_CREATED, ROOM_FOLLOWED/UNFOLLOWED, ITEM_SAVED/UNSAVED, NOTIFICATION_READ, REPORT_CREATED, MEDIA_UPLOADED, EVENT_DETAIL_VIEWED). Payload scrubber drops PII/body keys + truncates strings. Admin-only `GET /v1/admin/analytics/summary` returns 30-day counts grouped by event_type. `docs/ANALYTICS.md`. |
+| M20 | PRISM EVENT contract hardening | `PrismEventsClient` validates upstream payloads with a **zod** `PrismEventDTOSchema` row by row. Malformed rows are skipped and counted as `parse_failed`; valid neighbours still come through. Cumulative `parsed_ok / parse_failed / http_errors / timeouts / last_error` counters surface via `GET /v1/admin/events-client/status` (role-gated) and a new "Events client" card in the admin web console. `docs/EVENTS_INTEGRATION.md` updated with schema + failure-matrix + observability sections. |
 
 ---
 

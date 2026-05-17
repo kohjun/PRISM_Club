@@ -149,3 +149,31 @@ export async function refreshSignals(): Promise<{
 }> {
   return request('/admin/signals/refresh', { method: 'POST' });
 }
+
+export interface EventsClientStatus {
+  mode: 'mock' | 'prism';
+  base_url_configured: boolean;
+  timeout_ms: number;
+  stats: {
+    parsed_ok: number;
+    parse_failed: number;
+    http_errors: number;
+    timeouts: number;
+    last_error: string | null;
+    last_error_at: string | null;
+  };
+  note?: string;
+}
+
+export async function fetchEventsClientStatus(): Promise<EventsClientStatus> {
+  return request<EventsClientStatus>('/admin/events-client/status');
+}
+
+export interface AnalyticsSummary {
+  window_days: number;
+  counts: { event_type: string; count: number }[];
+}
+
+export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
+  return request<AnalyticsSummary>('/admin/analytics/summary');
+}
