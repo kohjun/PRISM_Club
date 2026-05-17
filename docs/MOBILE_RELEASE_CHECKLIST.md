@@ -364,7 +364,10 @@ Upload via `xcrun altool` or Transporter app.
 ## 13. Submission gates
 
 Track each item against a real release ticket — none of these are
-engineering-blocked at this point:
+engineering-blocked at this point. The Play-specific subset has its
+own walkthrough at
+[PLAY_INTERNAL_TESTING.md](PLAY_INTERNAL_TESTING.md) — start there
+for the first AAB upload.
 
 - [ ] Google Play developer account active.
 - [ ] Apple Developer Program membership active.
