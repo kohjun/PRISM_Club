@@ -7,6 +7,13 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
+**Alpha RC** — M1–M12 + hardening complete. See
+[ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the feature map, demo
+walkthrough, fresh-start flow, and RC verification steps. See
+[NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized post-Alpha items
+(real auth, deployment, real PRISM EVENT integration, production media
+storage, push, admin web, analytics).
+
 Milestone 1 — vertical slice. 참가자 → 연애 콘텐츠 Topic Hub → user room → post →
 replies flow.
 
@@ -163,7 +170,7 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 ├── prisma/
 │   ├── schema.prisma
 │   └── seed.ts
-├── docs/             # planning docs (00–05)
+├── docs/             # planning docs (00–05) + ALPHA_RC_CHECKLIST + NEXT_BACKLOG
 ├── scripts/
 │   └── smoke.sh      # curl-driven slice smoke test
 ├── docker-compose.yml
@@ -180,6 +187,8 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 - [Architecture and data design](docs/03_ARCHITECTURE_AND_DATA.md)
 - [UX mockups and storyboard](docs/04_UX_MOCKUPS_STORYBOARD.md)
 - [Roadmap](docs/05_ROADMAP.md)
+- **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — feature map, demo walkthrough, fresh-start flow, RC verification
+- **[Next backlog](docs/NEXT_BACKLOG.md)** — deferred production items
 
 ## Prerequisites
 
