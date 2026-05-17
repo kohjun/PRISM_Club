@@ -248,6 +248,28 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 | Tests | 158 backend unit + 43 e2e + 53 Flutter widget + admin typecheck, all green |
 | Smoke | `scripts/smoke.sh` — ~77 curl-driven checks (M1–M13 + M19 sections) |
 
+## Beta handoff
+
+If you are picking this repo up to deploy Beta, start here:
+
+- **[Handoff guide](docs/HANDOFF.md)** — baseline, feature map, run/test
+  commands, doc-reading order, known limitations, ops responsibilities,
+  immediate next actions before launch.
+- **[Beta readiness](docs/BETA_READINESS.md)** — feature map, architecture
+  snapshot, persona walkthrough, production-readiness checklist,
+  monitoring hooks, go / no-go.
+- **[Beta launch runbook](docs/BETA_LAUNCH_RUNBOOK.md)** — pre-launch
+  checklist, deploy sequence, env / migration / smoke / rollback /
+  incident response / monitoring.
+- **[Beta QA script](docs/BETA_QA_SCRIPT.md)** — manual QA flows for
+  cut-over (member / planner / curator+moderator / admin / media /
+  events / analytics).
+- **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, container
+  build, Flutter / admin web build, health endpoints.
+
+Read [HANDOFF.md](docs/HANDOFF.md) §6 for the recommended reading order
+across all the planning and operational docs.
+
 ## Repo layout
 
 ```
