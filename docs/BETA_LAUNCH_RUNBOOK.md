@@ -239,25 +239,33 @@ T+24h ──── post-launch retro (§10)
    - pass `GET /v1/health` (process up)
    - pass `GET /v1/health/ready` (DB reachable)
    before the orchestrator routes traffic to it.
-3. **Verify event client diagnostic** — once one pod is serving,
+3. **Verify build metadata** — confirm the image that's actually
+   serving traffic is the one you intended:
+   ```bash
+   curl -sS https://<api-host>/v1/health/version | jq .
+   ```
+   Expect `app_version` + `git_sha` matching the release tag and
+   `release_channel: "beta"` (or `"production"`). Capture the response
+   in the cut-over log.
+4. **Verify event client diagnostic** — once one pod is serving,
    ```bash
    curl -sS -H "Authorization: Bearer <admin-jwt>" \
      https://<api-host>/v1/admin/events-client/status | jq .
    ```
    Expect `mode: "prism"`, `base_url_configured: true`, all stats zero
    (until the first user request).
-4. **Verify analytics summary** —
+5. **Verify analytics summary** —
    ```bash
    curl -sS -H "Authorization: Bearer <admin-jwt>" \
      https://<api-host>/v1/admin/analytics/summary | jq .
    ```
    Expect `window_days: 30` and an empty / sparse `counts` array.
-5. **Verify admin web** — load the admin host in a browser. Log in with
+6. **Verify admin web** — load the admin host in a browser. Log in with
    the bootstrap user; the dashboard renders.
-6. **Run smoke** — §5.
-7. **Run persona QA** — §9, with [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md)
+7. **Run smoke** — §5.
+8. **Run persona QA** — §9, with [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md)
    open in another tab.
-8. **Flip status page** — "Beta live."
+9. **Flip status page** — "Beta live."
 
 ### Rolling deploys (post-launch)
 
@@ -354,6 +362,11 @@ launch day is when you actually wire them into your monitoring stack.
 - [ ] k8s `readinessProbe` → `GET /v1/health/ready` every 10s. Failure
       → remove pod from service.
 - [ ] Load balancer / reverse proxy health check → `GET /v1/health/ready`.
+- [ ] (Optional but recommended) Scrape `GET /v1/health/version` once
+      per deploy and log the response. The endpoint returns the build
+      metadata (`app_version`, `git_sha`, `build_time`,
+      `release_channel`, `node_env`) — useful when triaging "what
+      version is running right now?" in incidents.
 
 ### Scrape targets (every 60s, alert on threshold)
 

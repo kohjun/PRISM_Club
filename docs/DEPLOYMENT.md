@@ -53,6 +53,10 @@ The single source of truth is `.env.example`. Copy it to `.env` and adjust.
 | `EMAIL_REGION` | no | _(empty)_ | Provider region if applicable (e.g. SES). |
 | `PUSH_PROVIDER` | no | _(empty)_ | Provider id (e.g. `fcm`, `apns`). Enables the `PushDelivery` boundary. |
 | `PUSH_SERVICE_ACCOUNT` | yes for push | _(empty)_ | Path or JSON for the push service account credential. |
+| `APP_VERSION` | no | _(empty)_ | Surfaced at `/v1/health/version`. Set to your release tag (e.g. `0.1.0-beta.1`). Defaults to `unknown`. |
+| `GIT_SHA` | no | _(empty)_ | Surfaced at `/v1/health/version`. Short or full commit sha. Defaults to `unknown`. |
+| `BUILD_TIME` | no | _(empty)_ | Surfaced at `/v1/health/version`. ISO 8601 build timestamp. Defaults to `null`. |
+| `RELEASE_CHANNEL` | no | `local` (dev) | Surfaced at `/v1/health/version`. One of `local` / `staging` / `beta` / `production`; anything else → `unknown`. |
 
 ---
 
@@ -177,6 +181,7 @@ Compile-time defines:
 |---|---|---|
 | `GET /v1/health` | Liveness | Always returns `{ ok: true }` if the process is up. |
 | `GET /v1/health/ready` | Readiness | Returns 200 + `{ ok: true, db: 'up' }` when Postgres is reachable; otherwise 503 with the DB error. Use for load balancer / k8s readinessProbe. |
+| `GET /v1/health/version` | Build metadata | Returns `{ app_version, git_sha, build_time, release_channel, node_env }` from env. Public. Operators use it to confirm which image is actually running. Defaults to `'unknown'` / `null` when envs are unset — safe to expose. |
 
 ---
 

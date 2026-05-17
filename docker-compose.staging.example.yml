@@ -88,6 +88,12 @@ services:
       ALLOW_X_USER_ID: ${ALLOW_X_USER_ID:-1}   # acceptable for staging; production MUST leave this unset
       CORS_ORIGINS: ${CORS_ORIGINS}            # required — explicit allowlist, no `*`
 
+      # --- build metadata (surfaced at /v1/health/version) ---
+      APP_VERSION: ${APP_VERSION:-unknown}
+      GIT_SHA: ${GIT_SHA:-unknown}
+      BUILD_TIME: ${BUILD_TIME:-}
+      RELEASE_CHANNEL: ${RELEASE_CHANNEL:-staging}
+
       # --- M15: PRISM EVENT integration ---
       # First-boot default is `mock` so staging works without upstream
       # credentials. Flip to `prism` per docs/STAGING_SETUP.md §8 once

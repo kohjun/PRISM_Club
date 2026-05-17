@@ -257,6 +257,7 @@ Wire your load balancer and monitoring against:
 |---|---|---|
 | `https://api.staging.<your-domain>/v1/health` | Liveness — is the process up? | `200 {"ok": true}` |
 | `https://api.staging.<your-domain>/v1/health/ready` | Readiness — is Postgres reachable? | `200 {"ok": true, "db": "up"}` (503 with error body when DB is unreachable) |
+| `https://api.staging.<your-domain>/v1/health/version` | Build metadata — confirms which commit is deployed | `200 {"app_version": "...", "git_sha": "...", "build_time": ..., "release_channel": "staging", "node_env": "production"}`. SAFE to expose; defaults to `"unknown"` / `null` when build envs are unset. |
 
 Wiring details live in [DEPLOYMENT.md](DEPLOYMENT.md) §6. At staging:
 
