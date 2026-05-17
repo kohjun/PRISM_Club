@@ -221,7 +221,7 @@ export class SearchService {
     const rows = await this.prisma.post.findMany({
       where: {
         body: { contains: q, mode: 'insensitive' },
-        status: { not: 'DELETED' },
+        status: { notIn: ['DELETED', 'HIDDEN'] },
         room: { category: { space: { accessPolicy: { in: allowed } } } },
       },
       include: {

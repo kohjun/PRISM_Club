@@ -162,7 +162,7 @@ export class HomeService {
     return this.prisma.post.findMany({
       where: {
         roomId: { in: roomIds },
-        status: { not: 'DELETED' },
+        status: { notIn: ['DELETED', 'HIDDEN'] },
         room: { category: { space: { accessPolicy: { in: policies } } } },
       },
       orderBy: { createdAt: 'desc' },
@@ -220,7 +220,7 @@ export class HomeService {
   private async fetchTrendingCandidates(policies: string[]) {
     return this.prisma.post.findMany({
       where: {
-        status: { not: 'DELETED' },
+        status: { notIn: ['DELETED', 'HIDDEN'] },
         room: { category: { space: { accessPolicy: { in: policies } } } },
       },
       orderBy: { createdAt: 'desc' },
@@ -286,7 +286,7 @@ export class HomeService {
       const post = await this.prisma.post.findFirst({
         where: {
           id,
-          status: { not: 'DELETED' },
+          status: { notIn: ['DELETED', 'HIDDEN'] },
           room: { category: { space: { accessPolicy: { in: allowed } } } },
         },
         include: { room: true, author: { include: { profile: true } } },

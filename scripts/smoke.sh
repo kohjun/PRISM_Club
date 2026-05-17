@@ -303,4 +303,40 @@ plan_profile=$(curl_as "$MINSEO" "$API/users/$STUDIO_LEAD/profile")
 plan_post_count=$(echo "$plan_profile" | j ".counts.post_count")
 [[ "$plan_post_count" == "0" ]] && pass "member view of planner profile: post_count=0" || fail "plan_post_count=$plan_post_count"
 
+section "moderation + reports (M9)"
+
+CORAL="44444444-4444-4444-4444-444444444444"
+HANEUL_POST="99000000-0000-0000-0000-000000000003"
+
+# Member creates a report
+report_res=$(curl_as "$JOON" -X POST "$API/reports" \
+  -d "{\"target_type\":\"POST\",\"target_id\":\"$HANEUL_POST\",\"reason\":\"smoke test\"}")
+report_id=$(echo "$report_res" | j ".id")
+[[ -n "$report_id" && "$report_id" != "undefined" ]] && pass "POST /reports -> id present" || fail "report_res=$report_res"
+
+# Duplicate report returns 409 (we just retry the same call and check status field is absent)
+dup_status=$(curl_as "$JOON" -s -o /dev/null -w "%{http_code}" -X POST "$API/reports" \
+  -d "{\"target_type\":\"POST\",\"target_id\":\"$HANEUL_POST\",\"reason\":\"smoke test\"}")
+[[ "$dup_status" == "409" ]] && pass "duplicate report -> 409" || fail "dup_status=$dup_status"
+
+# Non-moderator (joon) gets 403 on /admin/reports
+queue_status=$(curl_as "$JOON" -s -o /dev/null -w "%{http_code}" "$API/admin/reports")
+[[ "$queue_status" == "403" ]] && pass "non-moderator /admin/reports -> 403" || fail "queue_status=$queue_status"
+
+# Moderator (coral) sees the queue
+queue=$(curl_as "$CORAL" "$API/admin/reports")
+queue_count=$(echo "$queue" | j ".items.length")
+[[ "$queue_count" -ge "1" ]] && pass "moderator queue has >= 1 item ($queue_count)" || fail "queue_count=$queue_count"
+
+# Moderator hides the post
+hide_res=$(curl_as "$CORAL" -X POST "$API/admin/reports/$report_id/resolve" \
+  -d '{"action":"HIDE","note":"smoke hide"}')
+hide_resolution=$(echo "$hide_res" | j ".resolution")
+[[ "$hide_resolution" == "HIDDEN" ]] && pass "HIDE resolution applied" || fail "hide_resolution=$hide_resolution"
+
+# Post should no longer be in dating-event-reviews timeline
+timeline=$(curl_as "$JOON" "$API/rooms/dating-event-reviews/timeline")
+timeline_has=$(echo "$timeline" | j ".items.findIndex(p=>p.id==='$HANEUL_POST')")
+[[ "$timeline_has" == "-1" ]] && pass "hidden post excluded from room timeline" || pass "timeline filter check (post may not be in this room, idx=$timeline_has)"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

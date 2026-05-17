@@ -219,7 +219,7 @@ export class PostService {
     const take = Math.max(1, Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
 
     const posts = await this.prisma.post.findMany({
-      where: { roomId: room.id, status: { not: 'DELETED' } },
+      where: { roomId: room.id, status: { notIn: ['DELETED', 'HIDDEN'] } },
       include: {
         room: true,
         author: { include: { profile: true } },

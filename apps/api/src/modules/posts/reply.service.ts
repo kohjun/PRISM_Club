@@ -108,7 +108,7 @@ export class ReplyService {
     await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
 
     const replies = await this.prisma.reply.findMany({
-      where: { postId, status: { not: 'DELETED' } },
+      where: { postId, status: { notIn: ['DELETED', 'HIDDEN'] } },
       include: { author: { include: { profile: true } } },
       orderBy: [{ createdAt: 'asc' }],
     });

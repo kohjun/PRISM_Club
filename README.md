@@ -72,6 +72,22 @@ wraps the five main tabs (홈 / 검색 / 커뮤니티 / 저장 / 알림) in a Ma
 `NavigationBar`; the post-login redirect now lands on `/home` instead of
 `/spaces`. All existing deep-link routes are preserved.
 
+Milestone 9 — moderation + reporting. Two new tables: `Report` (with
+reporter_id / target_type / target_id / reason / details / status /
+resolution / resolver_note) and `ModerationAction` (audit log). Five new
+endpoints: `POST /v1/reports` (members create), `GET /v1/me/reports` (my
+reports), `GET /v1/admin/reports` (queue — MODERATOR/ADMIN only),
+`GET /v1/admin/reports/:id` (detail with target summary + audit history),
+`POST /v1/admin/reports/:id/resolve` (HIDE/RESTORE/DISMISS — writes an
+audit row and notifies the reporter). Duplicate OPEN reports from the same
+reporter on the same target return 409. Self-reports on USER targets are
+rejected with 400. Hide is implemented for POST and REPLY by flipping
+`status` to `HIDDEN`; all read surfaces (timelines, search, home, event
+detail, profile activity, saves) exclude HIDDEN content via
+`status: { notIn: ['DELETED', 'HIDDEN'] }`. New `MODERATOR` role granted
+to coral in seed. Flutter: `ReportSheet` bottom-sheet modal, MyReportsScreen,
+ModerationQueueScreen, ModerationDetailScreen at `/admin/reports[/:id]`.
+
 Milestone 8 — user profiles and lightweight social graph. PRISM Club now
 has people, not just posts. `Profile.bio` is added (String?, 500-char cap)
 and a new `UserFollow` table links followers↔followed with a unique
@@ -97,10 +113,10 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 41 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas + 6 enriched profiles, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts, follow/save/notification endpoints with spaceAccessPolicy filtering, home bundle + feed endpoints with deterministic scoring, public profile bundle + edit + user-follow endpoints with access-filtered activity |
-| Mobile (Flutter) | Login picker (with 프로필 보기 affordance) → `/home` shell (5-tab NavigationBar: 홈/검색/커뮤니티/저장/알림), Home screen, Space list, Category list, Topic Hub, Room create, Room timeline (follow button; author tap), Post compose, Recruitment composer, Post detail (bookmark icon; author taps on replies), Contribution composer, My contributions (author taps), Curation queue (author taps), Curation detail, Search screen, Event Detail screen, Notification screen, Saved items screen, Profile screen at /users/:id (hero, role badges, counts, recent activity sections, follow button, edit-profile bottom sheet when isSelf) |
-| Tests | 114 backend unit tests + 16 e2e + 47 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` — 60 curl-driven checks (M1–M8 inclusive) |
+| Backend (NestJS + Prisma) | 46 endpoints, stub auth + role gate (MEMBER / VERIFIED_PLANNER / CURATOR / MODERATOR / ADMIN), `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with all five roles seeded, ILIKE-based search filtered per viewer, EventDetail bundle endpoint, follow/save/notification endpoints, home bundle + feed with deterministic scoring, public profile bundle + edit + user-follow, moderation report + audit endpoints with HIDDEN status propagating to all read surfaces |
+| Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose, Recruitment composer, Post detail, Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
+| Tests | 121 backend unit + 17 e2e + 49 Flutter widget, all green |
+| Smoke | `scripts/smoke.sh` — 66 curl-driven checks (M1–M9 inclusive) |
 
 ## Repo layout
 

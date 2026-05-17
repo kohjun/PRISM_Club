@@ -154,7 +154,7 @@ export class SaveService {
       const post = await this.prisma.post.findFirst({
         where: {
           id,
-          status: { not: 'DELETED' },
+          status: { notIn: ['DELETED', 'HIDDEN'] },
           room: { category: { space: { accessPolicy: { in: allowed } } } },
         },
         include: {

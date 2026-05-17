@@ -21,6 +21,9 @@ import '../features/home/ui/home_shell_screen.dart';
 import '../features/notifications/ui/notification_screen.dart';
 import '../features/saves/ui/saved_items_screen.dart';
 import '../features/topic_hub/ui/topic_hub_screen.dart';
+import '../features/moderation/ui/moderation_detail_screen.dart';
+import '../features/moderation/ui/moderation_queue_screen.dart';
+import '../features/moderation/ui/my_reports_screen.dart';
 import '../features/user_profile/ui/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -118,6 +121,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/users/:id',
         builder: (_, st) => ProfileScreen(userId: st.pathParameters['id']!),
+      ),
+      // Milestone 9: moderation
+      GoRoute(path: '/me/reports', builder: (_, _) => const MyReportsScreen()),
+      GoRoute(
+          path: '/admin/reports',
+          builder: (_, _) => const ModerationQueueScreen()),
+      GoRoute(
+        path: '/admin/reports/:id',
+        builder: (_, st) =>
+            ModerationDetailScreen(id: st.pathParameters['id']!),
       ),
       // Milestone 3: unified search
       GoRoute(

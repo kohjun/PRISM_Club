@@ -33,8 +33,49 @@ model User {
   notifications          Notification[]
   following              UserFollow[] @relation("UserFollowing")
   followers              UserFollow[] @relation("UserFollowers")
+  reports                Report[]      @relation("ReportReporter")
+  resolvedReports        Report[]      @relation("ReportResolver")
+  moderationActions      ModerationAction[]
 
   @@map("users")
+}
+
+model Report {
+  id           String    @id @default(uuid()) @db.Uuid
+  reporterId   String    @map("reporter_id") @db.Uuid
+  targetType   String    @map("target_type")
+  targetId     String    @map("target_id") @db.Uuid
+  reason       String
+  details      String?
+  status       String    @default("OPEN")
+  resolution   String?
+  resolvedBy   String?   @map("resolved_by") @db.Uuid
+  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz(6)
+  resolverNote String?   @map("resolver_note")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  reporter User  @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolver User? @relation("ReportResolver", fields: [resolvedBy], references: [id])
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([reporterId, createdAt(sort: Desc)])
+  @@map("reports")
+}
+
+model ModerationAction {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  action     String
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id") @db.Uuid
+  reportId   String?  @map("report_id") @db.Uuid
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([targetType, targetId, createdAt(sort: Desc)])
+  @@map("moderation_actions")
 }
 
 model UserFollow {

@@ -105,6 +105,10 @@ export const U = {
     minseoToHaneul: 'b3000000-0000-0000-0000-000000000001',
     joonToMinseo: 'b3000000-0000-0000-0000-000000000002',
   },
+  // Milestone 9 — Moderation reports
+  report: {
+    haneulOnRecruitTalkRound: 'b4000000-0000-0000-0000-000000000001',
+  },
 } as const;
 
 // Dates relative to a fixed "today" for stable seeds.
@@ -115,6 +119,8 @@ const DAYS = (n: number): Date => new Date(TODAY.getTime() + n * 86_400_000);
 
 async function clearAll(prisma: PrismaClient): Promise<void> {
   // Order matters: children before parents.
+  await prisma.moderationAction.deleteMany();
+  await prisma.report.deleteMany();
   await prisma.userFollow.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.savedItem.deleteMany();
@@ -207,6 +213,10 @@ async function seedUsers(prisma: PrismaClient): Promise<void> {
       { userId: U.user.studio_lead, role: 'VERIFIED_PLANNER', source: 'seed' },
       { userId: U.user.studio_mate, role: 'VERIFIED_PLANNER', source: 'seed' },
     ],
+  });
+  // Milestone 9: grant MODERATOR to coral (also CURATOR — ops dual role).
+  await prisma.userRole.create({
+    data: { userId: U.user.coral, role: 'MODERATOR', source: 'seed' },
   });
 }
 
@@ -882,6 +892,20 @@ async function seedFollowsSavesNotifications(prisma: PrismaClient): Promise<void
   });
 }
 
+async function seedModerationReports(prisma: PrismaClient): Promise<void> {
+  await prisma.report.create({
+    data: {
+      id: U.report.haneulOnRecruitTalkRound,
+      reporterId: U.user.haneul,
+      targetType: 'POST',
+      targetId: U.post.joonQuestion,
+      reason: '스팸',
+      details: '관련 없는 글로 보여요.',
+      status: 'OPEN',
+    },
+  });
+}
+
 async function seedUserFollows(prisma: PrismaClient): Promise<void> {
   await prisma.userFollow.createMany({
     data: [
@@ -913,6 +937,7 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
   await seedPlannerPosts(prisma);
   await seedFollowsSavesNotifications(prisma);
   await seedUserFollows(prisma);
+  await seedModerationReports(prisma);
 
   return {
     users: await prisma.user.count(),

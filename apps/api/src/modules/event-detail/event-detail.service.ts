@@ -157,7 +157,7 @@ export class EventDetailService {
     allowed: string[],
   ): Prisma.PostWhereInput {
     return {
-      status: { not: 'DELETED' },
+      status: { notIn: ['DELETED', 'HIDDEN'] },
       attachments: {
         some: { attachmentType: 'EVENT_CARD', targetId: cardId },
       },

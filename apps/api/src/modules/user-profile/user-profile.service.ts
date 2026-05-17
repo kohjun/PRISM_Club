@@ -52,7 +52,7 @@ export class UserProfileService {
     //    with how M4 PostService gates recruitment visibility).
     const postWhere = {
       authorId: userId,
-      status: { not: 'DELETED' },
+      status: { notIn: ['DELETED', 'HIDDEN'] },
       room: { category: { space: { accessPolicy: { in: allowed } } } },
       ...(isVerifiedPlanner ? {} : { postType: { not: 'RECRUITMENT' } }),
     };
