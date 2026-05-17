@@ -8,6 +8,9 @@ environment. Pairs with:
 - [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md) — manual QA flows for cut-over
 - [CUTOVER_REHEARSAL.md](CUTOVER_REHEARSAL.md) — **staging dry-run of
   this runbook; required before production cut-over**
+- [STAGING_BRINGUP_CHECKLIST.md](STAGING_BRINGUP_CHECKLIST.md) —
+  single-page checklist for standing up staging in the first place
+  (run this before the rehearsal)
 - [DEPLOYMENT.md](DEPLOYMENT.md) — env matrix + container build
 - [EVENTS_INTEGRATION.md](EVENTS_INTEGRATION.md) — upstream events
 - [ANALYTICS.md](ANALYTICS.md) — analytics taxonomy + privacy rules

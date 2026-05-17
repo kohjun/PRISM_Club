@@ -266,6 +266,8 @@ If you are picking this repo up to deploy Beta, start here:
   events / analytics).
 - **[Cutover rehearsal](docs/CUTOVER_REHEARSAL.md)** — staging dry-run
   of the production cut-over with sign-off + failure-log templates.
+- **[Staging bring-up checklist](docs/STAGING_BRINGUP_CHECKLIST.md)**
+  — exact single-page checklist for first-time staging stand-up.
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, container
   build, Flutter / admin web build, health endpoints.
 
@@ -307,6 +309,7 @@ across all the planning and operational docs.
 - **[Cutover rehearsal](docs/CUTOVER_REHEARSAL.md)** — staging dry-run of the production cut-over (timeline, deploy + migration + smoke + QA + rollback rehearsal, sign-off + failure log templates)
 - **[Handoff guide](docs/HANDOFF.md)** — single-page orientation for a new engineer / operator
 - **[Staging setup](docs/STAGING_SETUP.md)** — services + env + migration + builds for the rehearsal environment
+- **[Staging bring-up checklist](docs/STAGING_BRINGUP_CHECKLIST.md)** — the exact single-page checklist for an operator standing up staging for the first time
 - **[Staging smoke](docs/STAGING_SMOKE.md)** — how to point `scripts/smoke.sh` at staging, what persists, how to clean up
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — historical Alpha RC view (feature map, demo walkthrough, fresh-start flow, RC verification)
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build

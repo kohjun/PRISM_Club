@@ -16,6 +16,7 @@ Pairs with:
 - [HANDOFF.md](HANDOFF.md) — entry point for new engineers
 - [DEPLOYMENT.md](DEPLOYMENT.md) — env matrix + container build
 - [BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md) — execution-time guide
+- [STAGING_BRINGUP_CHECKLIST.md](STAGING_BRINGUP_CHECKLIST.md) — single-page bring-up checklist that condenses this guide into ticked boxes
 - [STAGING_SMOKE.md](STAGING_SMOKE.md) — how to smoke against the staging host
 - [.env.staging.example](../.env.staging.example) — staging-shaped env template
 - [docker-compose.staging.example.yml](../docker-compose.staging.example.yml) — runtime template for a single-VM staging host

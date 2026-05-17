@@ -152,19 +152,23 @@ If you are picking this up cold, the recommended reading path is:
    guide. Read once before launch day, keep open during cut-over. ~30 min.
 6. **[BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md)** — manual QA flows. Skim
    before launch day; execute during cut-over. ~15 min skim.
-7. **[CUTOVER_REHEARSAL.md](CUTOVER_REHEARSAL.md)** — the staging
+7. **[STAGING_BRINGUP_CHECKLIST.md](STAGING_BRINGUP_CHECKLIST.md)** —
+   the exact single-page checklist for first-time staging stand-up.
+   Run this immediately before the cutover rehearsal. ~30 min to
+   execute end-to-end.
+8. **[CUTOVER_REHEARSAL.md](CUTOVER_REHEARSAL.md)** — the staging
    dry-run of the production cut-over. Read once before scheduling the
    rehearsal; execute against staging at least 3 business days before
    the real launch. ~15 min read, ~120 min to execute. *Required before
    the production cut-over.*
-8. **[EVENTS_INTEGRATION.md](EVENTS_INTEGRATION.md)** — upstream events
+9. **[EVENTS_INTEGRATION.md](EVENTS_INTEGRATION.md)** — upstream events
    contract + failure matrix. Read if you are flipping
    `EVENTS_CLIENT_MODE=prism`. ~10 min.
-9. **[ANALYTICS.md](ANALYTICS.md)** — first-party event taxonomy and
-   privacy rules. Read if you are touching the analytics surfaces. ~10 min.
-10. **[NEXT_BACKLOG.md](NEXT_BACKLOG.md)** — what is intentionally still
+10. **[ANALYTICS.md](ANALYTICS.md)** — first-party event taxonomy and
+    privacy rules. Read if you are touching the analytics surfaces. ~10 min.
+11. **[NEXT_BACKLOG.md](NEXT_BACKLOG.md)** — what is intentionally still
     deferred. Read to understand what you should NOT promise. ~10 min.
-11. **[ALPHA_RC_CHECKLIST.md](ALPHA_RC_CHECKLIST.md)** — historical Alpha
+12. **[ALPHA_RC_CHECKLIST.md](ALPHA_RC_CHECKLIST.md)** — historical Alpha
     RC view. Read only if you need the M1–M12 + hardening provenance. Optional.
 
 Planning context (deep background, not load-bearing for the cut-over):
