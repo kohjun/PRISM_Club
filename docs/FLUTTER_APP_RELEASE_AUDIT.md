@@ -178,16 +178,21 @@ recommended PR sequence in §11.
 
 ## 5. Secure token storage status
 
-| Component | Today | Risk on native |
-|---|---|---|
-| `CurrentUserNotifier` (`lib/core/current_user.dart`) | Stores `accessToken`, `id`, `nickname` in `SharedPreferences` | On Android, `SharedPreferences` are plaintext in `/data/data/<pkg>/shared_prefs/`. A rooted device or an `adb backup` on `android:allowBackup=true` can lift the JWT. On iOS, `SharedPreferences` maps to `NSUserDefaults`, which is plist storage in the app's container. |
-| Logout flow | `signOut()` removes the three keys; the Dio interceptor sees no Authorization header on the next request | ✅ Works the same on web + native |
-| Session restore | `build()` reads the three keys at app start and populates the `CurrentUser` provider | ✅ Works the same; no expiry check (the JWT is HS256 signed, 7-day TTL; the API rejects expired ones with 401 and the app re-shows the login picker) |
+Hardened in the `feat(mobile): harden session storage` commit. Current
+behavior:
 
-**Gap.** Move the token to the OS keychain on native targets while
-keeping `SharedPreferences` for web (the browser has no equivalent).
-The `flutter_secure_storage` plugin is the standard choice. Tracked
-as a separate PR — see §11.
+| Component | Today | Surface |
+|---|---|---|
+| `SessionStorage` abstraction (`lib/core/session_storage.dart`) | Two production implementations behind a Riverpod provider | Tests override with an in-memory fake |
+| `SharedPrefsSessionStorage` | `shared_preferences` (browser `localStorage` on web) | Selected on web — browsers have no real keychain equivalent. Same behavior as M13. |
+| `SecureSessionStorage` | `flutter_secure_storage`: Android Keystore-backed `EncryptedSharedPreferences` + iOS Keychain (`first_unlock_this_device`) | Selected on Android + iOS. JWT is never written in plaintext on a native install. |
+| `CurrentUserNotifier` (`lib/core/current_user.dart`) | Reads / writes through `SessionStorage` only — does not know which backend is in use | Logout + session restore flows unchanged from M13. |
+
+**Migration note for existing installs.** Native installs that
+previously stored the JWT in `SharedPreferences` will see an empty
+secure-storage read on first launch after upgrade and bounce back to
+the login picker. The user re-authenticates once. Web installs are
+unaffected (still `SharedPreferences`).
 
 ---
 
@@ -298,10 +303,11 @@ reviewed in isolation.
    resolved URL on boot in debug mode; document the
    `--dart-define=API_BASE_URL=...` pattern for physical devices
    (cross-link [LOCAL_BROWSER_QA.md](LOCAL_BROWSER_QA.md)).
-6. **Secure token storage** — swap `SharedPreferences` for
-   `flutter_secure_storage` on Android / iOS while keeping
-   `SharedPreferences` on web. Add a widget test that proves login →
-   persist → restart → session-restore still works.
+6. **Secure token storage** — ✅ DONE in `feat(mobile): harden
+   session storage`. `SessionStorage` abstraction with
+   `flutter_secure_storage` on native and `SharedPreferences` on web.
+   8 tests cover the load / save / clear contract plus
+   `CurrentUserNotifier` login → restart → restore → signOut.
 7. **Update `<application android:label>`** to "PRISM Club" + verify
    `pubspec.yaml` `description` is brand-final.
 8. **Privacy policy + Data Safety draft** — owned by legal / product;
@@ -332,7 +338,7 @@ Beta-release-blockers, ranked:
 | 2 | Release signing config (Android upload key + iOS provisioning) | small — one PR per platform |
 | 3 | App icon + splash (both platforms) | small — design-blocked, not engineering-blocked |
 | 4 | Physical-device API URL falls through to localhost | trivial — already supports `--dart-define` |
-| 5 | JWT stored in `SharedPreferences` plaintext on native | small — one PR adding `flutter_secure_storage` |
+| 5 | JWT stored in `SharedPreferences` plaintext on native | ✅ DONE — `feat(mobile): harden session storage` |
 | 6 | Privacy policy + Data Safety / App Privacy declarations | depends on legal turnaround |
 | 7 | Store listing copy + screenshots | depends on marketing turnaround |
 | 8 | Developer account onboarding (Google + Apple) | clock-blocked, not engineering-blocked |

@@ -230,7 +230,29 @@ flutter build appbundle --release \
 
 ---
 
-## 5. Test surface (same on every platform)
+## 5. Session storage by platform
+
+`SessionStorage` (`apps/mobile/lib/core/session_storage.dart`) picks
+the right backend at boot:
+
+| Platform | Backend | Where the JWT lives |
+|---|---|---|
+| Web | `SharedPrefsSessionStorage` (via `shared_preferences`) | Browser `localStorage` |
+| Android | `SecureSessionStorage` (via `flutter_secure_storage`) | `EncryptedSharedPreferences` (Android Keystore-backed) |
+| iOS | `SecureSessionStorage` | Keychain, `first_unlock_this_device` accessibility |
+
+Native installs that pre-date the storage hardening will see an empty
+secure-storage read on first launch and re-show the login picker.
+That's expected — users re-authenticate once. Web installs continue
+to read from `localStorage` with no behavior change.
+
+Test fixture: `apps/mobile/test/session_storage_test.dart` defines
+`InMemorySessionStorage` and overrides `sessionStorageProvider` so
+tests don't depend on either real backend.
+
+---
+
+## 6. Test surface (same on every platform)
 
 ```bash
 cd apps/mobile
@@ -248,7 +270,7 @@ prefer mock-driven coverage over device-coupled coverage.
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 ### Gradle / Java mismatch on Android build
 
@@ -291,7 +313,7 @@ committing.
 
 ---
 
-## 7. Quick reference card
+## 8. Quick reference card
 
 ```bash
 # Bring up local API + DB first (see LOCAL_BROWSER_QA.md §2):

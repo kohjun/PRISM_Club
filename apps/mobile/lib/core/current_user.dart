@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'session_storage.dart';
 
 /// Current authenticated user (M13: JWT-backed).
 /// Holds the access token and a minimal id/nickname snapshot. The token is
 /// what authenticates every Dio request via the `dioProvider` interceptor.
+@immutable
 class CurrentUser {
   const CurrentUser({
     required this.id,
@@ -16,34 +19,35 @@ class CurrentUser {
   final String accessToken;
 }
 
+/// Persists the session via [SessionStorage] so storage is platform-
+/// appropriate (Keychain / EncryptedSharedPreferences on mobile,
+/// localStorage on web) without callers caring which.
 class CurrentUserNotifier extends AsyncNotifier<CurrentUser?> {
-  static const _kUserId = 'currentUser.id';
-  static const _kNickname = 'currentUser.nickname';
-  static const _kAccessToken = 'currentUser.accessToken';
-
   @override
   Future<CurrentUser?> build() async {
-    final prefs = await SharedPreferences.getInstance();
-    final id = prefs.getString(_kUserId);
-    final nickname = prefs.getString(_kNickname);
-    final token = prefs.getString(_kAccessToken);
-    if (id == null || nickname == null || token == null) return null;
-    return CurrentUser(id: id, nickname: nickname, accessToken: token);
+    final storage = ref.read(sessionStorageProvider);
+    final stored = await storage.load();
+    if (stored == null) return null;
+    return CurrentUser(
+      id: stored.id,
+      nickname: stored.nickname,
+      accessToken: stored.accessToken,
+    );
   }
 
   Future<void> setUser(CurrentUser user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kUserId, user.id);
-    await prefs.setString(_kNickname, user.nickname);
-    await prefs.setString(_kAccessToken, user.accessToken);
+    final storage = ref.read(sessionStorageProvider);
+    await storage.save(StoredSession(
+      id: user.id,
+      nickname: user.nickname,
+      accessToken: user.accessToken,
+    ));
     state = AsyncData(user);
   }
 
   Future<void> signOut() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kUserId);
-    await prefs.remove(_kNickname);
-    await prefs.remove(_kAccessToken);
+    final storage = ref.read(sessionStorageProvider);
+    await storage.clear();
     state = const AsyncData(null);
   }
 }

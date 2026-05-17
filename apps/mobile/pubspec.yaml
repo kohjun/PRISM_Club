@@ -23,6 +23,11 @@ dependencies:
 
   # Persistence
   shared_preferences: ^2.3.3
+  # Secure key-value storage (native Android Keystore / iOS Keychain).
+  # Used for JWT persistence on mobile; web falls back to
+  # shared_preferences via the SessionStorage abstraction in
+  # lib/core/session_storage.dart. See docs/FLUTTER_APP_RELEASE_AUDIT.md §5.
+  flutter_secure_storage: ^9.2.2
 
   # Open Reference URLs externally — M3
   url_launcher: ^6.3.1
