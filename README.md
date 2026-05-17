@@ -7,11 +7,13 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
-**Alpha RC** — M1–M20 + hardening complete. See
-[ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the feature map, demo
-walkthrough, fresh-start flow, and RC verification steps. See
-[NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized post-Alpha items
-(real email/push provider wiring, warehouse export).
+**Beta-ready** — M1–M20 + hardening complete. See
+[BETA_READINESS](docs/BETA_READINESS.md) for the full Beta checklist
+(feature map, architecture snapshot, persona walkthrough, production
+readiness, monitoring hooks, go/no-go) and
+[ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the historical Alpha
+RC view. See [NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized
+post-Beta items (real email/push provider wiring, warehouse export).
 
 Milestone 20 — PRISM EVENT contract hardening. The `PrismEventsClient`
 now validates every upstream response with a **zod** schema
@@ -244,7 +246,7 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 | Backend (NestJS + Prisma) | 49 endpoints, role-gated guard, zod-validated mock/real Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local or S3-compatible storage), first-party analytics events |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
 | Tests | 158 backend unit + 43 e2e + 53 Flutter widget + admin typecheck, all green |
-| Smoke | `scripts/smoke.sh` — 75 curl-driven checks (M1–M13 inclusive) |
+| Smoke | `scripts/smoke.sh` — ~77 curl-driven checks (M1–M13 + M19 sections) |
 
 ## Repo layout
 
@@ -275,9 +277,11 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 - [Architecture and data design](docs/03_ARCHITECTURE_AND_DATA.md)
 - [UX mockups and storyboard](docs/04_UX_MOCKUPS_STORYBOARD.md)
 - [Roadmap](docs/05_ROADMAP.md)
-- **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — feature map, demo walkthrough, fresh-start flow, RC verification
+- **[Beta readiness](docs/BETA_READINESS.md)** — Beta feature map, architecture snapshot, persona walkthrough, production readiness, monitoring hooks, go/no-go
+- **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — historical Alpha RC view (feature map, demo walkthrough, fresh-start flow, RC verification)
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build
 - **[Events integration](docs/EVENTS_INTEGRATION.md)** — IEventsClient modes, expected upstream shape, mapping, failure behavior
+- **[Analytics](docs/ANALYTICS.md)** — first-party event taxonomy and privacy rules
 - **[Next backlog](docs/NEXT_BACKLOG.md)** — deferred production items
 
 ## Prerequisites
@@ -330,25 +334,34 @@ flutter run -d chrome       # web target — fastest sanity check
 | `npm run api:dev` | Start the API with watch-mode reload |
 | `npm run api:build` | Compile the API for production |
 | `npm run api:test` | Run backend unit tests (Jest, serial) |
-| `npm run api:test:e2e` | Run the vertical-slice e2e test |
+| `npm run api:test:e2e` | Run backend e2e tests (supertest + test DB) |
+| `npm run admin:dev` | Start the admin web console on http://localhost:5180 |
+| `npm run admin:build` | Build the admin web console (static `apps/admin/dist`) |
+| `npm run admin:typecheck` | Typecheck the admin web console without emitting |
 | `npm run db:seed` | Re-seed the dev database |
 | `npm run db:reset` | Drop + recreate the dev database (then auto-seeds) |
 | `npm run prisma:generate` | Regenerate the Prisma client |
 | `npm run prisma:migrate` | Create a new migration in dev mode |
+| `npm run prisma:migrate:deploy` | Apply pending migrations to a deployed DB |
 | `npm run prisma:studio` | Open Prisma Studio |
+| `npm run build` | Full production build (`prisma generate` + API build) |
+| `npm run start:prod` | Run the built API (`node apps/api/dist/main`) |
 
 ## Test surface
 
 ```powershell
 # Backend
-npm run api:test          # 82 unit tests, 10 suites (M1 + M2 + M3 + M4 + M5)
-npm run api:test:e2e      # 5 e2e: M1 slice + M2 contribution + M3 search + M4 planner + M5 event detail
-bash scripts/smoke.sh     # 44 curl-driven checks (api must be running)
+npm run api:test          # 158 unit tests, 22 suites (M1–M20, all green)
+npm run api:test:e2e      # 43 e2e tests, 15 suites — full slice across M1–M20
+bash scripts/smoke.sh     # ~77 curl-driven checks (api must be running)
+
+# Admin web (typecheck only — UI is exercised manually)
+npm run admin:typecheck
 
 # Mobile
 cd apps/mobile
-flutter analyze
-flutter test              # 34 widget tests (M1 + M2 + M3 + M4 + M5)
+flutter analyze           # info-only output expected (no errors / warnings)
+flutter test              # 53 widget tests
 flutter build web --no-tree-shake-icons   # full compile check
 ```
 
@@ -446,13 +459,28 @@ header — tap a chip to land on Search pre-filled with that query.
   `shared`, `auth`, `users`, `community` (spaces/categories/rooms),
   `knowledge` (topic hubs + contributions), `event-link`, `reference`, `posts`
   (posts + replies + reactions).
-- **Stub auth via `X-User-Id` + role gate.** `AuthGuard` resolves the header
-  to a user and exposes roles. `RolesGuard` reads `@Roles('CURATOR','ADMIN')`
-  metadata and rejects with 403. The contract is identical to what a real
-  JWT-based guard will populate — the swap is one file.
-- **Mock Events client** (`apps/api/src/modules/event-link/clients/mock-events.client.ts`)
-  hides behind the `IEventsClient` token — swap the binding to introduce the
-  real Events/Contenido client without touching callers.
+- **JWT auth with legacy header fallback (M13).** `AuthGuard` accepts
+  `Authorization: Bearer <jwt>` issued by `POST /v1/auth/login`. In
+  non-production environments (or when `ALLOW_X_USER_ID=1`) the guard
+  also accepts the legacy `X-User-Id` header that tests / smoke scripts
+  use. `RolesGuard` reads `@Roles('CURATOR','ADMIN', …)` metadata and
+  rejects with 403. Login is still passwordless at Beta — see
+  [NEXT_BACKLOG](docs/NEXT_BACKLOG.md) §1.
+- **`IEventsClient` boundary** with two adapters: `MockEventsClient`
+  (default, JSON fixture, dev/test/demo) and `PrismEventsClient` (real
+  HTTP client, validated with a `zod` schema). Mode is selected at boot
+  via `EVENTS_CLIENT_MODE`; see
+  [EVENTS_INTEGRATION](docs/EVENTS_INTEGRATION.md).
+- **`IMediaStorage` boundary** with two adapters: `LocalMediaStorage`
+  (default, filesystem under `UPLOADS_DIR`) and `S3MediaStorage`
+  (`@aws-sdk/client-s3` against AWS S3 / Cloudflare R2 / MinIO). Mode is
+  selected at boot via `MEDIA_STORAGE_MODE`; config is lazy-validated on
+  first upload so dev boots never crash on missing S3 envs.
+- **`INotificationDeliverer` boundary** with three adapters:
+  `LocalNoopDelivery` (IN_APP only — default), `EmailDelivery`, and
+  `PushDelivery`. Providers MUST NOT throw; they return
+  `DeliveryAttempt[]` so callers always see channel-level status.
+  Selected via `NOTIFICATION_DELIVERY_MODE`.
 - **Reply depth = 2** enforced at the service layer (per FR-REP-05).
 - **`reference_items`** table — Prisma model is `Reference`; the table is
   named `reference_items` because `references` clashes with a SQL reserved
@@ -497,18 +525,28 @@ header — tap a chip to land on Search pre-filled with that query.
 
 ## What's deferred
 
-Notifications, bookmarks, moderation / reports / audit-log table, real
-OAuth, URL metadata scraping, real-time updates, image upload, real
-application forms / payment handoff for recruitment, PRISM Studio backoffice
-integration, role-grant UI (Admin → Verified Planner promotion lives only in
-the seed), the admin web, multi-evidence per contribution, versioned block
-history beyond the per-contribution snapshot, editing a pending contribution
-before approval, concurrent-edit conflict resolution across approvals, query
-history / dynamic popular queries, FTS or a Korean tokenizer, external search
-engines, search inside replies, personalized ranking or "for you"
-recommendations. M5-specific deferrals: ticket purchase / RSVP / capacity
-countdown / organizer notes, real participant-verified review badges,
-star ratings, live event metadata via a real Events service at detail-render
-time, calendar export / system share, cross-event aggregation, EventCard
-edit-from-Club, EventCard tap in curator/contribution evidence flows.
-See the plan file's §8 risks / deferred list for the full breakdown.
+Production-shaped concerns deferred to post-Beta (see
+[NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized list):
+
+- **Real auth & accounts.** `POST /v1/auth/login` is JWT-backed (M13) but
+  remains **passwordless** — any seeded user id signs you in. No email /
+  password / OAuth / signup / password reset / email verification yet.
+- **Notification delivery providers.** Boundary is in place (M17) but
+  email / push providers are stubs; only IN_APP fan-out is live.
+- **Analytics warehouse export.** First-party event capture lands (M19),
+  but there is no exporter, no retention job, no funnel dashboard.
+- **Avatar upload + nickname rename.** Profiles can edit bio / region /
+  interests; nickname is immutable; avatar URL field is present but no
+  upload UI yet.
+- **Rate limiting.** No throttling at the API edge.
+- **Observability.** Request-id middleware is wired; no log shipping,
+  no metrics, no tracing.
+- **ROOM / USER / REFERENCE hide.** Moderation HIDE flips visibility for
+  POST / REPLY only; ROOM / USER / REFERENCE hide is recorded as an audit
+  row but doesn't yet propagate.
+- **Search ranking.** ILIKE substring match — no Korean tokenizer, no
+  BM25, no vector / semantic search.
+- **Real-time updates.** No WebSocket / SSE; clients poll on screen
+  entry.
+- **Recruitment applications.** Post displays a contact method string;
+  no application tracking, no payment handoff.

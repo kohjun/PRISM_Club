@@ -1,125 +1,127 @@
-# PRISM Club — Post-Alpha Backlog
+# PRISM Club — Post-Beta Backlog
 
-What we know we want to add after Alpha RC. Prioritized loosely; each item
+What we know we want to add after Beta. Prioritized loosely; each item
 sketches the scope so the team can pick it up without re-discovering the
 why.
 
----
-
-## 1. Real authentication (M13 — planned)
-
-**Why:** `X-User-Id` is a development affordance. Production needs verified identity, password / passwordless flows, and tamper-proof sessions.
-
-**Scope sketch:**
-- Server-issued JWT (or session row) with role array baked in.
-- `POST /v1/auth/login`, `GET /v1/auth/session`, `POST /v1/auth/logout`.
-- Flutter: real login form (passwordless dev mode + email/password as fallback). Token stored in `SharedPreferences` (mobile) / cookie / localStorage (web) — at least integrity-protected for alpha.
-- Keep `X-User-Id` available only behind a dev-only guard or test helper.
-- Migration path: existing seeded users get default credentials.
+> **Status note (post-M20):** M13–M18 (auth, deployment, events client,
+> media storage, notification delivery boundary, admin web console) and
+> M19–M20 (analytics events + PRISM EVENT contract hardening) have all
+> shipped. This document tracks what is *still* deferred — items that are
+> in scope for the post-Beta release sequence.
 
 ---
 
-## 2. Deployment + production config (M14 — planned)
+## 1. Real authentication (M13 boundary → production flow)
 
-**Why:** Right now the API only runs locally with `npm run api:dev`. Alpha needs a deployable artifact.
+**Why:** M13 added JWT sessions, but login is still passwordless — any
+seeded user id signs you in. Beta exposes the surface to real users; this
+is the gating item before opening signup.
 
 **Scope sketch:**
-- API Dockerfile (multi-stage Node build).
-- `npm run start:prod` already exists; verify it boots a built bundle.
-- `prisma:migrate:deploy` script + documented usage in CI/CD.
-- `docs/DEPLOYMENT.md` — env vars (DATABASE_URL, PRISM_EVENTS_API_BASE_URL, UPLOADS_DIR, CORS_ORIGIN, JWT_SECRET, …).
-- Flutter web build with `--dart-define=API_BASE_URL=…` documented per environment.
-- Production CORS lock-down (replace `origin: true`).
-- Health endpoint should return DB connectivity status, not just `{ ok: true }`.
+- Email + password (Argon2 hash) or OAuth (Google / Kakao / Naver).
+- Signup endpoint + email verification flow.
+- Password reset (token email).
+- Optional MFA.
+- Drop the `X-User-Id` fallback entirely once tests/smoke move to
+  obtaining a JWT via `/v1/auth/login`.
+- Persist sessions in a `sessions` table (so logout can actually
+  invalidate) or move to short-lived JWT + refresh tokens.
 
 ---
 
-## 3. Real PRISM EVENT / CONTENIDO integration (M15 — planned)
+## 2. Notification delivery — wire real providers (M17 boundary → live)
 
-**Why:** EventCard snapshots currently come from `MockEventsClient`. The real ecosystem expects PRISM EVENT to be the source of truth for ticketed events and CONTENIDO for content metadata.
-
-**Scope sketch:**
-- Keep `IEventsClient` abstraction.
-- Add `PrismEventsClient` with `EVENTS_CLIENT_MODE=prism` selection.
-- Normalize remote payloads into existing EventCard fields.
-- Handle 404 / timeout / 5xx gracefully (cache local snapshot when remote is down).
-- Optional `POST /v1/admin/events/sync` (ADMIN only) for batch refresh.
-- `docs/EVENTS_INTEGRATION.md` documenting expected remote shape, mapping, and failure behavior.
-
----
-
-## 4. Production media storage
-
-**Why:** `apps/api/uploads/` will not survive a container restart or scale to multiple instances.
+**Why:** M17 added `INotificationDeliverer` with `email` and `push`
+boundary stubs. The contract is in place; the actual provider integration
+is not.
 
 **Scope sketch:**
-- S3-compatible storage abstraction (or Cloudflare R2). Driver chosen by env var.
-- Antivirus / content scan hook before serving.
-- Image resize pipeline (thumbnails, max-side cap) — sharp or imagemagick.
-- Signed URLs for private content if M9 hide ever needs to revoke access.
-- `docs/MEDIA_STORAGE.md`.
-
----
-
-## 5. Push notifications
-
-**Why:** The in-app `notifications` table covers retention, but real users won't reopen the app to discover replies.
-
-**Scope sketch:**
-- FCM (Android) + APNS (iOS) + Web Push subscription.
+- **Email:** pick one of Resend / Postmark / SES; implement the
+  `EmailDelivery` stub against it. Use the `EMAIL_PROVIDER`,
+  `EMAIL_FROM_ADDRESS`, `EMAIL_API_KEY`, `EMAIL_REGION` env shape
+  already documented.
+- **Push:** FCM (Android) + APNS (iOS) + Web Push. Add a
+  `device_tokens` table keyed on user.
 - Notification preferences per type (REPLY_ON_POST opt-out, etc.).
-- Worker process (separate from API) consuming a queue of pending pushes.
 - Quiet hours, batching, deduplication.
+- Worker process (separate from API) consuming the delivery queue, if
+  the synchronous fan-out gets too noisy.
 
 ---
 
-## 6. Admin / ops web
+## 3. Analytics — exporter + retention + dashboards
 
-**Why:** `OpsDashboardScreen` lives inside the Flutter app today. Moderators may want a tighter desktop-first surface for incidents.
+**Why:** M19 captures server-side events into `analytics_events`. There
+is no exporter, no retention job, and the only read path is a 30-day
+rollup. Long-horizon analysis requires landing somewhere else.
 
 **Scope sketch:**
-- Next.js admin app under `apps/admin/`.
-- Same role-gated endpoints (CURATOR/MODERATOR/ADMIN).
-- Side-by-side moderation review (post + reports + history).
-- Bulk operations (bulk-hide spam wave, bulk-resolve same-target reports).
-- Audit log viewer (currently only inline in report detail).
-
----
-
-## 7. Analytics pipeline — partially shipped in M19
-
-**Status:** M19 added a first-party server-side pipeline. See
-`docs/ANALYTICS.md` for the taxonomy and admin summary endpoint.
-
-**What's still backlog:**
-- Client-side telemetry: today only server-side events are captured. A
-  `POST /v1/events/track` ingest for Flutter taps would round it out
-  but bring its own privacy / abuse questions.
-- External warehouse export (BigQuery / ClickHouse / Snowflake) — for
-  long-horizon analysis. Today queries hit the `analytics_events` table
-  directly.
-- Funnel / cohort dashboards beyond the 30-day rollup card.
+- Nightly exporter to BigQuery / ClickHouse / Snowflake (CSV or
+  Parquet via S3).
+- Retention job: `DELETE FROM analytics_events WHERE created_at <
+  NOW() - INTERVAL '90 days';` — the table grows monotonically today.
+- Funnel / cohort dashboards (e.g. signup → first post → first
+  follow → second visit).
 - Per-room engagement health.
 - A/B framework for trending-score weights.
-- Retention job (`DELETE FROM analytics_events WHERE created_at < …`).
-  The table grows monotonically right now.
+- Optional client-side telemetry (`POST /v1/events/track`) for taps —
+  needs an abuse/rate-limit design before opening.
 
 ---
 
-## 8. Smaller follow-ups
+## 4. Media storage — production polish (M16 boundary → safety net)
+
+**Why:** M16 added S3-compatible storage. Beta still needs the safety
+features the alpha env doesn't have.
+
+**Scope sketch:**
+- Antivirus / content scan hook before serving.
+- Image resize pipeline (thumbnails, max-side cap) — `sharp` or
+  ImageMagick.
+- Signed URLs for hide-protected content once ROOM/USER hide ships.
+- CDN in front (CloudFront / Cloudflare).
+- One-time migration script for any `apps/api/uploads/` files left
+  on disk in legacy environments.
+- `docs/MEDIA_STORAGE.md` walking through the S3 setup end to end.
+
+---
+
+## 5. Admin web — bulk ops + audit log (M18 polish)
+
+**Why:** M18 admin console renders ops summary + open report queue +
+signal refresh + events client status + analytics rollup. Moderators
+still need higher-throughput affordances for incident response.
+
+**Scope sketch:**
+- Side-by-side moderation review (post body + reports + history) on
+  one screen.
+- Bulk operations (bulk-hide spam wave, bulk-resolve same-target
+  reports).
+- Audit log viewer (today the only audit surface is inline in report
+  detail).
+- Role-grant UI (Admin → Verified Planner promotion is seed-only).
+- A view onto `analytics_events` beyond the 30-day rollup card —
+  searchable / filterable per-actor history.
+
+---
+
+## 6. Smaller follow-ups
 
 | Item | Notes |
 |---|---|
 | Nickname rename + history | Today nicknames are immutable; rename needs to cascade to denormalized references safely. |
 | Avatar upload | Profile screen has fallback colored initials; upload UI exists for posts but not for profile photo. |
-| Account deletion (GDPR / Korean PIPA) | Right now cascade-deletes work via Prisma onDelete, but no self-serve flow. |
-| Email verification + password reset | Required once real auth ships. |
+| Account deletion (GDPR / Korean PIPA) | Cascade-deletes work via Prisma `onDelete`, but no self-serve flow. |
 | Soft-delete UI affordance for authors | The DB supports it but Flutter doesn't surface "삭제" reliably from every detail screen. |
 | Recruitment post applications | Currently only displays a contact method string; doesn't track applications. |
-| Search ranking / Korean morphology | ILIKE works for the demo; production needs a real tokenizer and BM25/vector. |
-| Rate limiting | None at the API edge. Throw NestJS throttler in front of write endpoints once auth exists. |
-| Observability | Request ID middleware is wired but no log shipping, no metrics, no tracing. |
+| Search ranking / Korean morphology | ILIKE works for the demo; production needs a real tokenizer and BM25 / vector. |
+| Rate limiting | None at the API edge. Throw NestJS throttler in front of write endpoints once auth is real. |
+| Observability | Request-id middleware is wired but no log shipping, no metrics, no tracing. |
 | ROOM / USER / REFERENCE hide | M9 records audit but doesn't propagate to all surfaces — finish the visibility flip. |
 | Rich text / mentions | Post body is plain text. `@nickname` mentions and basic markdown would help. |
 | Pagination on profile activity | Activity lists in `GET /v1/users/:id/profile` are capped at 5; add paginated `/users/:id/posts` etc. when needed. |
 | Reply depth > 2 | Today blocked at depth 3. Decide whether to extend or formalize. |
+| Real-time updates | No WebSocket / SSE; clients poll on screen entry. |
+| Native mobile distribution | Web bundle works today; App Store / Play submissions not started. |
+| Sessions table for /auth/logout | Logout is a no-op stub on stateless JWT — needs a revocation list or short-lived tokens. |

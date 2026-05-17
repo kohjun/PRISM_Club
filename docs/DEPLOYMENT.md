@@ -42,6 +42,17 @@ The single source of truth is `.env.example`. Copy it to `.env` and adjust.
 | `S3_ENDPOINT` | no | AWS default | Override for R2 / MinIO / etc. |
 | `S3_OBJECT_PREFIX` | no | `uploads` | Object key prefix inside the bucket. |
 | `S3_FORCE_PATH_STYLE` | no | `false` | `1`/`true` for MinIO-style hosts. |
+| `EVENTS_CLIENT_MODE` | no | `mock` | `mock` (bundled fixture) or `prism` (real HTTP client). Falls back to mock if prism mode is set but `PRISM_EVENTS_API_BASE_URL` is missing. |
+| `PRISM_EVENTS_API_BASE_URL` | yes for prism | _(empty)_ | Base URL of upstream PRISM EVENT / CONTENIDO API, no trailing slash. |
+| `PRISM_EVENTS_API_KEY` | no | _(empty)_ | If set, sent as `Authorization: Bearer …` on every events request. |
+| `PRISM_EVENTS_TIMEOUT_MS` | no | `4000` | Per-request timeout for upstream events client. |
+| `NOTIFICATION_DELIVERY_MODE` | no | `noop` | `noop` (IN_APP only — default), `email`, or `push`. |
+| `EMAIL_PROVIDER` | no | _(empty)_ | Provider id (e.g. `resend`). Enables the `EmailDelivery` boundary. |
+| `EMAIL_FROM_ADDRESS` | yes for email | _(empty)_ | RFC 5322 sender (e.g. `PRISM Club <no-reply@club.prism.app>`). |
+| `EMAIL_API_KEY` | yes for email | _(empty)_ | Provider API key. Treated as a secret. |
+| `EMAIL_REGION` | no | _(empty)_ | Provider region if applicable (e.g. SES). |
+| `PUSH_PROVIDER` | no | _(empty)_ | Provider id (e.g. `fcm`, `apns`). Enables the `PushDelivery` boundary. |
+| `PUSH_SERVICE_ACCOUNT` | yes for push | _(empty)_ | Path or JSON for the push service account credential. |
 
 ---
 

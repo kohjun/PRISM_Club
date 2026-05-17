@@ -87,7 +87,7 @@ docker compose up -d postgres
 
 # Wait a few seconds for the container to be ready, then:
 cp .env.example .env       # (or copy in your shell)
-npx prisma migrate dev      # applies all M1–M12 migrations
+npx prisma migrate dev      # applies all M1–M20 migrations
 npm run db:seed             # seeds 6 personas + spaces/categories/rooms/posts/etc.
 
 # Apply migrations to the test database (used by e2e tests):
@@ -126,11 +126,11 @@ cd apps/mobile ; flutter build web --no-tree-shake-icons
 bash scripts/smoke.sh
 ```
 
-Expected counts at Alpha RC:
-- 128 backend unit tests, 18 suites — all green
-- 35 backend e2e tests, 13 suites — all green
+Expected counts at Alpha RC (post-M20 baseline used for Beta):
+- 158 backend unit tests, 22 suites — all green
+- 43 backend e2e tests, 15 suites — all green
 - 53 Flutter widget tests — all green
-- Smoke: 75 curl-driven assertions covering M1–M13
+- Smoke: ~77 curl-driven assertions covering M1–M13 + M19 sections
 
 ---
 
@@ -163,10 +163,10 @@ See `docs/NEXT_BACKLOG.md` for the prioritized list of post-Alpha work.
 - [ ] `docker compose up -d postgres` brings up port 5433
 - [ ] `npx prisma migrate dev` applies all migrations cleanly on a fresh DB
 - [ ] `npm run db:seed` finishes with non-zero counts for all entities
-- [ ] `cd apps/api ; npm test` — 121 / 121 green
-- [ ] `cd apps/api ; npm run test:e2e` — 28 / 28 green
-- [ ] `cd apps/mobile ; flutter analyze` — no errors (info warnings OK)
-- [ ] `cd apps/mobile ; flutter test` — 51 / 51 green
+- [ ] `cd apps/api ; npm test` — 158 / 158 green
+- [ ] `cd apps/api ; npm run test:e2e` — 43 / 43 green
+- [ ] `cd apps/mobile ; flutter analyze` — no errors (info-only output OK)
+- [ ] `cd apps/mobile ; flutter test` — 53 / 53 green
 - [ ] `cd apps/mobile ; flutter build web --no-tree-shake-icons` — succeeds
 - [ ] `bash scripts/smoke.sh` against the running stack — all sections pass
 - [ ] All six seeded personas can sign in via the login picker
