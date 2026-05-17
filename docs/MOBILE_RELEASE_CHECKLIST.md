@@ -159,6 +159,9 @@ inventory of what works and what's missing.
 ## 6. Privacy policy / data collection
 
 Required by both Play (Data Safety) and App Store (App Privacy).
+Engineering inventory and draft form answers live in
+[PRIVACY_DATA_INVENTORY.md](PRIVACY_DATA_INVENTORY.md) (DRAFT — for
+legal + product review, not a published policy).
 
 - [ ] Privacy policy URL drafted and hosted on a public page (e.g.
       `https://prism.app/privacy/club`).

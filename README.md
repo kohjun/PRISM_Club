@@ -320,6 +320,7 @@ across all the planning and operational docs.
 - **[App asset pipeline](docs/APP_ASSET_PIPELINE.md)** — required source files, launcher icon sizes + adaptive icon, splash, generation pipeline (`flutter_launcher_icons` + `flutter_native_splash`), QA checklist
 - **[Play internal testing](docs/PLAY_INTERNAL_TESTING.md)** — Play Console prerequisites, signing assets, applicationId / versionCode policy, AAB upload, tester groups, Data Safety + privacy, QA flow, rollback / unpublish
 - **[Mobile versioning](docs/MOBILE_VERSIONING.md)** — `version:` source of truth, versionName + versionCode format and bump rules, RC tagging, rollback warnings (monotonic-only)
+- **[Privacy data inventory (draft)](docs/PRIVACY_DATA_INVENTORY.md)** — engineering inventory of every personal-data field, retention, third-party processors, draft Play Data Safety + Apple App Privacy answers (DRAFT — for legal + product review, not a published policy)
 - **[Staging smoke](docs/STAGING_SMOKE.md)** — how to point `scripts/smoke.sh` at staging, what persists, how to clean up
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — historical Alpha RC view (feature map, demo walkthrough, fresh-start flow, RC verification)
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build
