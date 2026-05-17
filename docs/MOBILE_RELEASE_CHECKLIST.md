@@ -173,14 +173,32 @@ Required by both Play (Data Safety) and App Store (App Privacy).
 
 ### Android (`AndroidManifest.xml`)
 
-- [ ] `INTERNET` — required (auto-added by Flutter debug merging;
-      verify it's present in the merged release manifest).
-- [ ] No `READ_EXTERNAL_STORAGE` / `READ_MEDIA_IMAGES` declared yet
-      because `file_picker` uses the Storage Access Framework on
-      Android 13+ (no permission needed). If we add camera capture
-      later, declare `CAMERA` then.
-- [ ] No notification permission declared because push is deferred
-      (audit §7 / NEXT_BACKLOG §2).
+Current state (audited in `chore(mobile): audit android permissions`):
+
+| Permission | Status | Why |
+|---|---|---|
+| `INTERNET` | ✅ Declared in `main/AndroidManifest.xml` | Every API call (Dio → REST, media upload, `/v1/auth/login`). The Flutter scaffold's default — declaring it only in debug/profile overlays — would mean the release APK has no network access. Fixed explicitly. |
+| `<queries>` for `https` + `http` `VIEW` intents | ✅ Declared | `url_launcher` needs package-visibility queries to discover a browser activity on Android 11+ (API 30+). Used by `ReferenceTile` to open external Reference URLs. |
+| `<queries>` for `PROCESS_TEXT` `text/plain` | ✅ Declared | Flutter engine's text-processing plugin (default scaffold). |
+| `READ_EXTERNAL_STORAGE` / `READ_MEDIA_IMAGES` | ❌ Not declared, by design | `file_picker` 8.x uses the Storage Access Framework — no permission needed. |
+| `CAMERA` | ❌ Not declared, by design | Camera capture not implemented. Add only if a future feature needs it. |
+| `POST_NOTIFICATIONS` | ❌ Not declared, by design | In-app notifications only; push is deferred (audit §7 / NEXT_BACKLOG §2). Declare when push lands. |
+| `WAKE_LOCK` / `RECEIVE_BOOT_COMPLETED` | ❌ Not declared, by design | Would be added by `firebase_messaging` once push lands. |
+| `BLUETOOTH*` / `LOCATION*` / `RECORD_AUDIO` | ❌ Not declared, by design | None of these are used. |
+
+Verification: `grep -E "uses-permission" apps/mobile/build/app/intermediates/packaged_manifests/release/.../AndroidManifest.xml`
+after the release dry-run build (§12) — the only entries should be
+`INTERNET` and the auto-merged
+`<package>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that androidx
+runtime broadcasts inject.
+
+- [x] No surprise permissions auto-injected by plugins (verified via
+      merged manifest from the debug build).
+- [x] `INTERNET` declared in main manifest.
+- [x] `url_launcher` Android-11+ queries declared.
+- [ ] Re-verify with the release-variant merged manifest before the
+      first Play upload (release manifest may differ from debug due
+      to other overlays).
 
 ### iOS (`Info.plist`)
 
