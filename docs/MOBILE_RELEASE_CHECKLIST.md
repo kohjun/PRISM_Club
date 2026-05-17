@@ -275,10 +275,12 @@ implement `PushDelivery` on the API.
 
 ## 11. QA
 
-Run [MOBILE_QA_SCRIPT.md](MOBILE_QA_SCRIPT.md) on emulator + physical
-device against the local API for fast iteration, then run
-[BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md) on a real device against the
-staging API before submitting an internal test build.
+Use [ANDROID_DEVICE_RUNBOOK.md](ANDROID_DEVICE_RUNBOOK.md) to get
+emulator / physical device up and pointed at the right API, then run
+[MOBILE_QA_SCRIPT.md](MOBILE_QA_SCRIPT.md) for fast iteration against
+the local API, then run [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md) on a
+real device against the staging API before submitting an internal
+test build.
 
 - [ ] Android emulator pass — every section §1–§7.
 - [ ] At least one **physical Android device** pass (so we exercise

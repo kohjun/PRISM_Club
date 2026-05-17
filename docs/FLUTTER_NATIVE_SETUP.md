@@ -16,6 +16,11 @@ Pairs with:
 
 ---
 
+> Tester-oriented companion: [ANDROID_DEVICE_RUNBOOK.md](ANDROID_DEVICE_RUNBOOK.md)
+> distills emulator + physical-device setup, networking, and reset
+> commands for someone who just wants to tap through the app rather
+> than write code.
+
 ## 1. Current platform state
 
 | Platform | Folder | Buildable? | Notes |

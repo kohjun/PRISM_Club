@@ -314,6 +314,7 @@ across all the planning and operational docs.
 - **[Flutter app release audit](docs/FLUTTER_APP_RELEASE_AUDIT.md)** — inventory of what exists vs. missing for native Flutter release
 - **[Flutter native setup](docs/FLUTTER_NATIVE_SETUP.md)** — day-to-day Android + iOS run / build / troubleshooting
 - **[Mobile QA script](docs/MOBILE_QA_SCRIPT.md)** — repeatable QA checklist for Android emulator + physical device against the local API
+- **[Android device runbook](docs/ANDROID_DEVICE_RUNBOOK.md)** — tester-friendly setup guide for emulator + physical device with the local API or staging
 - **[Mobile release checklist](docs/MOBILE_RELEASE_CHECKLIST.md)** — discrete go/no-go list for the first App Store / Play Store upload
 - **[Android release dry-run](docs/ANDROID_RELEASE_DRY_RUN.md)** — what builds today vs. what's missing for a Play-uploadable AAB
 - **[Staging smoke](docs/STAGING_SMOKE.md)** — how to point `scripts/smoke.sh` at staging, what persists, how to clean up
