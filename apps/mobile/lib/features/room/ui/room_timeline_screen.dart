@@ -10,6 +10,7 @@ import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/state_views.dart';
 import '../../auth/data/me_repository.dart';
 import '../../post/data/post_repository.dart';
+import '../data/follow_repository.dart';
 import '../data/room_detail_dto.dart';
 import '../data/room_repository.dart';
 
@@ -39,6 +40,20 @@ class RoomTimelineScreen extends ConsumerWidget {
           data: (d) => Text(d.name, maxLines: 1, overflow: TextOverflow.ellipsis),
           orElse: () => const Text('방'),
         ),
+        actions: [
+          Consumer(builder: (ctx, ref, _) {
+            final state = ref.watch(roomFollowProvider(roomSlug));
+            final followed = state.valueOrNull?.followed ?? false;
+            return TextButton(
+              onPressed: state.isLoading
+                  ? null
+                  : () => ref
+                      .read(roomFollowProvider(roomSlug).notifier)
+                      .toggle(),
+              child: Text(followed ? '팔로잉' : '팔로우'),
+            );
+          }),
+        ],
       ),
       body: detail.when(
         loading: () => const LoadingView(),

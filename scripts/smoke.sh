@@ -224,4 +224,31 @@ default_room_3=$(echo "$detail3" | j ".default_compose_room_slug")
 plan_isolation=$(echo "$detail" | j ".related_rooms.findIndex(r=>r.slug==='planner-recruitment')")
 [[ "$plan_isolation" == "-1" ]] && pass "member: planner room not in related_rooms" || fail "leaked: $plan_isolation"
 
+section "follow / save / notifications (M6)"
+
+# Follow toggle: minseo follows swap-style-talk-game → followed=true
+follow_res=$(curl_as "$MINSEO" -X POST "$API/rooms/swap-style-talk-game/follow")
+followed=$(echo "$follow_res" | j ".followed")
+[[ "$followed" == "true" ]] && pass "follow toggle -> followed=true" || fail "follow=$followed"
+
+# Toggle again → unfollowed
+unfollow_res=$(curl_as "$MINSEO" -X POST "$API/rooms/swap-style-talk-game/follow")
+unfollowed=$(echo "$unfollow_res" | j ".followed")
+[[ "$unfollowed" == "false" ]] && pass "follow toggle x2 -> followed=false" || fail "unfollow=$unfollowed"
+
+# Save minseoReview post → saved=true
+REVIEW_POST="88800001-0000-0000-0000-000000000001"
+save_res=$(curl_as "$MINSEO" -X POST "$API/me/saves" -d "{\"target_type\":\"POST\",\"target_id\":\"$REVIEW_POST\"}")
+saved=$(echo "$save_res" | j ".saved")
+[[ "$saved" == "true" ]] && pass "save POST -> saved=true" || fail "saved=$saved"
+
+# Toggle unsave → saved=false
+unsave_res=$(curl_as "$MINSEO" -X POST "$API/me/saves" -d "{\"target_type\":\"POST\",\"target_id\":\"$REVIEW_POST\"}")
+unsaved=$(echo "$unsave_res" | j ".saved")
+[[ "$unsaved" == "false" ]] && pass "unsave POST -> saved=false" || fail "unsaved=$unsaved"
+
+# Unread count for minseo (seeded 1 unread notification)
+unread=$(curl_as "$MINSEO" "$API/me/notifications/unread-count" | j ".count")
+[[ "$unread" -ge "1" ]] && pass "unread-count >= 1 for minseo (got $unread)" || fail "unread=$unread"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

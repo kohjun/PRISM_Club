@@ -220,15 +220,21 @@ export class KnowledgeContributionService {
   ): Promise<ContributionDetailDTO> {
     const existing = await this.prisma.knowledgeContribution.findUnique({
       where: { id },
-      include: { hub: true, targetBlock: true },
+      include: {
+        hub: { include: { category: { include: { space: true } } } },
+        targetBlock: true,
+      },
     });
     if (!existing) throw new NotFoundException(`Contribution not found: ${id}`);
     if (existing.status !== 'PENDING') {
       throw new ConflictException(`Contribution already ${existing.status.toLowerCase()}`);
     }
 
+    const spaceAccessPolicy =
+      (existing.hub as any)?.category?.space?.accessPolicy ?? 'PUBLIC';
+
     if (input.decision === 'APPROVE') {
-      await this._applyApprove(existing, resolverId, input.note);
+      await this._applyApprove(existing, resolverId, input.note, spaceAccessPolicy);
     } else {
       const status =
         input.decision === 'REJECT' ? 'REJECTED'
@@ -243,6 +249,22 @@ export class KnowledgeContributionService {
           resolvedAt: new Date(),
         },
       });
+      // Notify contributor of rejection/changes request
+      if (existing.contributorId !== resolverId) {
+        await this.prisma.notification.create({
+          data: {
+            userId: existing.contributorId,
+            type: 'CONTRIBUTION_RESOLVED',
+            payload: {
+              contributionId: id,
+              topicHubTitle: existing.hub.title,
+              decision: status,
+              curatorNote: input.note ?? null,
+              spaceAccessPolicy,
+            },
+          },
+        });
+      }
     }
 
     return this.getDetail(id);
@@ -254,10 +276,12 @@ export class KnowledgeContributionService {
     contribution: {
       id: string;
       topicHubId: string;
+      contributorId: string;
       targetBlockId: string | null;
       proposedBlockType: string;
       proposedTitle: string;
       proposedBody: string;
+      hub: { title: string };
       targetBlock: {
         id: string;
         blockType: string;
@@ -268,6 +292,7 @@ export class KnowledgeContributionService {
     },
     resolverId: string,
     note: string | undefined,
+    spaceAccessPolicy: string,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       if (contribution.targetBlockId && contribution.targetBlock) {
@@ -315,6 +340,23 @@ export class KnowledgeContributionService {
             curatorNote: note ?? null,
             resolvedBy: resolverId,
             resolvedAt: new Date(),
+          },
+        });
+      }
+
+      // Notify contributor of approval
+      if (contribution.contributorId !== resolverId) {
+        await tx.notification.create({
+          data: {
+            userId: contribution.contributorId,
+            type: 'CONTRIBUTION_RESOLVED',
+            payload: {
+              contributionId: contribution.id,
+              topicHubTitle: contribution.hub.title,
+              decision: 'APPROVED',
+              curatorNote: note ?? null,
+              spaceAccessPolicy,
+            },
           },
         });
       }

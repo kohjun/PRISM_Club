@@ -5,6 +5,8 @@ import 'package:mobile/features/event_card/data/event_card_dto.dart';
 import 'package:mobile/features/event_detail/data/event_detail_dto.dart';
 import 'package:mobile/features/event_detail/data/event_detail_repository.dart';
 import 'package:mobile/features/event_detail/ui/event_detail_screen.dart';
+import 'package:mobile/features/saves/data/saved_item_dto.dart';
+import 'package:mobile/features/saves/data/saves_repository.dart' show savedItemsProvider;
 
 EventCardDto _card() => EventCardDto(
       id: 'card-1',
@@ -47,6 +49,9 @@ Widget _wrap(Widget child, {required EventDetailBundleDto bundle}) =>
     ProviderScope(
       overrides: [
         eventDetailProvider('card-1').overrideWith((_) async => bundle),
+        // Prevent real Dio calls from the save state watcher
+        savedItemsProvider('EVENT_CARD').overrideWith(
+            (_) async => const SavedItemListDto(items: [])),
       ],
       child: MaterialApp(home: child),
     );

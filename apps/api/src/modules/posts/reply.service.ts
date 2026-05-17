@@ -19,18 +19,20 @@ export class ReplyService {
   async create(postId: string, input: CreateReplyInput, viewer: RequestUser): Promise<ReplyDTO> {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
-      include: { room: true },
+      include: { room: { include: { category: { include: { space: true } } } } },
     });
     if (!post || post.status === 'DELETED') {
       throw new NotFoundException(`Post not found: ${postId}`);
     }
     await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
+    const spaceAccessPolicy = post.room.category?.space?.accessPolicy ?? 'PUBLIC';
 
     // Depth check: parent_reply_id may only reference a top-level reply.
+    let parent: { id: string; postId: string; parentReplyId: string | null; status: string; authorId: string } | null = null;
     if (input.parent_reply_id) {
-      const parent = await this.prisma.reply.findUnique({
+      parent = await this.prisma.reply.findUnique({
         where: { id: input.parent_reply_id },
-        select: { id: true, postId: true, parentReplyId: true, status: true },
+        select: { id: true, postId: true, parentReplyId: true, status: true, authorId: true },
       });
       if (!parent || parent.status === 'DELETED') {
         throw new NotFoundException('parent_reply_id not found');
@@ -42,6 +44,9 @@ export class ReplyService {
         throw new BadRequestException('Replies cannot be nested deeper than 2 levels');
       }
     }
+
+    const viewerNickname = (viewer as any).profile?.nickname ?? viewer.id.slice(0, 8);
+    const bodyPreview = input.body.slice(0, 80);
 
     const created = await this.prisma.$transaction(async (tx) => {
       const reply = await tx.reply.create({
@@ -57,6 +62,35 @@ export class ReplyService {
         where: { id: postId },
         data: { replyCount: { increment: 1 } },
       });
+
+      // Emit notifications (never notify self)
+      const notifs: Array<{ userId: string; type: string; payload: object }> = [];
+      if (post.authorId !== viewer.id) {
+        notifs.push({
+          userId: post.authorId,
+          type: 'REPLY_ON_POST',
+          payload: {
+            postId, replyId: reply.id,
+            roomSlug: post.room.slug, roomName: post.room.name,
+            spaceAccessPolicy, authorNickname: viewerNickname, bodyPreview,
+          },
+        });
+      }
+      if (parent && parent.authorId !== viewer.id && parent.authorId !== post.authorId) {
+        notifs.push({
+          userId: parent.authorId,
+          type: 'NESTED_REPLY',
+          payload: {
+            postId, replyId: reply.id, parentReplyId: parent.id,
+            roomSlug: post.room.slug, roomName: post.room.name,
+            spaceAccessPolicy, authorNickname: viewerNickname, bodyPreview,
+          },
+        });
+      }
+      if (notifs.length > 0) {
+        await tx.notification.createMany({ data: notifs });
+      }
+
       return reply;
     });
 

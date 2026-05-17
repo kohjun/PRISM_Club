@@ -9,6 +9,7 @@ import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/reply_tree_widget.dart';
 import '../../../widgets/state_views.dart';
+import '../../../features/saves/data/saves_repository.dart';
 import '../data/post_dto.dart';
 import '../data/post_repository.dart';
 import '../data/reaction_repository.dart';
@@ -249,13 +250,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 }
 
-class _PostBody extends StatelessWidget {
+class _PostBody extends ConsumerWidget {
   const _PostBody({required this.post, required this.onLike});
   final PostDto post;
   final VoidCallback onLike;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saveKey = 'POST:${post.id}';
+    final saved = ref.watch(saveStateProvider(saveKey)).valueOrNull ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -331,6 +334,19 @@ class _PostBody extends StatelessWidget {
             const SizedBox(width: 4),
             Text('${post.replyCount}',
                 style: const TextStyle(color: PrismColors.muted)),
+            const Spacer(),
+            IconButton(
+              icon: Icon(
+                saved ? Icons.bookmark : Icons.bookmark_outline,
+                color: saved ? PrismColors.primary : PrismColors.muted,
+              ),
+              tooltip: saved ? '저장 취소' : '저장',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => ref
+                  .read(saveStateProvider(saveKey).notifier)
+                  .toggle(),
+            ),
           ],
         ),
       ],

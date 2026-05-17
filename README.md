@@ -41,12 +41,29 @@ Search results); the old search-result bottom sheet is retired. The
 `?attach_event_card_id=<id>` so the event is pre-attached (and still
 removable). No schema migration; mock `IEventsClient` is unchanged.
 
+Milestone 6 — lightweight retention loop: follow rooms, save items,
+notification inbox. Three new schema tables (`room_follows`, `saved_items`,
+`notifications`) and six new API endpoints power a retention layer with no
+push/email/realtime infrastructure. Followers of a room receive
+`NEW_POST_IN_FOLLOWED_ROOM` notifications when a post is created; replies
+trigger `REPLY_ON_POST` / `NESTED_REPLY`; recruitment status changes emit
+`RECRUITMENT_STATUS_CHANGED`; approved/rejected contributions emit
+`CONTRIBUTION_RESOLVED`. Notification access is filtered at read time by
+`spaceAccessPolicy` stored in the payload, consistent with M4 role gates.
+`Post.bookmarkCount` (dormant since M1) is now activated: incremented and
+decremented transactionally in `SaveService.toggle()`. New Flutter screens:
+`NotificationScreen` at `/me/notifications` (with mark-all-read) and
+`SavedItemsScreen` at `/me/saves` (type chip filter). AppBar surfaces:
+bell icon + unread badge in `SpaceListScreen`, follow button in
+`RoomTimelineScreen`, bookmark icon in `PostDetailScreen` and
+`EventDetailScreen`.
+
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 29 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts |
-| Mobile (Flutter) | Login picker, Space list (curator banner + planner lock dialog + 내 제안 entry), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선; related-event tiles open Event Detail), Room create, Room timeline (FAB routes to recruitment composer in RECRUITMENT rooms; pinned EventCards open Event Detail), Post compose (accepts `?attach_event_card_id` for pre-attached events), Recruitment composer, Post detail with RecruitmentPostCard + status toggle (attachment EventCards open Event Detail), Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter (event_card hits open Event Detail), Event Detail screen with hero card / related rooms / related posts / 글 작성 CTA + room picker |
-| Tests | 82 backend unit tests + 5 e2e + 34 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` — 44 curl-driven checks (M1 slice + M3 search + M4 planner / recruitment + M5 event detail) |
+| Backend (NestJS + Prisma) | 35 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts, follow/save/notification endpoints with spaceAccessPolicy filtering |
+| Mobile (Flutter) | Login picker, Space list (curator banner + planner lock dialog + 내 제안 entry + bell badge), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선; related-event tiles open Event Detail), Room create, Room timeline (FAB routes to recruitment composer in RECRUITMENT rooms; pinned EventCards open Event Detail; follow button in AppBar), Post compose (accepts `?attach_event_card_id` for pre-attached events), Recruitment composer, Post detail with RecruitmentPostCard + status toggle (attachment EventCards open Event Detail; bookmark icon), Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter (event_card hits open Event Detail), Event Detail screen with hero card / related rooms / related posts / 글 작성 CTA + room picker + bookmark icon, Notification screen, Saved items screen |
+| Tests | 95 backend unit tests + 9 e2e + 40 Flutter widget tests, all green |
+| Smoke | `scripts/smoke.sh` — 49 curl-driven checks (M1 slice + M3 search + M4 planner / recruitment + M5 event detail + M6 follow / save / notifications) |
 
 ## Repo layout
 

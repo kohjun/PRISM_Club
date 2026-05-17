@@ -110,6 +110,30 @@ export class PostService {
       });
     });
 
+    // Notify room followers of new post (post-tx, non-blocking)
+    const followers = await this.prisma.roomFollow.findMany({ where: { roomId: room.id } });
+    if (followers.length > 0) {
+      const spaceRow = await this.prisma.room.findUnique({
+        where: { id: room.id },
+        include: { category: { include: { space: true } } },
+      });
+      const spaceAccessPolicy = spaceRow?.category?.space?.accessPolicy ?? 'PUBLIC';
+      const bodyPreview = input.body.slice(0, 80);
+      const notifs = followers
+        .filter((f) => f.userId !== viewer.id)
+        .map((f) => ({
+          userId: f.userId,
+          type: 'NEW_POST_IN_FOLLOWED_ROOM',
+          payload: {
+            postId: post.id, roomSlug: room.slug, roomName: room.name,
+            spaceAccessPolicy, bodyPreview,
+          },
+        }));
+      if (notifs.length > 0) {
+        await this.prisma.notification.createMany({ data: notifs });
+      }
+    }
+
     return this.getById(post.id, viewer);
   }
 
@@ -140,6 +164,31 @@ export class PostService {
       where: { id: postId },
       data: { recruitmentFields: next as unknown as Prisma.InputJsonValue },
     });
+
+    // Notify room followers of status change (non-blocking)
+    const followers = await this.prisma.roomFollow.findMany({ where: { roomId: post.roomId } });
+    if (followers.length > 0) {
+      const spaceRow = await this.prisma.room.findUnique({
+        where: { id: post.roomId },
+        include: { category: { include: { space: true } } },
+      });
+      const spaceAccessPolicy = spaceRow?.category?.space?.accessPolicy ?? 'PUBLIC';
+      const role = ((post.recruitmentFields as Record<string, unknown> | null)?.role as string) ?? '';
+      const notifs = followers
+        .filter((f) => f.userId !== viewer.id)
+        .map((f) => ({
+          userId: f.userId,
+          type: 'RECRUITMENT_STATUS_CHANGED',
+          payload: {
+            postId, roomSlug: post.room.slug, roomName: post.room.name,
+            spaceAccessPolicy, status, role,
+          },
+        }));
+      if (notifs.length > 0) {
+        await this.prisma.notification.createMany({ data: notifs });
+      }
+    }
+
     return this.getById(postId, viewer);
   }
 

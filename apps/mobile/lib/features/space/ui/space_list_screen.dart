@@ -7,6 +7,7 @@ import '../../../core/api_error.dart';
 import '../../../core/current_user.dart';
 import '../../../widgets/state_views.dart';
 import '../../auth/data/me_repository.dart';
+import '../../notifications/data/notification_repository.dart';
 import '../data/space_dto.dart';
 import '../data/space_repository.dart';
 
@@ -27,6 +28,18 @@ class SpaceListScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(right: 12),
               child: Chip(label: Text(user.nickname)),
             ),
+          Consumer(builder: (ctx, ref, _) {
+            final count = ref.watch(unreadCountProvider).valueOrNull ?? 0;
+            return Badge(
+              isLabelVisible: count > 0,
+              label: Text(count > 9 ? '9+' : '$count'),
+              child: IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                tooltip: '알림',
+                onPressed: () => context.go('/me/notifications'),
+              ),
+            );
+          }),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: '검색',

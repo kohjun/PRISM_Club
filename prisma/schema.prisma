@@ -28,6 +28,9 @@ model User {
   references Reference[]
   contributions          KnowledgeContribution[] @relation("Contributor")
   resolvedContributions  KnowledgeContribution[] @relation("Resolver")
+  follows                RoomFollow[]
+  savedItems             SavedItem[]
+  notifications          Notification[]
 
   @@map("users")
 }
@@ -193,10 +196,11 @@ model Room {
   status       String   @default("ACTIVE")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  category Category  @relation(fields: [categoryId], references: [id])
-  owner    User?     @relation(fields: [ownerId], references: [id])
-  pins     RoomPin[]
-  posts    Post[]
+  category  Category    @relation(fields: [categoryId], references: [id])
+  owner     User?       @relation(fields: [ownerId], references: [id])
+  pins      RoomPin[]
+  posts     Post[]
+  followers RoomFollow[]
 
   @@index([categoryId])
   @@map("rooms")
@@ -386,4 +390,53 @@ model KnowledgeContribution {
   @@index([topicHubId, status, createdAt(sort: Desc)])
   @@index([contributorId, createdAt(sort: Desc)])
   @@map("knowledge_contributions")
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 6: Follow / Save / Notification
+// ---------------------------------------------------------------------------
+
+model RoomFollow {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roomId    String   @map("room_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+  @@map("room_follows")
+}
+
+// target_type: POST | REFERENCE | EVENT_CARD; target_id has no FK (resolved at read time).
+model SavedItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("saved_items")
+}
+
+// type: REPLY_ON_POST | NESTED_REPLY | NEW_POST_IN_FOLLOWED_ROOM |
+//       RECRUITMENT_STATUS_CHANGED | CONTRIBUTION_RESOLVED
+// payload contains type-specific context + spaceAccessPolicy for access filtering.
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  isRead    Boolean  @default(false) @map("is_read")
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@map("notifications")
 }

@@ -8,6 +8,7 @@ import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/state_views.dart';
 import '../../post/data/post_dto.dart';
+import '../../saves/data/saves_repository.dart';
 import '../data/event_detail_dto.dart';
 import '../data/event_detail_repository.dart';
 import 'widgets/compose_room_picker.dart';
@@ -40,6 +41,24 @@ class EventDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
               EventCardWidget(card: b.eventCard),
+              Consumer(builder: (ctx, ref, _) {
+                final saveKey = 'EVENT_CARD:${b.eventCard.id}';
+                final saved =
+                    ref.watch(saveStateProvider(saveKey)).valueOrNull ??
+                        false;
+                return Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    icon: Icon(saved
+                        ? Icons.bookmark
+                        : Icons.bookmark_outline),
+                    label: Text(saved ? '저장됨' : '저장'),
+                    onPressed: () => ref
+                        .read(saveStateProvider(saveKey).notifier)
+                        .toggle(),
+                  ),
+                );
+              }),
               const SizedBox(height: 16),
               _RelatedRoomsSection(rooms: b.relatedRooms),
               const SizedBox(height: 20),

@@ -87,6 +87,19 @@ export const U = {
     pendingNewChecklist: 'a1000000-0000-0000-0000-000000000002',
     approvedFaqEdit: 'a1000000-0000-0000-0000-000000000003',
   },
+  // Milestone 6 — Follow / Save / Notification
+  follow: {
+    minseoDatingReviews: 'b0000000-0000-0000-0000-000000000001',
+    minseoSwapTalk: 'b0000000-0000-0000-0000-000000000002',
+  },
+  savedItem: {
+    minseoReviewPost: 'b1000000-0000-0000-0000-000000000001',
+    minseoSwapAnalysis: 'b1000000-0000-0000-0000-000000000002',
+  },
+  notification: {
+    joonReplied: 'b2000000-0000-0000-0000-000000000001',
+    approvedFaqNotif: 'b2000000-0000-0000-0000-000000000002',
+  },
 } as const;
 
 // Dates relative to a fixed "today" for stable seeds.
@@ -97,6 +110,9 @@ const DAYS = (n: number): Date => new Date(TODAY.getTime() + n * 86_400_000);
 
 async function clearAll(prisma: PrismaClient): Promise<void> {
   // Order matters: children before parents.
+  await prisma.notification.deleteMany();
+  await prisma.savedItem.deleteMany();
+  await prisma.roomFollow.deleteMany();
   await prisma.knowledgeContribution.deleteMany();
   await prisma.reaction.deleteMany();
   await prisma.postAttachment.deleteMany();
@@ -768,6 +784,62 @@ async function seedPlannerPosts(prisma: PrismaClient): Promise<void> {
   });
 }
 
+async function seedFollowsSavesNotifications(prisma: PrismaClient): Promise<void> {
+  // minseo follows two participant rooms
+  await prisma.roomFollow.createMany({
+    data: [
+      { id: U.follow.minseoDatingReviews, userId: U.user.minseo, roomId: U.room.datingReviews },
+      { id: U.follow.minseoSwapTalk, userId: U.user.minseo, roomId: U.room.swapTalkGame },
+    ],
+  });
+
+  // minseo saves the review post and the swap-talk reference
+  await prisma.savedItem.createMany({
+    data: [
+      { id: U.savedItem.minseoReviewPost, userId: U.user.minseo, targetType: 'POST', targetId: U.post.minseoReview },
+      { id: U.savedItem.minseoSwapAnalysis, userId: U.user.minseo, targetType: 'REFERENCE', targetId: U.reference.swapTalkAnalysis },
+    ],
+  });
+  // Activate the dormant bookmarkCount counter for the saved post
+  await prisma.post.update({
+    where: { id: U.post.minseoReview },
+    data: { bookmarkCount: 1 },
+  });
+
+  // Two demo notifications for minseo
+  await prisma.notification.createMany({
+    data: [
+      {
+        id: U.notification.joonReplied,
+        userId: U.user.minseo,
+        type: 'REPLY_ON_POST',
+        isRead: false,
+        payload: {
+          postId: U.post.minseoReview,
+          roomSlug: 'dating-event-reviews',
+          roomName: '소개팅/매칭 이벤트 후기',
+          spaceAccessPolicy: 'PUBLIC',
+          authorNickname: 'joon',
+          bodyPreview: '미션 순서가 어떻게 됐나요? 제가 듣기로는 아이스브레이킹 게임이 먼저라던데.',
+        },
+      },
+      {
+        id: U.notification.approvedFaqNotif,
+        userId: U.user.minseo,
+        type: 'CONTRIBUTION_RESOLVED',
+        isRead: true,
+        payload: {
+          contributionId: U.contribution.approvedFaqEdit,
+          topicHubTitle: '연애 콘텐츠',
+          decision: 'APPROVED',
+          curatorNote: null,
+          spaceAccessPolicy: 'PUBLIC',
+        },
+      },
+    ],
+  });
+}
+
 export async function runSeed(prisma: PrismaClient): Promise<Record<string, number>> {
   await clearAll(prisma);
   await seedUsers(prisma);
@@ -780,6 +852,7 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
   await seedPlannerHub(prisma);
   await seedPlannerRooms(prisma);
   await seedPlannerPosts(prisma);
+  await seedFollowsSavesNotifications(prisma);
 
   return {
     users: await prisma.user.count(),
@@ -798,6 +871,9 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
     userRoles: await prisma.userRole.count(),
     knowledgeContributions: await prisma.knowledgeContribution.count(),
     recruitmentPosts: await prisma.post.count({ where: { postType: 'RECRUITMENT' } }),
+    roomFollows: await prisma.roomFollow.count(),
+    savedItems: await prisma.savedItem.count(),
+    notifications: await prisma.notification.count(),
   };
 }
 

@@ -17,6 +17,8 @@ import '../features/search/ui/search_screen.dart';
 import '../features/room/ui/room_creator_screen.dart';
 import '../features/room/ui/room_timeline_screen.dart';
 import '../features/space/ui/space_list_screen.dart';
+import '../features/notifications/ui/notification_screen.dart';
+import '../features/saves/ui/saved_items_screen.dart';
 import '../features/topic_hub/ui/topic_hub_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -106,6 +108,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           cardId: st.pathParameters['cardId']!,
         ),
       ),
+      // Milestone 6: notifications + saves
+      GoRoute(path: '/me/notifications', builder: (_, _) => const NotificationScreen()),
+      GoRoute(path: '/me/saves', builder: (_, _) => const SavedItemsScreen()),
       // Milestone 3: unified search
       GoRoute(
         path: '/search',
