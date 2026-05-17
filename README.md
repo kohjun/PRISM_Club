@@ -304,6 +304,7 @@ across all the planning and operational docs.
 - **[Beta QA script](docs/BETA_QA_SCRIPT.md)** — manual QA flows for cut-over (member / planner / curator+moderator / admin / media / events / analytics)
 - **[Handoff guide](docs/HANDOFF.md)** — single-page orientation for a new engineer / operator
 - **[Staging setup](docs/STAGING_SETUP.md)** — services + env + migration + builds for the rehearsal environment
+- **[Staging smoke](docs/STAGING_SMOKE.md)** — how to point `scripts/smoke.sh` at staging, what persists, how to clean up
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — historical Alpha RC view (feature map, demo walkthrough, fresh-start flow, RC verification)
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build
 - **[Events integration](docs/EVENTS_INTEGRATION.md)** — IEventsClient modes, expected upstream shape, mapping, failure behavior
