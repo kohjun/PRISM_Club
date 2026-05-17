@@ -37,22 +37,59 @@ class LoginPickerScreen extends ConsumerWidget {
   }
 }
 
-class _UserTile extends ConsumerWidget {
+class _UserTile extends ConsumerStatefulWidget {
   const _UserTile({required this.user});
   final DevUserDto user;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Future<void> loginAndGo(String path) async {
-      await ref
-          .read(currentUserProvider.notifier)
-          .setUser(CurrentUser(id: user.id, nickname: user.nickname));
-      if (context.mounted) context.go(path);
-    }
+  ConsumerState<_UserTile> createState() => _UserTileState();
+}
 
+class _UserTileState extends ConsumerState<_UserTile> {
+  bool _busy = false;
+
+  /// M13: actually call POST /v1/auth/login, store the JWT, then navigate.
+  Future<void> _loginAndGo(String path) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final result =
+          await ref.read(authRepositoryProvider).login(widget.user.id);
+      await ref.read(currentUserProvider.notifier).setUser(
+            CurrentUser(
+              id: result.userId,
+              nickname: result.nickname,
+              accessToken: result.accessToken,
+            ),
+          );
+      if (mounted) context.go(path);
+    } on ApiError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('로그인 실패: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.user;
     return Card(
       child: ListTile(
-        leading: CircleAvatar(child: Text(user.nickname.characters.first)),
+        leading: _busy
+            ? const SizedBox(
+                width: 32,
+                height: 32,
+                child: Center(
+                    child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))),
+              )
+            : CircleAvatar(child: Text(user.nickname.characters.first)),
         title: Text(user.nickname),
         subtitle: Text(user.id, style: const TextStyle(fontSize: 11)),
         trailing: Row(
@@ -61,12 +98,12 @@ class _UserTile extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.person_outline),
               tooltip: '프로필 보기',
-              onPressed: () => loginAndGo('/users/${user.id}'),
+              onPressed: _busy ? null : () => _loginAndGo('/users/${user.id}'),
             ),
             const Icon(Icons.chevron_right),
           ],
         ),
-        onTap: () => loginAndGo('/home'),
+        onTap: _busy ? null : () => _loginAndGo('/home'),
       ),
     );
   }

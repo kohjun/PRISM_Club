@@ -380,4 +380,20 @@ hubs_processed=$(echo "$refresh_res" | j ".hubs_processed")
 non_ops_status=$(curl_as "$JOON" -s -o /dev/null -w "%{http_code}" -X POST "$API/admin/signals/refresh")
 [[ "$non_ops_status" == "403" ]] && pass "non-ops signal refresh -> 403" || fail "non_ops_status=$non_ops_status"
 
+section "auth sessions (M13)"
+
+# POST /v1/auth/login returns a JWT
+login_res=$(curl -sS -X POST "$API/auth/login" -H "Content-Type: application/json" -d "{\"user_id\":\"$MINSEO\"}")
+access_token=$(echo "$login_res" | j ".access_token")
+[[ -n "$access_token" && "$access_token" != "undefined" ]] && pass "POST /auth/login -> access_token" || fail "login_res=$login_res"
+
+# Bearer token authenticates /me
+me_res=$(curl -sS -H "Authorization: Bearer $access_token" "$API/me")
+me_id=$(echo "$me_res" | j ".id")
+[[ "$me_id" == "$MINSEO" ]] && pass "Bearer token authenticates /me" || fail "me_res=$me_res"
+
+# Invalid token -> 401
+bad_status=$(curl -sS -o /dev/null -w "%{http_code}" -H "Authorization: Bearer not-a-token" "$API/me")
+[[ "$bad_status" == "401" ]] && pass "invalid token -> 401" || fail "bad_status=$bad_status"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

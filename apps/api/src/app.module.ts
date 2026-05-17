@@ -9,6 +9,7 @@ import { RolesGuard } from './shared/guards/roles.guard';
 import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
 import { RequestIdMiddleware } from './shared/middleware/request-id.middleware';
 
+import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { CommunityModule } from './modules/community/community.module';
@@ -32,6 +33,7 @@ import { SignalsModule } from './modules/signals/signals.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    AuthModule,
     AccessControlModule,
     HealthModule,
     UsersModule,

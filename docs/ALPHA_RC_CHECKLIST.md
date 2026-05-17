@@ -7,7 +7,7 @@ end to end.
 
 ---
 
-## 1. Feature map (M1–M12)
+## 1. Feature map (M1–M13)
 
 | Milestone | Surface | What's working |
 |---|---|---|
@@ -23,6 +23,7 @@ end to end.
 | M10 | Media attachments | Local image upload (`/uploads/<uuid>.<ext>`); IMAGE attachment_type; composer image picker + thumbnails |
 | M11 | Ops dashboard | `GET /v1/admin/ops/summary` (role-gated); Flutter `OpsDashboardScreen` with deep-link cards |
 | M12 | Activity signals | Computed TopicSignal entries (HOT_DEBATE / POPULAR_REF / VERIFIED_REVIEWS) recalculated from real activity via `POST /v1/admin/signals/refresh` |
+| M13 | Real auth sessions | JWT-backed login: `POST /v1/auth/login`, `GET /v1/auth/session`, `POST /v1/auth/logout`. AuthGuard accepts `Authorization: Bearer <jwt>`; legacy `X-User-Id` still works in non-production for tests/smoke. Flutter persists the access token and sends it automatically. |
 
 ---
 
@@ -120,9 +121,9 @@ bash scripts/smoke.sh
 
 Expected counts at Alpha RC:
 - 121 backend unit tests, 17 suites — all green
-- 28 backend e2e tests, 12 suites — all green
-- 51 Flutter widget tests — all green
-- Smoke: 72 curl-driven assertions covering M1–M12
+- 35 backend e2e tests, 13 suites — all green
+- 53 Flutter widget tests — all green
+- Smoke: 75 curl-driven assertions covering M1–M13
 
 ---
 
@@ -132,7 +133,7 @@ Things that are intentionally NOT yet production-shaped:
 
 | Area | Limitation |
 |---|---|
-| **Auth** | `X-User-Id` header is the only authentication. No login screen produces a real session. Anyone can impersonate any user by setting the header. Dev/demo only. |
+| **Auth** | M13 added real JWT sessions and a working `/auth/login` flow. Login is **still passwordless** (any seeded user id signs you in) — production needs email/password or SSO before exposing this to real users. `X-User-Id` remains as a fallback only when `NODE_ENV != production` or `ALLOW_X_USER_ID=1`. |
 | **Media storage** | Files land in `apps/api/uploads/` on the API host. No S3, no CDN, no antivirus, no resize pipeline. |
 | **Events client** | A mock `IEventsClient` returns hand-curated payloads. No real PRISM EVENT / CONTENIDO integration. |
 | **Notifications** | In-app only. No push, no email, no SMS, no realtime channel. |

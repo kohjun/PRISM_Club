@@ -7,12 +7,24 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
-**Alpha RC** — M1–M12 + hardening complete. See
+**Alpha RC** — M1–M13 + hardening complete. See
 [ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the feature map, demo
 walkthrough, fresh-start flow, and RC verification steps. See
 [NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized post-Alpha items
-(real auth, deployment, real PRISM EVENT integration, production media
-storage, push, admin web, analytics).
+(deployment, real PRISM EVENT integration, production media storage, push,
+admin web, analytics).
+
+Milestone 13 — real auth sessions. Replaces the stub `X-User-Id` with a
+JWT-backed flow. `POST /v1/auth/login` (passwordless: accept a seeded
+user id, return signed JWT + session DTO), `GET /v1/auth/session`,
+`POST /v1/auth/logout` (no-op stub for the stateless design). The shared
+`AuthGuard` now accepts either `Authorization: Bearer <jwt>` (preferred)
+or — only in non-production / `ALLOW_X_USER_ID=1` — the legacy
+`X-User-Id` header that tests and the smoke script keep using. Flutter
+`CurrentUser` carries the access token in `SharedPreferences`; the Dio
+interceptor adds `Authorization: Bearer …` automatically. The login
+picker now actually calls `/auth/login` before navigating. `JWT_SECRET`
+in `.env.example` MUST be overridden in non-dev environments.
 
 Milestone 1 — vertical slice. 참가자 → 연애 콘텐츠 Topic Hub → user room → post →
 replies flow.
@@ -155,8 +167,8 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 |---|---|
 | Backend (NestJS + Prisma) | 47 endpoints, role-gated guard, mock Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local dev storage at /uploads/*) |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 121 backend unit + 28 e2e + 51 Flutter widget, all green |
-| Smoke | `scripts/smoke.sh` — 72 curl-driven checks (M1–M12 inclusive) |
+| Tests | 121 backend unit + 35 e2e + 53 Flutter widget, all green |
+| Smoke | `scripts/smoke.sh` — 75 curl-driven checks (M1–M13 inclusive) |
 
 ## Repo layout
 

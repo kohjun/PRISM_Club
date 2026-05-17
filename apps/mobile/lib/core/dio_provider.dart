@@ -24,6 +24,10 @@ final dioProvider = Provider<Dio>((ref) {
       onRequest: (options, handler) {
         final user = ref.read(currentUserProvider).valueOrNull;
         if (user != null) {
+          if (user.accessToken.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer ${user.accessToken}';
+          }
+          // Keep X-User-Id for tests / smoke that still use it.
           options.headers['X-User-Id'] = user.id;
         }
         handler.next(options);
