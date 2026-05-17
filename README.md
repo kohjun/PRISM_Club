@@ -302,6 +302,8 @@ across all the planning and operational docs.
 - **[Beta readiness](docs/BETA_READINESS.md)** — Beta feature map, architecture snapshot, persona walkthrough, production readiness, monitoring hooks, go/no-go
 - **[Beta launch runbook](docs/BETA_LAUNCH_RUNBOOK.md)** — pre-launch checklist, deploy sequence, env / migration / smoke / rollback / incident response / monitoring
 - **[Beta QA script](docs/BETA_QA_SCRIPT.md)** — manual QA flows for cut-over (member / planner / curator+moderator / admin / media / events / analytics)
+- **[Handoff guide](docs/HANDOFF.md)** — single-page orientation for a new engineer / operator
+- **[Staging setup](docs/STAGING_SETUP.md)** — services + env + migration + builds for the rehearsal environment
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — historical Alpha RC view (feature map, demo walkthrough, fresh-start flow, RC verification)
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build
 - **[Events integration](docs/EVENTS_INTEGRATION.md)** — IEventsClient modes, expected upstream shape, mapping, failure behavior

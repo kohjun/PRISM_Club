@@ -19,6 +19,7 @@ prisma/migrations/migration_lock.toml.bak
 .env
 .env.*
 !.env.example
+!.env.staging.example
 
 # logs
 logs/
