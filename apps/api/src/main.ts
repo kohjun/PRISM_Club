@@ -21,7 +21,7 @@ async function bootstrap(): Promise<void> {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('PRISM Club API')
-    .setDescription('Milestone 1 — knowledge-based community vertical slice')
+    .setDescription('PRISM Club — knowledge-based community API (M1–M12)')
     .setVersion('0.1.0')
     .addApiKey({ type: 'apiKey', name: 'X-User-Id', in: 'header' }, 'X-User-Id')
     .build();

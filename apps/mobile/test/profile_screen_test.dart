@@ -60,20 +60,13 @@ UserProfileBundleDto _bundle({
     );
 
 class _FakeFollowRepo implements UserFollowRepository {
-  _FakeFollowRepo({
-    this.initialFollowed = false,
-    this.onToggle,
-  });
+  _FakeFollowRepo({this.onToggle});
 
-  final bool initialFollowed;
   final void Function(String userId)? onToggle;
 
   @override
   Future<UserFollowStateDto> getState(String userId) async {
-    return UserFollowStateDto(
-      followed: initialFollowed,
-      followerCount: initialFollowed ? 3 : 2,
-    );
+    return const UserFollowStateDto(followed: false, followerCount: 2);
   }
 
   @override
