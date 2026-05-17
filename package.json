@@ -15,9 +15,12 @@
     "api:test:e2e": "npm run test:e2e -w api",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "db:seed": "node --import tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "build": "npm run prisma:generate && npm run api:build",
+    "start:prod": "npm run api:start"
   },
   "prisma": {
     "seed": "node --import tsx prisma/seed.ts"

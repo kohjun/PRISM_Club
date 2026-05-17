@@ -34,9 +34,15 @@ export interface MediaAssetDTO {
 
 @Injectable()
 export class MediaService {
-  // Resolve uploads dir relative to the API working directory.
-  // In dev (npm run dev) cwd is apps/api so this matches the static-served path.
-  private readonly uploadsDir = path.join(process.cwd(), 'uploads');
+  // M14: configurable via UPLOADS_DIR env. Defaults to ./uploads relative
+  // to the API process cwd. Keep in sync with main.ts's useStaticAssets call.
+  private readonly uploadsDir = (() => {
+    const env = process.env.UPLOADS_DIR;
+    if (!env || env.trim() === '') {
+      return path.join(process.cwd(), 'uploads');
+    }
+    return path.isAbsolute(env) ? env : path.join(process.cwd(), env);
+  })();
 
   constructor(private readonly prisma: PrismaService) {
     if (!fs.existsSync(this.uploadsDir)) {

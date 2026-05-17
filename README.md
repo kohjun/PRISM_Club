@@ -200,6 +200,7 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 - [UX mockups and storyboard](docs/04_UX_MOCKUPS_STORYBOARD.md)
 - [Roadmap](docs/05_ROADMAP.md)
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — feature map, demo walkthrough, fresh-start flow, RC verification
+- **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build
 - **[Next backlog](docs/NEXT_BACKLOG.md)** — deferred production items
 
 ## Prerequisites
