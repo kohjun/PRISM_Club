@@ -18,9 +18,13 @@ inventory) and [FLUTTER_NATIVE_SETUP.md](FLUTTER_NATIVE_SETUP.md)
 
 ## 1. Android — package / applicationId
 
-- [ ] `applicationId = "club.prism.mobile"` matches the Play Console
-      app shell (locked once the first AAB is uploaded).
-- [ ] `namespace = "club.prism.mobile"` matches.
+- [x] `applicationId = "club.prism.mobile"` set in
+      `android/app/build.gradle.kts`. Will be locked once the first
+      AAB is uploaded to Play.
+- [x] `namespace = "club.prism.mobile"` matches.
+- [x] `android:label` resolves through `@string/app_name` (defined in
+      `android/app/src/main/res/values/strings.xml` as **"PRISM
+      Club"**), not hardcoded to the Flutter default `"mobile"`.
 - [ ] `versionCode` and `versionName` derive from
       `apps/mobile/pubspec.yaml` `version:` (currently `0.1.0+1`).
       Bumped per release: `0.1.0+1` → `0.1.0+2` → `0.1.1+3` etc.
@@ -57,6 +61,13 @@ Files:
 
 ## 3. App icon / splash
 
+**Current state (placeholder):** Android ships with the **default
+Flutter "F" launcher icon** in every `mipmap-*` density. The launch
+background is the Flutter default white. No brand assets exist in the
+repo (`find apps/mobile -name '*logo*'` returns nothing). This is
+acceptable for engineering builds and emulator testing but **MUST be
+replaced before any store upload**.
+
 - [ ] Branded launcher icon replaces the default Flutter "F" mark on
       Android (all `mipmap-*` densities) — see audit §8.
 - [ ] Adaptive icon (`mipmap-anydpi-v26/ic_launcher.xml` +
@@ -69,6 +80,17 @@ Files:
 - [ ] Generated via `flutter_launcher_icons` and
       `flutter_native_splash` for reproducibility (one config block
       in `pubspec.yaml`, one `dart run` step per asset refresh).
+
+**When the brand assets land**, the recommended path is:
+
+1. Drop the source SVG/PNG into `apps/mobile/assets/branding/` (a
+   new folder).
+2. Add `flutter_launcher_icons` + `flutter_native_splash` as dev
+   dependencies.
+3. Configure both in `pubspec.yaml` pointing at the source files.
+4. `dart run flutter_launcher_icons` + `dart run flutter_native_splash:create`.
+5. The `mipmap-*/ic_launcher.png` + adaptive icon XML files in
+   `android/app/src/main/res/` will be regenerated. Commit those.
 
 ---
 

@@ -21,7 +21,7 @@ Pairs with:
 | Platform | Folder | Buildable? | Notes |
 |---|---|---|---|
 | Web (Chrome / Edge) | `apps/mobile/web/` | ✅ Yes | `flutter build web --no-tree-shake-icons` |
-| Android | `apps/mobile/android/` | ✅ Yes (debug); release signing is a TODO | `applicationId=club.prism.mobile`; default icon + splash |
+| Android | `apps/mobile/android/` | ✅ Yes (debug); release signing is a TODO | `applicationId=club.prism.mobile`; label="PRISM Club" via `@string/app_name`; default Flutter "F" icon + splash (placeholders pending brand assets) |
 | iOS | _missing_ | ❌ Not on Windows | Folder must be created on macOS — see §3 |
 
 `flutter doctor` from a Windows host (current dev workstation):

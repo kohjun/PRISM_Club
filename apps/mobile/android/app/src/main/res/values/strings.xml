@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android resource strings.
+
+  Single source of truth for the user-facing app label. Reference from
+  AndroidManifest.xml as `@string/app_name`. Add locale-specific
+  values/values-<lang>/strings.xml when we localize the app label.
+
+  The `applicationId` (final: club.prism.mobile) lives in
+  android/app/build.gradle.kts and is separate from this label.
+-->
+<resources>
+    <string name="app_name">PRISM Club</string>
+</resources>
