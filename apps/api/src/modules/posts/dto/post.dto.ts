@@ -1,9 +1,19 @@
 import { EventCardDTO, ReferenceDTO } from '../../community/dto/room.dto';
 
+export interface MediaAttachmentTarget {
+  id: string;
+  kind: 'IMAGE';
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  url: string;
+  created_at: string;
+}
+
 export interface PostAttachmentDTO {
   id: string;
-  attachment_type: 'EVENT_CARD' | 'REFERENCE';
-  target: EventCardDTO | ReferenceDTO;
+  attachment_type: 'EVENT_CARD' | 'REFERENCE' | 'IMAGE';
+  target: EventCardDTO | ReferenceDTO | MediaAttachmentTarget;
   sort_order: number;
 }
 

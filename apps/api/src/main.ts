@@ -1,16 +1,20 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('v1');
+  // M10: serve uploaded media files (dev/local storage). NOT a production CDN.
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
   app.enableCors({
     // Loose during milestone 1 — Flutter web dev server, Android emulator
     // (10.0.2.2), and curl all need to reach us locally. Tighten in phase 2.
     origin: true,
     credentials: false,
-    allowedHeaders: ['Content-Type', 'X-User-Id', 'X-Request-Id'],
+    allowedHeaders: ['Content-Type', 'X-User-Id', 'X-Request-Id', 'Authorization'],
     exposedHeaders: ['X-Request-Id'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   });

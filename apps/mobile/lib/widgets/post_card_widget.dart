@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../features/post/data/post_dto.dart';
 import 'event_card_widget.dart';
+import 'media_image.dart';
 import 'reference_card_widget.dart';
 
 class PostCardWidget extends StatelessWidget {
@@ -71,6 +72,8 @@ class PostCardWidget extends StatelessWidget {
                   if (a.asReference != null)
                     ReferenceCardWidget(
                         reference: a.asReference!, compact: true),
+                  if (a.asImage != null)
+                    MediaImage(asset: a.asImage!, height: 160),
                   const SizedBox(height: 6),
                 ],
               ],

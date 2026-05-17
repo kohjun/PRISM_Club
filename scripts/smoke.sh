@@ -339,4 +339,23 @@ timeline=$(curl_as "$JOON" "$API/rooms/dating-event-reviews/timeline")
 timeline_has=$(echo "$timeline" | j ".items.findIndex(p=>p.id==='$HANEUL_POST')")
 [[ "$timeline_has" == "-1" ]] && pass "hidden post excluded from room timeline" || pass "timeline filter check (post may not be in this room, idx=$timeline_has)"
 
+section "media attachments (M10)"
+
+# Create a tiny PNG via printf escape
+TMP_PNG="$(mktemp).png"
+# 1x1 transparent PNG bytes
+printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\x00\x01\x00\x00\x00\x05\x00\x01\x96\xfe,F\x00\x00\x00\x00IEND\xaeB`\x82' > "$TMP_PNG"
+
+# Upload
+upload_res=$(curl -sS -X POST "$API/media/upload" -H "X-User-Id: $MINSEO" -F "file=@$TMP_PNG;type=image/png")
+upload_url=$(echo "$upload_res" | j ".url")
+[[ "$upload_url" == "/uploads/"* ]] && pass "POST /media/upload -> url returned" || fail "upload_res=$upload_res"
+
+# Reject non-image MIME
+txt_status=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API/media/upload" \
+  -H "X-User-Id: $MINSEO" -F "file=@$TMP_PNG;type=text/plain;filename=note.txt")
+[[ "$txt_status" == "400" ]] && pass "non-image MIME -> 400" || fail "txt_status=$txt_status"
+
+rm -f "$TMP_PNG"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

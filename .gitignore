@@ -1,3 +1,6 @@
+# dev media uploads (M10) — local dev storage; not for production
+apps/api/uploads/
+
 # dependencies
 node_modules/
 .pnp.*

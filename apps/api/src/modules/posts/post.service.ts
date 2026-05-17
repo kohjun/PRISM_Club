@@ -19,7 +19,7 @@ import {
 } from './dto/post.dto';
 
 export interface AttachmentInput {
-  attachment_type: 'EVENT_CARD' | 'REFERENCE';
+  attachment_type: 'EVENT_CARD' | 'REFERENCE' | 'IMAGE';
   target_id: string;
 }
 
@@ -290,17 +290,27 @@ export class PostService {
     const refIds = attachments
       .filter((a) => a.attachment_type === 'REFERENCE')
       .map((a) => a.target_id);
+    const mediaIds = attachments
+      .filter((a) => a.attachment_type === 'IMAGE')
+      .map((a) => a.target_id);
 
-    const [eventCount, refCount] = await Promise.all([
+    const [eventCount, refCount, mediaCount] = await Promise.all([
       eventIds.length > 0
         ? this.prisma.eventCard.count({ where: { id: { in: eventIds } } })
         : Promise.resolve(0),
       refIds.length > 0
         ? this.prisma.reference.count({ where: { id: { in: refIds } } })
         : Promise.resolve(0),
+      mediaIds.length > 0
+        ? this.prisma.mediaAsset.count({ where: { id: { in: mediaIds } } })
+        : Promise.resolve(0),
     ]);
 
-    if (eventCount !== eventIds.length || refCount !== refIds.length) {
+    if (
+      eventCount !== eventIds.length ||
+      refCount !== refIds.length ||
+      mediaCount !== mediaIds.length
+    ) {
       throw new NotFoundException('One or more attachment targets not found');
     }
   }
@@ -381,18 +391,25 @@ export class PostService {
     const refIds = attachmentRows
       .filter((a) => a.attachmentType === 'REFERENCE')
       .map((a) => a.targetId);
+    const mediaIds = attachmentRows
+      .filter((a) => a.attachmentType === 'IMAGE')
+      .map((a) => a.targetId);
 
-    const [events, references] = await Promise.all([
+    const [events, references, mediaAssets] = await Promise.all([
       eventIds.length > 0
         ? this.prisma.eventCard.findMany({ where: { id: { in: eventIds } } })
         : Promise.resolve([]),
       refIds.length > 0
         ? this.prisma.reference.findMany({ where: { id: { in: refIds } } })
         : Promise.resolve([]),
+      mediaIds.length > 0
+        ? this.prisma.mediaAsset.findMany({ where: { id: { in: mediaIds } } })
+        : Promise.resolve([]),
     ]);
 
     const eMap = new Map(events.map((e) => [e.id, e]));
     const rMap = new Map(references.map((r) => [r.id, r]));
+    const mMap = new Map(mediaAssets.map((m) => [m.id, m]));
 
     return attachmentRows
       .map((a): PostAttachmentDTO | null => {
@@ -414,6 +431,24 @@ export class PostService {
             attachment_type: 'REFERENCE',
             sort_order: a.sortOrder,
             target: this.rooms.toReferenceDTO(r),
+          };
+        }
+        if (a.attachmentType === 'IMAGE') {
+          const m = mMap.get(a.targetId);
+          if (!m) return null;
+          return {
+            id: a.id,
+            attachment_type: 'IMAGE',
+            sort_order: a.sortOrder,
+            target: {
+              id: m.id,
+              kind: 'IMAGE',
+              filename: m.filename,
+              mime_type: m.mimeType,
+              size_bytes: m.sizeBytes,
+              url: m.path,
+              created_at: m.createdAt.toISOString(),
+            },
           };
         }
         return null;

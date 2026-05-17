@@ -36,6 +36,7 @@ model User {
   reports                Report[]      @relation("ReportReporter")
   resolvedReports        Report[]      @relation("ReportResolver")
   moderationActions      ModerationAction[]
+  mediaAssets            MediaAsset[]
 
   @@map("users")
 }
@@ -311,7 +312,7 @@ model Post {
 model PostAttachment {
   id             String @id @default(uuid()) @db.Uuid
   postId         String @map("post_id") @db.Uuid
-  attachmentType String @map("attachment_type") // EVENT_CARD | REFERENCE
+  attachmentType String @map("attachment_type") // EVENT_CARD | REFERENCE | IMAGE
   targetId       String @map("target_id") @db.Uuid
   sortOrder      Int    @default(0) @map("sort_order")
 
@@ -319,6 +320,22 @@ model PostAttachment {
 
   @@index([postId])
   @@map("post_attachments")
+}
+
+model MediaAsset {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  kind      String   // IMAGE (only supported kind in M10)
+  filename  String
+  mimeType  String   @map("mime_type")
+  sizeBytes Int      @map("size_bytes")
+  path      String   // relative URL like /uploads/<uuid>.<ext>
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt(sort: Desc)])
+  @@map("media_assets")
 }
 
 model Reply {

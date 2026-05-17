@@ -15,7 +15,7 @@ import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { PostService } from './post.service';
 
 const attachmentSchema = z.object({
-  attachment_type: z.enum(['EVENT_CARD', 'REFERENCE']),
+  attachment_type: z.enum(['EVENT_CARD', 'REFERENCE', 'IMAGE']),
   target_id: z.string().uuid(),
 });
 

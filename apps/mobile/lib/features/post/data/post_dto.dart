@@ -1,4 +1,5 @@
 import '../../event_card/data/event_card_dto.dart';
+import '../../media/data/media_dto.dart';
 import '../../reference/data/reference_dto.dart';
 import 'recruitment_fields_dto.dart';
 
@@ -36,13 +37,17 @@ class PostAttachmentDto {
       target is EventCardDto ? target as EventCardDto : null;
   ReferenceDto? get asReference =>
       target is ReferenceDto ? target as ReferenceDto : null;
+  MediaAssetDto? get asImage =>
+      target is MediaAssetDto ? target as MediaAssetDto : null;
 
   factory PostAttachmentDto.fromJson(Map<String, dynamic> json) {
     final type = json['attachment_type'] as String;
     final targetMap = (json['target'] as Map).cast<String, dynamic>();
     final Object target = type == 'EVENT_CARD'
         ? EventCardDto.fromJson(targetMap)
-        : ReferenceDto.fromJson(targetMap);
+        : type == 'IMAGE'
+            ? MediaAssetDto.fromJson(targetMap)
+            : ReferenceDto.fromJson(targetMap);
     return PostAttachmentDto(
       id: json['id'] as String,
       attachmentType: type,

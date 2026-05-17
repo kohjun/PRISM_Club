@@ -72,6 +72,17 @@ wraps the five main tabs (홈 / 검색 / 커뮤니티 / 저장 / 알림) in a Ma
 `NavigationBar`; the post-login redirect now lands on `/home` instead of
 `/spaces`. All existing deep-link routes are preserved.
 
+Milestone 10 — media attachments. Adds `MediaAsset` table (id, owner_id,
+kind, filename, mime_type, size_bytes, path) and `POST /v1/media/upload`
+(multipart, image-only, 5MB cap, jpg/png/webp/gif). Files are stored locally
+in `apps/api/uploads/` and served at `/uploads/<id>.<ext>` via Nest's static
+middleware. **This is dev/local storage only — no S3, no CDN, no production
+pipeline yet.** `PostAttachment` gains an `IMAGE` attachmentType alongside
+`EVENT_CARD` / `REFERENCE`; posts can mix all three. Flutter composer adds
+an 이미지 picker (via `file_picker`) with inline preview and remove button;
+`PostCardWidget` renders thumbnails through a new `MediaImage` widget with
+loading + error states.
+
 Milestone 9 — moderation + reporting. Two new tables: `Report` (with
 reporter_id / target_type / target_id / reason / details / status /
 resolution / resolver_note) and `ModerationAction` (audit log). Five new
@@ -113,10 +124,10 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 46 endpoints, stub auth + role gate (MEMBER / VERIFIED_PLANNER / CURATOR / MODERATOR / ADMIN), `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with all five roles seeded, ILIKE-based search filtered per viewer, EventDetail bundle endpoint, follow/save/notification endpoints, home bundle + feed with deterministic scoring, public profile bundle + edit + user-follow, moderation report + audit endpoints with HIDDEN status propagating to all read surfaces |
-| Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose, Recruitment composer, Post detail, Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 121 backend unit + 17 e2e + 49 Flutter widget, all green |
-| Smoke | `scripts/smoke.sh` — 66 curl-driven checks (M1–M9 inclusive) |
+| Backend (NestJS + Prisma) | 47 endpoints, role-gated guard, mock Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local dev storage at /uploads/*) |
+| Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
+| Tests | 121 backend unit + 21 e2e + 50 Flutter widget, all green |
+| Smoke | `scripts/smoke.sh` — 68 curl-driven checks (M1–M10 inclusive) |
 
 ## Repo layout
 

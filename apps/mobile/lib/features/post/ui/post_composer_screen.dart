@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,10 +6,13 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
+import '../../../widgets/media_image.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../event_card/ui/event_picker_modal.dart';
 import '../../event_detail/data/event_detail_repository.dart';
+import '../../media/data/media_dto.dart';
+import '../../media/data/media_repository.dart';
 import '../../reference/data/reference_dto.dart';
 import '../../reference/ui/reference_form_modal.dart';
 import '../data/post_repository.dart';
@@ -34,8 +38,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   final _body = TextEditingController();
   final _attachedEvents = <EventCardDto>[];
   final _attachedRefs = <ReferenceDto>[];
+  final _attachedImages = <MediaAssetDto>[];
   bool _submitting = false;
   bool _prefetchingEvent = false;
+  bool _uploadingImage = false;
 
   @override
   void initState() {
@@ -81,6 +87,49 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     }
   }
 
+  Future<void> _pickImage() async {
+    if (_attachedImages.length >= 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이미지는 최대 4장까지 첨부할 수 있어요.')),
+      );
+      return;
+    }
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = picked?.files.first;
+    if (file == null || file.bytes == null) return;
+    setState(() => _uploadingImage = true);
+    try {
+      final mime = _guessMime(file.name);
+      final asset = await ref.read(mediaRepositoryProvider).uploadImage(
+            bytes: file.bytes!,
+            filename: file.name,
+            contentType: mime,
+          );
+      if (mounted) {
+        setState(() => _attachedImages.add(asset));
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('이미지 업로드 실패: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
+
+  String _guessMime(String filename) {
+    final lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  }
+
   Future<void> _submit() async {
     final text = _body.text.trim();
     if (text.isEmpty) {
@@ -96,6 +145,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           CreatePostAttachment(attachmentType: 'EVENT_CARD', targetId: e.id),
         for (final r in _attachedRefs)
           CreatePostAttachment(attachmentType: 'REFERENCE', targetId: r.id),
+        for (final m in _attachedImages)
+          CreatePostAttachment(attachmentType: 'IMAGE', targetId: m.id),
       ];
       await ref.read(postRepositoryProvider).create(
             widget.roomSlug,
@@ -171,8 +222,48 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                 icon: const Icon(Icons.link),
                 label: const Text('레퍼런스'),
               ),
+              OutlinedButton.icon(
+                onPressed: _uploadingImage ? null : _pickImage,
+                icon: _uploadingImage
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.image_outlined),
+                label: const Text('이미지'),
+              ),
             ],
           ),
+          if (_attachedImages.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _attachedImages
+                  .map((m) => Stack(
+                        children: [
+                          SizedBox(
+                              width: 100,
+                              height: 100,
+                              child: MediaImage(asset: m, fit: BoxFit.cover)),
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: const Icon(Icons.cancel,
+                                  size: 20, color: Colors.black54),
+                              onPressed: () =>
+                                  setState(() => _attachedImages.remove(m)),
+                            ),
+                          ),
+                        ],
+                      ))
+                  .toList(),
+            ),
+          ],
           if (_prefetchingEvent) ...[
             const SizedBox(height: 16),
             Row(
