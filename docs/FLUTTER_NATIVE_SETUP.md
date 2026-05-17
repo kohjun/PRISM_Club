@@ -115,8 +115,12 @@ flutter build appbundle --release
 # Output: apps/mobile/build/app/outputs/bundle/release/app-release.aab
 ```
 
-The bundle is produced but rejected by Play because of debug
-signing — same blocker as §2.5. Resolve before first upload.
+The bundle is produced (~42 MB) but rejected by Play because of debug
+signing — same blocker as §2.5. See
+[ANDROID_RELEASE_DRY_RUN.md](ANDROID_RELEASE_DRY_RUN.md) for the
+full dry-run output, the exact unblockers (keystore file + gitignored
+`key.properties` + `signingConfigs.release` Gradle block), and the
+recommended Play App Signing posture.
 
 ### 2.7 Known local setup gaps (Windows)
 

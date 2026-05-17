@@ -98,6 +98,12 @@ replaced before any store upload**.
 
 ### 4.1 Android upload key
 
+Dry-run state today: both `flutter build apk --release` and
+`flutter build appbundle --release` succeed at HEAD but produce
+**debug-signed** artifacts that Play rejects. See
+[ANDROID_RELEASE_DRY_RUN.md](ANDROID_RELEASE_DRY_RUN.md) for the full
+inventory of what works and what's missing.
+
 - [ ] Keystore file generated (`keytool -genkey -v ...`) and stored
       in the team password vault. **Do NOT commit.**
 - [ ] `android/key.properties` (gitignored) lists `storeFile`,
@@ -105,7 +111,7 @@ replaced before any store upload**.
 - [ ] `android/app/build.gradle.kts` `signingConfigs.release` reads
       from `key.properties` and `buildTypes.release.signingConfig`
       points at it (replaces the current debug-signed fallback —
-      audit §2.3).
+      audit §2.3 / ANDROID_RELEASE_DRY_RUN §3.3).
 - [ ] Play App Signing enabled in the Play Console so we only manage
       the upload key.
 
@@ -303,7 +309,10 @@ flutter build appbundle --release \
 ```
 
 The Play upload step expects an AAB. Use Play App Signing so the
-upload key is the only one we manage.
+upload key is the only one we manage. Today the AAB builds but is
+debug-signed and Play-rejected — see
+[ANDROID_RELEASE_DRY_RUN.md](ANDROID_RELEASE_DRY_RUN.md) for the
+exact unblockers.
 
 ### Android (APK for ad-hoc sideload)
 
