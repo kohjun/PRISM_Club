@@ -168,11 +168,12 @@ If you are picking this up cold, the recommended reading path is:
     privacy rules. Read if you are touching the analytics surfaces. ~10 min.
 11. **[FLUTTER_APP_RELEASE_AUDIT.md](FLUTTER_APP_RELEASE_AUDIT.md)** +
     **[FLUTTER_NATIVE_SETUP.md](FLUTTER_NATIVE_SETUP.md)** +
+    **[MOBILE_QA_SCRIPT.md](MOBILE_QA_SCRIPT.md)** +
     **[MOBILE_RELEASE_CHECKLIST.md](MOBILE_RELEASE_CHECKLIST.md)** —
     read these together when picking up the native release path
     (App Store / Play Store). Audit lists what's missing; native setup
-    is the daily commands; checklist is the go/no-go for first
-    upload.
+    is the daily commands; QA script is the repeatable device test
+    flow; checklist is the go/no-go for first upload.
 12. **[NEXT_BACKLOG.md](NEXT_BACKLOG.md)** — what is intentionally still
     deferred. Read to understand what you should NOT promise. ~10 min.
 13. **[ALPHA_RC_CHECKLIST.md](ALPHA_RC_CHECKLIST.md)** — historical Alpha
