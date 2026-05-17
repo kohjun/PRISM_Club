@@ -6,10 +6,14 @@ import {
   EventsClientStatus,
   fetchAnalyticsSummary,
   fetchEventsClientStatus,
+  fetchHealthReady,
+  fetchHealthVersion,
   fetchOpenReports,
   fetchOpsSummary,
   getSession,
   getApiBase,
+  HealthReady,
+  HealthVersion,
   login,
   refreshSignals,
   ReportItem,
@@ -18,6 +22,29 @@ import {
   setSession,
   type OpsSummary,
 } from './api';
+
+const DOC_LINKS: { label: string; path: string; what: string }[] = [
+  {
+    label: 'BETA_READINESS',
+    path: 'docs/BETA_READINESS.md',
+    what: 'feature map, architecture, go/no-go',
+  },
+  {
+    label: 'BETA_LAUNCH_RUNBOOK',
+    path: 'docs/BETA_LAUNCH_RUNBOOK.md',
+    what: 'deploy sequence, env, smoke, rollback, incident response',
+  },
+  {
+    label: 'BETA_QA_SCRIPT',
+    path: 'docs/BETA_QA_SCRIPT.md',
+    what: 'manual QA flows for cut-over',
+  },
+  {
+    label: 'STAGING_SMOKE',
+    path: 'docs/STAGING_SMOKE.md',
+    what: 'how to point scripts/smoke.sh at staging',
+  },
+];
 
 const REQUIRED_ROLES = ['CURATOR', 'MODERATOR', 'ADMIN'];
 
@@ -129,6 +156,8 @@ function Dashboard({
     null,
   );
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [version, setVersion] = useState<HealthVersion | null>(null);
+  const [ready, setReady] = useState<HealthReady | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -138,16 +167,20 @@ function Dashboard({
     setLoading(true);
     setError(null);
     try {
-      const [s, r, ec, an] = await Promise.all([
+      const [s, r, ec, an, v, rd] = await Promise.all([
         fetchOpsSummary(),
         fetchOpenReports(),
         fetchEventsClientStatus().catch(() => null),
         fetchAnalyticsSummary().catch(() => null),
+        fetchHealthVersion().catch(() => null),
+        fetchHealthReady().catch(() => null),
       ]);
       setSummary(s);
       setReports(r.items);
       setEventsStatus(ec);
       setAnalytics(an);
+      setVersion(v);
+      setReady(rd);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -197,6 +230,14 @@ function Dashboard({
       <main className="body">
         {loading && <div className="banner">로딩 중...</div>}
         {error && <div className="banner warn">로드 실패: {error}</div>}
+
+        <BetaLaunchCard
+          version={version}
+          ready={ready}
+          eventsStatus={eventsStatus}
+          analytics={analytics}
+          summary={summary}
+        />
 
         {summary && (
           <>
@@ -376,6 +417,142 @@ function Dashboard({
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+/**
+ * Compact "Beta Launch" checklist card. Pure derivation from already-
+ * fetched diagnostics — no new product API. Renders read-only signals
+ * (API ready, build metadata, events client mode, analytics 30-day
+ * volume, open report + pending contribution counts) plus repo-relative
+ * paths to the operational docs.
+ */
+function BetaLaunchCard({
+  version,
+  ready,
+  eventsStatus,
+  analytics,
+  summary,
+}: {
+  version: HealthVersion | null;
+  ready: HealthReady | null;
+  eventsStatus: EventsClientStatus | null;
+  analytics: AnalyticsSummary | null;
+  summary: OpsSummary | null;
+}) {
+  const apiReady = ready?.ok === true && ready?.db === 'up';
+  const dbState = ready?.db ?? 'unknown';
+  const eventsMode = eventsStatus?.mode ?? 'unknown';
+  const eventsParseFailed = eventsStatus?.stats.parse_failed ?? 0;
+  const eventsHttpErrors = eventsStatus?.stats.http_errors ?? 0;
+  const analyticsTotal =
+    analytics?.counts.reduce((acc, c) => acc + c.count, 0) ?? 0;
+  const eventsClean =
+    eventsStatus !== null && eventsParseFailed === 0 && eventsHttpErrors === 0;
+
+  return (
+    <div className="card" style={{ gridColumn: '1 / -1' }}>
+      <h3>Beta launch checklist</h3>
+      <div className="list" style={{ marginBottom: 12 }}>
+        <ChecklistRow
+          label="API ready"
+          status={apiReady ? 'ok' : ready ? 'warn' : 'unknown'}
+          value={
+            ready
+              ? `db=${dbState}` + (ready.error ? ` · ${ready.error}` : '')
+              : '…'
+          }
+        />
+        <ChecklistRow
+          label="Build"
+          status={version && version.app_version !== 'unknown' ? 'ok' : 'warn'}
+          value={
+            version
+              ? `${version.app_version} · ${version.git_sha.slice(0, 12)} · ${version.release_channel}`
+              : '— unavailable —'
+          }
+        />
+        <ChecklistRow
+          label="Events client"
+          status={
+            eventsStatus === null
+              ? 'unknown'
+              : eventsClean
+                ? 'ok'
+                : 'warn'
+          }
+          value={
+            eventsStatus
+              ? `${eventsMode} · parsed_ok=${eventsStatus.stats.parsed_ok} · parse_failed=${eventsParseFailed} · http_errors=${eventsHttpErrors} · timeouts=${eventsStatus.stats.timeouts}`
+              : '— unavailable —'
+          }
+        />
+        <ChecklistRow
+          label="Analytics (30d)"
+          status={analytics === null ? 'unknown' : 'ok'}
+          value={
+            analytics
+              ? `${analytics.counts.length} event types · ${analyticsTotal} events`
+              : '— unavailable —'
+          }
+        />
+        <ChecklistRow
+          label="Open reports"
+          status={
+            summary === null
+              ? 'unknown'
+              : summary.open_reports.count === 0
+                ? 'ok'
+                : 'warn'
+          }
+          value={summary ? `${summary.open_reports.count}` : '— unavailable —'}
+        />
+        <ChecklistRow
+          label="Pending contributions"
+          status={summary === null ? 'unknown' : 'ok'}
+          value={
+            summary ? `${summary.pending_contributions.count}` : '— unavailable —'
+          }
+        />
+      </div>
+      <p style={{ color: 'var(--muted)', margin: '0 0 6px' }}>
+        Operational docs (paths in the PRISM Club repo):
+      </p>
+      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12 }}>
+        {DOC_LINKS.map((d) => (
+          <li key={d.path}>
+            <code>{d.path}</code> — {d.what}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ChecklistRow({
+  label,
+  status,
+  value,
+}: {
+  label: string;
+  status: 'ok' | 'warn' | 'unknown';
+  value: string;
+}) {
+  const dot = status === 'ok' ? '●' : status === 'warn' ? '▲' : '○';
+  const color =
+    status === 'ok'
+      ? 'var(--good, #2ecc71)'
+      : status === 'warn'
+        ? 'var(--warn, #f39c12)'
+        : 'var(--muted, #888)';
+  return (
+    <div className="item">
+      <div>
+        <span style={{ color, marginRight: 8 }}>{dot}</span>
+        {label}
+      </div>
+      <div className="meta">{value}</div>
     </div>
   );
 }

@@ -177,3 +177,39 @@ export interface AnalyticsSummary {
 export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   return request<AnalyticsSummary>('/admin/analytics/summary');
 }
+
+export interface HealthVersion {
+  app_version: string;
+  git_sha: string;
+  build_time: string | null;
+  release_channel: 'local' | 'staging' | 'beta' | 'production' | 'unknown';
+  node_env: string;
+}
+
+export async function fetchHealthVersion(): Promise<HealthVersion> {
+  return request<HealthVersion>('/health/version');
+}
+
+/**
+ * Liveness + readiness probes are public. We don't go through the
+ * Bearer-token request() so the checklist still surfaces them when the
+ * caller is signed out, but the admin shell as a whole is role-gated.
+ */
+export interface HealthReady {
+  ok: boolean;
+  db: 'up' | 'down';
+  error?: string;
+}
+
+export async function fetchHealthReady(): Promise<HealthReady> {
+  const res = await fetch(`${getApiBase()}/health/ready`);
+  // /health/ready returns 503 with a body when the DB is down; we want
+  // to surface that, not throw.
+  let body: HealthReady;
+  try {
+    body = (await res.json()) as HealthReady;
+  } catch {
+    body = { ok: res.ok, db: res.ok ? 'up' : 'down' };
+  }
+  return body;
+}
