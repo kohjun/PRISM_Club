@@ -256,6 +256,20 @@ export class PostService {
     }
   }
 
+  /**
+   * Public batch helper for converting Prisma post rows into DTOs.
+   * Reused by EventDetailService (M5) so the related-posts payload uses
+   * the same shape as the room timeline.
+   */
+  async postsToDTOs(
+    rows: Prisma.PostGetPayload<{
+      include: { room: true; author: { include: { profile: true } }; attachments: true };
+    }>[],
+    viewerId: string,
+  ): Promise<PostDTO[]> {
+    return Promise.all(rows.map((p) => this.toDTO(p, viewerId)));
+  }
+
   private async toDTO(
     post: Prisma.PostGetPayload<{
       include: { room: true; author: { include: { profile: true } }; attachments: true };

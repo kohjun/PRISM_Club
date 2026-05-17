@@ -91,7 +91,10 @@ class TopicHubScreen extends ConsumerWidget {
                   children: b.relatedEvents
                       .map((e) => Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: EventCardWidget(card: e),
+                            child: EventCardWidget(
+                              card: e,
+                              onTap: () => context.go('/events/${e.id}'),
+                            ),
                           ))
                       .toList(),
                 ),

@@ -19,7 +19,17 @@ SearchHitDto _hit({
     );
 
 // Wraps the tile in a minimal MaterialApp.router so context.go inside the tile
-// does not throw even though we don't actually verify navigation here.
+// works. The /events page exposes its `cardId` path param so the navigation
+// test below can assert it landed on the right place.
+class _EventDetailProbe extends StatelessWidget {
+  const _EventDetailProbe({required this.cardId});
+  final String cardId;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(body: Center(child: Text('event:$cardId')));
+  }
+}
+
 Widget _wrap(Widget child) {
   final router = GoRouter(
     initialLocation: '/',
@@ -28,6 +38,11 @@ Widget _wrap(Widget child) {
       GoRoute(path: '/categories/:slug', builder: (_, _) => const Placeholder()),
       GoRoute(path: '/rooms/:slug', builder: (_, _) => const Placeholder()),
       GoRoute(path: '/posts/:id', builder: (_, _) => const Placeholder()),
+      GoRoute(
+        path: '/events/:cardId',
+        builder: (_, st) =>
+            _EventDetailProbe(cardId: st.pathParameters['cardId']!),
+      ),
     ],
   );
   return MaterialApp.router(routerConfig: router);
@@ -105,6 +120,26 @@ void main() {
     expect(find.byIcon(Icons.event), findsOneWidget);
     expect(find.textContaining('완료'), findsOneWidget);
     expect(find.textContaining('서울/홍대'), findsOneWidget);
+  });
+
+  testWidgets('tapping an event_card tile navigates to /events/<id>',
+      (tester) async {
+    await tester.pumpWidget(_wrap(SearchResultTile(
+      hit: _hit(
+        type: SearchEntityType.eventCard,
+        title: 'PRISM 소개팅 미션 나이트',
+        context: {
+          'external_event_id': 'evt-001',
+          'venue_name': '홍대 스튜디오',
+          'region': '서울/홍대',
+          'starts_at': '2026-04-25T19:00:00.000Z',
+          'event_status': 'COMPLETED',
+        },
+      ),
+    )));
+    await tester.tap(find.byType(SearchResultTile));
+    await tester.pumpAndSettle();
+    expect(find.text('event:id-1'), findsOneWidget);
   });
 
   testWidgets('renders reference with source name', (tester) async {

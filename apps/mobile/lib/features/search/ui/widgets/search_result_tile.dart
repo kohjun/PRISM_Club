@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
 import '../../data/search_dto.dart';
-import 'event_info_sheet.dart';
 
 class SearchResultTile extends StatelessWidget {
   const SearchResultTile({super.key, required this.hit});
@@ -90,7 +89,7 @@ class SearchResultTile extends StatelessWidget {
         break;
       }
       case SearchEntityType.eventCard:
-        await showEventInfoSheet(context, hit);
+        context.go('/events/${hit.id}');
         break;
       case SearchEntityType.reference: {
         final url = hit.ctxString('url');

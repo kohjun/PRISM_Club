@@ -27,12 +27,26 @@ recruitment-post status. Recruitment posts reuse `Post.recruitment_fields`
 (role / schedule / location / compensation / capacity / application_method
 / status) — no schema migration.
 
+Milestone 5 — event discussion surfaces. EventCard is now an entry point,
+not just an inline chip. A new `GET /v1/event-cards/:id` endpoint returns
+the local snapshot + related rooms (PIN ∪ POST_ATTACHMENT, deduped) +
+related posts (paged) + `default_compose_room_slug` (falls back via
+`topic_hub_event_links` when no room directly references the event).
+Access-policy filtering is reused from M4 so non-planners never see
+planner-space rooms/posts in the bundle. A new mobile `EventDetailScreen`
+at `/events/:cardId` is reachable from every former EventCard tap target
+(TopicHub related events, RoomTimeline pins, PostDetail attachments,
+Search results); the old search-result bottom sheet is retired. The
+"글 작성" CTA routes to the existing composer with
+`?attach_event_card_id=<id>` so the event is pre-attached (and still
+removable). No schema migration; mock `IEventsClient` is unchanged.
+
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 28 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer |
-| Mobile (Flutter) | Login picker, Space list (curator banner + planner lock dialog + 내 제안 entry), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선), Room create, Room timeline (FAB routes to recruitment composer in RECRUITMENT rooms), Post compose, Recruitment composer, Post detail with RecruitmentPostCard + status toggle, Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter |
-| Tests | 75 backend unit tests + 4 e2e + 26 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` — 35 curl-driven checks (M1 slice + M3 search + M4 planner / recruitment) |
+| Backend (NestJS + Prisma) | 29 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts |
+| Mobile (Flutter) | Login picker, Space list (curator banner + planner lock dialog + 내 제안 entry), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선; related-event tiles open Event Detail), Room create, Room timeline (FAB routes to recruitment composer in RECRUITMENT rooms; pinned EventCards open Event Detail), Post compose (accepts `?attach_event_card_id` for pre-attached events), Recruitment composer, Post detail with RecruitmentPostCard + status toggle (attachment EventCards open Event Detail), Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter (event_card hits open Event Detail), Event Detail screen with hero card / related rooms / related posts / 글 작성 CTA + room picker |
+| Tests | 82 backend unit tests + 5 e2e + 34 Flutter widget tests, all green |
+| Smoke | `scripts/smoke.sh` — 44 curl-driven checks (M1 slice + M3 search + M4 planner / recruitment + M5 event detail) |
 
 ## Repo layout
 
@@ -125,14 +139,14 @@ flutter run -d chrome       # web target — fastest sanity check
 
 ```powershell
 # Backend
-npm run api:test          # 75 unit tests, 9 suites (M1 + M2 + M3 + M4)
-npm run api:test:e2e      # 4 e2e: M1 slice + M2 contribution + M3 search + M4 planner
-bash scripts/smoke.sh     # 35 curl-driven checks (api must be running)
+npm run api:test          # 82 unit tests, 10 suites (M1 + M2 + M3 + M4 + M5)
+npm run api:test:e2e      # 5 e2e: M1 slice + M2 contribution + M3 search + M4 planner + M5 event detail
+bash scripts/smoke.sh     # 44 curl-driven checks (api must be running)
 
 # Mobile
 cd apps/mobile
 flutter analyze
-flutter test              # 26 widget tests (M1 + M2 + M3 + M4)
+flutter test              # 34 widget tests (M1 + M2 + M3 + M4 + M5)
 flutter build web --no-tree-shake-icons   # full compile check
 ```
 
@@ -186,6 +200,25 @@ demonstrating the audit trail).
 
 The Topic Hub also surfaces a small "관련 검색" chip row right under the
 header — tap a chip to land on Search pre-filled with that query.
+
+## Trying event detail
+
+1. With the API running and the mobile app open, sign in as **민서**.
+2. On the 연애 콘텐츠 Topic Hub, scroll to "관련 이벤트" — each EventCard is
+   tappable. Tap **PRISM 소개팅 미션 나이트** → lands on `/events/<cardId>`
+   with the hero card, "관련 방", and "관련 글" sections (1 related post:
+   minseo's review).
+3. Tap **글 작성** in the floating CTA. There's only one eligible room
+   (`dating-event-reviews`), so the composer opens directly with the
+   EventCard pre-attached under "첨부된 이벤트". Remove it via the close
+   button if desired; submitting routes back to the room timeline.
+4. Search "환승연애" from SpaceList — the EventCard hit now navigates to
+   Event Detail directly (the M3 bottom sheet has been retired).
+5. Open `evt-003`-style events through search/topic hub to see the
+   empty-state copy ("아직 이 이벤트로 작성된 글이 없어요"). The CTA stays
+   enabled because `default_compose_room_slug` falls through
+   `topic_hub_event_links` to the OFFICIAL event-reaction room of the
+   parent topic hub.
 
 ## Trying the planner community
 
@@ -251,6 +284,14 @@ header — tap a chip to land on Search pre-filled with that query.
   or columns — the existing `post_type` + `recruitment_fields` slots from
   M1 are now actually populated. Author-only status toggle lives behind
   `POST /v1/posts/:id/recruitment-status`.
+- **EventCard stays the canonical local snapshot.** M5's
+  `GET /v1/event-cards/:id` aggregates pin-based + post-attachment-based
+  related entities and computes counts live. The mock `IEventsClient`
+  is unchanged; supplementing the snapshot with live organizer data
+  (capacity, RSVP, etc.) is the deferred bridge to a real Events
+  service. `default_compose_room_slug` resolves through
+  `topic_hub_event_links` when no room directly references the event,
+  so empty events still get a sensible compose target.
 
 ## What's deferred
 
@@ -263,5 +304,9 @@ history beyond the per-contribution snapshot, editing a pending contribution
 before approval, concurrent-edit conflict resolution across approvals, query
 history / dynamic popular queries, FTS or a Korean tokenizer, external search
 engines, search inside replies, personalized ranking or "for you"
-recommendations. See the plan file's §8 risks / deferred list for the
-full breakdown.
+recommendations. M5-specific deferrals: ticket purchase / RSVP / capacity
+countdown / organizer notes, real participant-verified review badges,
+star ratings, live event metadata via a real Events service at detail-render
+time, calendar export / system share, cross-event aggregation, EventCard
+edit-from-Club, EventCard tap in curator/contribution evidence flows.
+See the plan file's §8 risks / deferred list for the full breakdown.

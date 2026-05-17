@@ -20,12 +20,12 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
   });
 
-  Future<void> _expandSurface(WidgetTester tester) async {
+  Future<void> expandSurface(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 2400));
   }
 
   testWidgets('submit disabled when fields are empty', (tester) async {
-    await _expandSurface(tester);
+    await expandSurface(tester);
     await tester.pumpWidget(_wrap());
     await tester.pump();
 
@@ -35,7 +35,7 @@ void main() {
 
   testWidgets('submit enabled when all required fields are valid',
       (tester) async {
-    await _expandSurface(tester);
+    await expandSurface(tester);
     await tester.pumpWidget(_wrap());
     await tester.pump();
 
@@ -56,7 +56,7 @@ void main() {
 
   testWidgets('submit remains disabled when capacity is "0" or non-numeric',
       (tester) async {
-    await _expandSurface(tester);
+    await expandSurface(tester);
     await tester.pumpWidget(_wrap());
     await tester.pump();
 

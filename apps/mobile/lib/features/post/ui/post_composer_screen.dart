@@ -8,13 +8,23 @@ import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../event_card/ui/event_picker_modal.dart';
+import '../../event_detail/data/event_detail_repository.dart';
 import '../../reference/data/reference_dto.dart';
 import '../../reference/ui/reference_form_modal.dart';
 import '../data/post_repository.dart';
 
 class PostComposerScreen extends ConsumerStatefulWidget {
-  const PostComposerScreen({super.key, required this.roomSlug});
+  const PostComposerScreen({
+    super.key,
+    required this.roomSlug,
+    this.initialEventCardId,
+  });
   final String roomSlug;
+
+  /// When non-null, the composer fetches this EventCard and pre-attaches it.
+  /// The user can still remove it via the close button before submitting
+  /// (M5 acceptance criterion #3).
+  final String? initialEventCardId;
 
   @override
   ConsumerState<PostComposerScreen> createState() => _PostComposerScreenState();
@@ -25,6 +35,37 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   final _attachedEvents = <EventCardDto>[];
   final _attachedRefs = <ReferenceDto>[];
   bool _submitting = false;
+  bool _prefetchingEvent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final id = widget.initialEventCardId;
+    if (id != null && id.isNotEmpty) {
+      _prefetchInitialEvent(id);
+    }
+  }
+
+  Future<void> _prefetchInitialEvent(String id) async {
+    setState(() => _prefetchingEvent = true);
+    try {
+      final card =
+          await ref.read(eventDetailRepositoryProvider).getEventCardById(id);
+      if (mounted) {
+        setState(() {
+          _attachedEvents.add(card);
+        });
+      }
+    } on ApiError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('이벤트 카드를 불러오지 못했어요: ${e.message}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _prefetchingEvent = false);
+    }
+  }
 
   Future<void> _pickEvent() async {
     final selected = await showEventPickerModal(context);
@@ -132,6 +173,26 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               ),
             ],
           ),
+          if (_prefetchingEvent) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '이벤트 카드 불러오는 중…',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: PrismColors.muted),
+                ),
+              ],
+            ),
+          ],
           if (_attachedEvents.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text('첨부된 이벤트',

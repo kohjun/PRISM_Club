@@ -291,7 +291,11 @@ class _PostBody extends StatelessWidget {
         if (post.attachments.isNotEmpty) ...[
           const SizedBox(height: 12),
           for (final a in post.attachments) ...[
-            if (a.asEventCard != null) EventCardWidget(card: a.asEventCard!),
+            if (a.asEventCard != null)
+              EventCardWidget(
+                card: a.asEventCard!,
+                onTap: () => context.go('/events/${a.asEventCard!.id}'),
+              ),
             if (a.asReference != null)
               ReferenceCardWidget(reference: a.asReference!),
             const SizedBox(height: 6),

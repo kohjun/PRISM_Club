@@ -192,4 +192,36 @@ plan_sugg=$(curl_as "$STUDIO_LEAD" "$API/search/suggestions?categorySlug=planner
 has_staff=$(echo "$plan_sugg" | j ".items.indexOf('스태프')>=0")
 [[ "$has_staff" == "true" ]] && pass "planner-staff suggestions include '스태프'" || fail "no '스태프' in suggestions"
 
+section "event detail (M5)"
+E001="dd000000-0000-0000-0000-000000000001"
+E003="dd000000-0000-0000-0000-000000000003"
+
+# Member fetch evt-001 → 200 with expected fields.
+detail=$(curl_as "$MINSEO" "$API/event-cards/$E001")
+title=$(echo "$detail" | j ".event_card.title")
+ext_id=$(echo "$detail" | j ".event_card.external_event_id")
+post_count=$(echo "$detail" | j ".counts.post_count")
+room_count=$(echo "$detail" | j ".counts.room_count")
+default_room=$(echo "$detail" | j ".default_compose_room_slug")
+[[ "$title" == "PRISM 소개팅 미션 나이트" ]] && pass "event title" || fail "title=$title"
+[[ "$ext_id" == "evt-001" ]] && pass "external_event_id=evt-001" || fail "ext=$ext_id"
+[[ "$post_count" -ge "1" ]] && pass "post_count >= 1 (got $post_count)" || fail "post_count=$post_count"
+[[ "$room_count" -ge "1" ]] && pass "room_count >= 1 (got $room_count)" || fail "room_count=$room_count"
+[[ "$default_room" == "dating-event-reviews" ]] && pass "default_compose_room_slug" || fail "$default_room"
+
+# Unknown id → 404.
+nf_code=$(curl_as "$MINSEO" -o /dev/null -w "%{http_code}" "$API/event-cards/00000000-0000-0000-0000-000000000000")
+[[ "$nf_code" == "404" ]] && pass "unknown event -> 404" || fail "got $nf_code"
+
+# evt-003 empty-state: no posts, but default_compose_room_slug still resolves.
+detail3=$(curl_as "$MINSEO" "$API/event-cards/$E003")
+post_count_3=$(echo "$detail3" | j ".counts.post_count")
+default_room_3=$(echo "$detail3" | j ".default_compose_room_slug")
+[[ "$post_count_3" == "0" ]] && pass "evt-003 empty related_posts" || fail "post_count_3=$post_count_3"
+[[ "$default_room_3" == "dating-event-reviews" ]] && pass "evt-003 default room via topic_hub_event_links" || fail "$default_room_3"
+
+# Planner-space isolation: member doesn't see planner room in related_rooms.
+plan_isolation=$(echo "$detail" | j ".related_rooms.findIndex(r=>r.slug==='planner-recruitment')")
+[[ "$plan_isolation" == "-1" ]] && pass "member: planner room not in related_rooms" || fail "leaked: $plan_isolation"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

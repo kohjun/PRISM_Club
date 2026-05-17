@@ -77,6 +77,7 @@ export const U = {
     minseoReview: '99000000-0000-0000-0000-000000000001',
     joonQuestion: '99000000-0000-0000-0000-000000000002',
     haneulIdea: '99000000-0000-0000-0000-000000000003',
+    haneulTalkRoundPreview: '99000000-0000-0000-0000-000000000004', // milestone 5 — attaches evt-002
     recruitDatingNight: '99000000-0000-0000-0000-000000000101', // milestone 4
     recruitTalkRound: '99000000-0000-0000-0000-000000000102', // milestone 4
     recruitClosed: '99000000-0000-0000-0000-000000000103', // milestone 4
@@ -486,6 +487,24 @@ async function seedPostsAndReplies(prisma: PrismaClient): Promise<void> {
     },
   });
 
+  // Post 4 (M5): haneul previews 환승연애 토크 라운드, attaches evt-002.
+  // Gives evt-002's Event Detail screen a non-empty related_posts section.
+  await prisma.post.create({
+    data: {
+      id: U.post.haneulTalkRoundPreview,
+      roomId: U.room.swapTalkGame,
+      authorId: U.user.haneul,
+      body:
+        '환승연애 토크 라운드 예고편 봤는데 미션 라운드 비중이 높아 보여요. ' +
+        '가시는 분 같이 후기 정리해요.',
+      attachments: {
+        create: [
+          { attachmentType: 'EVENT_CARD', targetId: U.event.e002, sortOrder: 1 },
+        ],
+      },
+    },
+  });
+
   // Replies on Post 1 (minseo's review): joon → minseo (depth 2), haneul flat
   const r1Joon = await prisma.reply.create({
     data: {
@@ -537,7 +556,12 @@ async function seedPostsAndReplies(prisma: PrismaClient): Promise<void> {
   });
 
   // Refresh reply_count on each post based on actual replies.
-  for (const postId of [U.post.minseoReview, U.post.joonQuestion, U.post.haneulIdea]) {
+  for (const postId of [
+    U.post.minseoReview,
+    U.post.joonQuestion,
+    U.post.haneulIdea,
+    U.post.haneulTalkRoundPreview,
+  ]) {
     const count = await prisma.reply.count({ where: { postId } });
     await prisma.post.update({ where: { id: postId }, data: { replyCount: count } });
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/current_user.dart';
 import '../features/auth/ui/login_picker_screen.dart';
 import '../features/category/ui/category_list_screen.dart';
+import '../features/event_detail/ui/event_detail_screen.dart';
 import '../features/knowledge/ui/contribution_composer_screen.dart';
 import '../features/knowledge/ui/curation_detail_screen.dart';
 import '../features/knowledge/ui/curation_queue_screen.dart';
@@ -66,6 +67,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/rooms/:roomSlug/compose',
         builder: (_, st) => PostComposerScreen(
           roomSlug: st.pathParameters['roomSlug']!,
+          initialEventCardId:
+              st.uri.queryParameters['attach_event_card_id'],
         ),
       ),
       GoRoute(
@@ -94,6 +97,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/curate/:id',
         builder: (_, st) => CurationDetailScreen(
           contributionId: st.pathParameters['id']!,
+        ),
+      ),
+      // Milestone 5: event detail
+      GoRoute(
+        path: '/events/:cardId',
+        builder: (_, st) => EventDetailScreen(
+          cardId: st.pathParameters['cardId']!,
         ),
       ),
       // Milestone 3: unified search

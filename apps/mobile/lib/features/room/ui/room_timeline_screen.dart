@@ -62,7 +62,11 @@ class RoomTimelineScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 for (final pin in room.pins) ...[
                   if (pin.asEventCard != null)
-                    EventCardWidget(card: pin.asEventCard!),
+                    EventCardWidget(
+                      card: pin.asEventCard!,
+                      onTap: () =>
+                          context.go('/events/${pin.asEventCard!.id}'),
+                    ),
                   if (pin.asReference != null)
                     ReferenceCardWidget(reference: pin.asReference!),
                   const SizedBox(height: 8),
