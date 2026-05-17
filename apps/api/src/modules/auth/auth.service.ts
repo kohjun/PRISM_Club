@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { PrismaService } from '../../shared/prisma.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 export interface SessionDTO {
   user_id: string;
@@ -32,7 +33,10 @@ function getSecret(): string {
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly analytics: AnalyticsService,
+  ) {}
 
   /**
    * Passwordless dev/alpha login: the caller submits a user id (one of the
@@ -67,6 +71,12 @@ export class AuthService {
     };
 
     const token = jwt.sign(payload, getSecret(), { algorithm: 'HS256' });
+
+    this.analytics.record({
+      actorId: user.id,
+      eventType: 'AUTH_LOGIN',
+      payload: { roles_count: roles.length },
+    });
 
     return {
       access_token: token,

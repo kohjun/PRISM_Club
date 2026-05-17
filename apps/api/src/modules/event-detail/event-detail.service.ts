@@ -8,6 +8,7 @@ import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { RoomService } from '../community/room.service';
 import { PostService } from '../posts/post.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   EventDetailBundleDTO,
   RelatedRoomDTO,
@@ -37,6 +38,7 @@ export class EventDetailService {
     private readonly access: AccessControlService,
     private readonly rooms: RoomService,
     private readonly posts: PostService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async getBundle(
@@ -131,6 +133,16 @@ export class EventDetailService {
       cardId,
       allowed,
     );
+
+    this.analytics.record({
+      actorId: viewer.id,
+      eventType: 'EVENT_DETAIL_VIEWED',
+      payload: {
+        event_card_id: cardId,
+        post_count: postCount,
+        room_count: relatedRooms.length,
+      },
+    });
 
     return {
       event_card: this.rooms.toEventCardDTO(card),

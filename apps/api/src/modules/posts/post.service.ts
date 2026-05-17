@@ -9,6 +9,7 @@ import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService } from '../../shared/access-control.service';
 import { RequestUser } from '../../shared/decorators/current-user.decorator';
 import { RoomService } from '../community/room.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   PostAttachmentDTO,
   PostAuthorDTO,
@@ -54,6 +55,7 @@ export class PostService {
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
     private readonly rooms: RoomService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
@@ -133,6 +135,17 @@ export class PostService {
         await this.prisma.notification.createMany({ data: notifs });
       }
     }
+
+    this.analytics.record({
+      actorId: viewer.id,
+      eventType: 'POST_CREATED',
+      payload: {
+        post_id: post.id,
+        room_slug: room.slug,
+        post_type: postType,
+        attachment_count: input.attachments?.length ?? 0,
+      },
+    });
 
     return this.getById(post.id, viewer);
   }

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   DeliveryAttempt,
   DeliveryRequest,
@@ -31,6 +32,7 @@ export class NotificationService {
     private readonly access: AccessControlService,
     @Inject(NOTIFICATION_DELIVERY)
     private readonly delivery: INotificationDeliverer,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   deliveryMode(): string {
@@ -109,6 +111,11 @@ export class NotificationService {
     const row = await this.prisma.notification.findFirst({ where: { id, userId } });
     if (!row) throw new NotFoundException(`Notification not found: ${id}`);
     await this.prisma.notification.update({ where: { id }, data: { isRead: true } });
+    this.analytics.record({
+      actorId: userId,
+      eventType: 'NOTIFICATION_READ',
+      payload: { notification_id: id, notif_type: row.type },
+    });
     return { ok: true };
   }
 

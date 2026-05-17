@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 export interface FollowStateDTO {
   followed: boolean;
@@ -12,6 +13,7 @@ export class FollowService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async toggle(roomSlug: string, viewer: Viewer & { id: string }): Promise<FollowStateDTO> {
@@ -28,6 +30,11 @@ export class FollowService {
         data: { userId: viewer.id, roomId: room!.id },
       });
     }
+    this.analytics.record({
+      actorId: viewer.id,
+      eventType: existing ? 'ROOM_UNFOLLOWED' : 'ROOM_FOLLOWED',
+      payload: { room_id: room!.id, room_slug: roomSlug },
+    });
     return this.getState(roomSlug, viewer.id);
   }
 

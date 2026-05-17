@@ -86,16 +86,23 @@ why.
 
 ---
 
-## 7. Analytics pipeline
+## 7. Analytics pipeline — partially shipped in M19
 
-**Why:** Today's "signals" are deterministic on-demand scans. Real product decisions need event-level analytics.
+**Status:** M19 added a first-party server-side pipeline. See
+`docs/ANALYTICS.md` for the taxonomy and admin summary endpoint.
 
-**Scope sketch:**
-- Lightweight event ingest: `POST /v1/events/track` accepting client-side telemetry.
-- Sink to BigQuery / ClickHouse / Postgres event store.
-- Dashboards for funnel: signup → first post → first follow → second visit.
+**What's still backlog:**
+- Client-side telemetry: today only server-side events are captured. A
+  `POST /v1/events/track` ingest for Flutter taps would round it out
+  but bring its own privacy / abuse questions.
+- External warehouse export (BigQuery / ClickHouse / Snowflake) — for
+  long-horizon analysis. Today queries hit the `analytics_events` table
+  directly.
+- Funnel / cohort dashboards beyond the 30-day rollup card.
 - Per-room engagement health.
 - A/B framework for trending-score weights.
+- Retention job (`DELETE FROM analytics_events WHERE created_at < …`).
+  The table grows monotonically right now.
 
 ---
 

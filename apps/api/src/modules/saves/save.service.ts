@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 const VALID_TYPES = ['POST', 'REFERENCE', 'EVENT_CARD'] as const;
 type SaveTargetType = (typeof VALID_TYPES)[number];
@@ -35,6 +36,7 @@ export class SaveService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async toggle(input: ToggleSaveInput, viewer: Viewer & { id: string }): Promise<SaveToggleDTO> {
@@ -63,6 +65,11 @@ export class SaveService {
           });
         }
       });
+      this.analytics.record({
+        actorId: viewer.id,
+        eventType: 'ITEM_UNSAVED',
+        payload: { target_type: type, target_id: input.target_id },
+      });
       return { saved: false };
     }
 
@@ -79,6 +86,11 @@ export class SaveService {
           data: { bookmarkCount: { increment: 1 } },
         });
       }
+    });
+    this.analytics.record({
+      actorId: viewer.id,
+      eventType: 'ITEM_SAVED',
+      payload: { target_type: type, target_id: input.target_id },
     });
     return { saved: true };
   }

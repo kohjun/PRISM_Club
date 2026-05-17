@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService } from '../../shared/access-control.service';
 import { RequestUser } from '../../shared/decorators/current-user.decorator';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { PostAuthorDTO, ReplyDTO } from './dto/post.dto';
 
 export interface CreateReplyInput {
@@ -14,6 +15,7 @@ export class ReplyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async create(postId: string, input: CreateReplyInput, viewer: RequestUser): Promise<ReplyDTO> {
@@ -92,6 +94,16 @@ export class ReplyService {
       }
 
       return reply;
+    });
+
+    this.analytics.record({
+      actorId: viewer.id,
+      eventType: 'REPLY_CREATED',
+      payload: {
+        reply_id: created.id,
+        post_id: postId,
+        is_nested: input.parent_reply_id ? true : false,
+      },
     });
 
     return this.toDTO(created, viewer.id);

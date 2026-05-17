@@ -79,6 +79,18 @@ model ModerationAction {
   @@map("moderation_actions")
 }
 
+model AnalyticsEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @map("actor_id") @db.Uuid
+  eventType String   @map("event_type")
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([eventType, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("analytics_events")
+}
+
 model UserFollow {
   id         String   @id @default(uuid()) @db.Uuid
   followerId String   @map("follower_id") @db.Uuid

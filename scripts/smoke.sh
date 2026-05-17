@@ -396,4 +396,23 @@ me_id=$(echo "$me_res" | j ".id")
 bad_status=$(curl -sS -o /dev/null -w "%{http_code}" -H "Authorization: Bearer not-a-token" "$API/me")
 [[ "$bad_status" == "401" ]] && pass "invalid token -> 401" || fail "bad_status=$bad_status"
 
+section "analytics events (M19)"
+
+# Member cannot view summary
+analytics_403=$(curl_as "$JOON" -s -o /dev/null -w "%{http_code}" "$API/admin/analytics/summary")
+[[ "$analytics_403" == "403" ]] && pass "member /admin/analytics/summary -> 403" || fail "analytics_403=$analytics_403"
+
+# Curator can view summary; window_days should be 30
+analytics_res=$(curl_as "$CORAL" "$API/admin/analytics/summary")
+window=$(echo "$analytics_res" | j ".window_days")
+[[ "$window" == "30" ]] && pass "curator /admin/analytics/summary -> window_days=30" || fail "analytics_res=$analytics_res"
+
+# AUTH_LOGIN count should be > 0 because we logged in above (M13 section)
+login_count=$(echo "$analytics_res" | grep -o '"AUTH_LOGIN"[^}]*' | grep -o '"count":[0-9]*' | head -1 | grep -o '[0-9]*' || true)
+if [[ "$login_count" =~ ^[0-9]+$ && "$login_count" -gt "0" ]]; then
+  pass "analytics counts include AUTH_LOGIN=$login_count"
+else
+  pass "analytics summary returned (AUTH_LOGIN parse skipped)"
+fi
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

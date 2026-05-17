@@ -7,7 +7,7 @@ end to end.
 
 ---
 
-## 1. Feature map (M1–M15)
+## 1. Feature map (M1–M19)
 
 | Milestone | Surface | What's working |
 |---|---|---|
@@ -26,6 +26,10 @@ end to end.
 | M13 | Real auth sessions | JWT-backed login: `POST /v1/auth/login`, `GET /v1/auth/session`, `POST /v1/auth/logout`. AuthGuard accepts `Authorization: Bearer <jwt>`; legacy `X-User-Id` still works in non-production for tests/smoke. Flutter persists the access token and sends it automatically. |
 | M14 | Deployment readiness | Multi-stage API Dockerfile, env-driven CORS_ORIGINS + UPLOADS_DIR, real `/v1/health/ready` probe, root `build`/`start:prod`/`prisma:migrate:deploy` scripts, `docs/DEPLOYMENT.md`. |
 | M15 | PRISM EVENT integration boundary | `EVENTS_CLIENT_MODE=mock` (default; bundled fixture) OR `prism` (real HTTP client at `PRISM_EVENTS_API_BASE_URL`, optional `PRISM_EVENTS_API_KEY`, `PRISM_EVENTS_TIMEOUT_MS`). Failures degrade gracefully: search returns `[]`, getById returns `null`. Local `EventCard` remains the canonical snapshot. `docs/EVENTS_INTEGRATION.md`. |
+| M16 | Production media storage | `MEDIA_STORAGE_MODE=local` (default; filesystem under `UPLOADS_DIR`) OR `s3` (`@aws-sdk/client-s3` against AWS S3 / Cloudflare R2 / MinIO via `S3_BUCKET` + `S3_REGION` + `S3_ACCESS_KEY_ID` + `S3_SECRET_ACCESS_KEY` + optional `S3_ENDPOINT`/`S3_FORCE_PATH_STYLE`). Lazy config validation on first upload. |
+| M17 | Notification delivery adapters | `NOTIFICATION_DELIVERY_MODE=noop` (default; IN_APP only) OR `email`/`push` boundary stubs. Fire-and-forget; providers MUST NOT throw, they return `DeliveryAttempt[]`. |
+| M18 | Admin web console | Vite + React + TypeScript SPA at `apps/admin/`. Authenticates via `POST /v1/auth/login`, persists JWT in localStorage, renders ops summary + open-report queue + signal refresh. Role-gated to CURATOR/MODERATOR/ADMIN on both sides. `npm run admin:dev` (port 5180). |
+| M19 | Analytics events pipeline | First-party `analytics_events` table. 11 event types captured server-side fire-and-forget (AUTH_LOGIN, POST_CREATED, REPLY_CREATED, ROOM_FOLLOWED/UNFOLLOWED, ITEM_SAVED/UNSAVED, NOTIFICATION_READ, REPORT_CREATED, MEDIA_UPLOADED, EVENT_DETAIL_VIEWED). Payload scrubber drops PII/body keys + truncates strings. Admin-only `GET /v1/admin/analytics/summary` returns 30-day counts grouped by event_type. `docs/ANALYTICS.md`. |
 
 ---
 

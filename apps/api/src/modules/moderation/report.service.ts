@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   CreateReportInput,
   ModerationActionDTO,
@@ -39,6 +40,7 @@ export class ReportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   isModerator(viewer: Viewer): boolean {
@@ -98,6 +100,15 @@ export class ReportService {
         details: input.details?.trim() ?? null,
       },
       include: { reporter: { include: { profile: true } } },
+    });
+    this.analytics.record({
+      actorId: viewer.id,
+      eventType: 'REPORT_CREATED',
+      payload: {
+        report_id: row.id,
+        target_type: type,
+        target_id: input.target_id,
+      },
     });
     return this.toDTO(row);
   }

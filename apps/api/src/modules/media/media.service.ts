@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../shared/prisma.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   IMediaStorage,
   MEDIA_STORAGE,
@@ -40,6 +41,7 @@ export class MediaService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(MEDIA_STORAGE) private readonly storage: IMediaStorage,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   storageMode(): string {
@@ -85,6 +87,17 @@ export class MediaService {
         mimeType: file.mimetype,
         sizeBytes: file.size,
         path: stored.urlPath,
+      },
+    });
+
+    this.analytics.record({
+      actorId: ownerId,
+      eventType: 'MEDIA_UPLOADED',
+      payload: {
+        media_id: row.id,
+        mime_type: file.mimetype,
+        size_bytes: file.size,
+        storage_mode: this.storage.mode(),
       },
     });
 
