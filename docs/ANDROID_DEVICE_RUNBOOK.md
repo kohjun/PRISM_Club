@@ -336,8 +336,8 @@ These are intentional and tracked in
 |---|---|
 | No push notifications — only in-app | Push is deferred ([NEXT_BACKLOG §2](NEXT_BACKLOG.md)). You see notifications when you open the app, not while it's backgrounded. |
 | Deep links from email / SMS open the browser, not the app | App Links / Universal Links not wired yet ([FLUTTER_APP_RELEASE_AUDIT.md §9](FLUTTER_APP_RELEASE_AUDIT.md)). |
-| Launcher icon is the default Flutter "F" | Brand assets pending; placeholder documented in [MOBILE_RELEASE_CHECKLIST.md §3](MOBILE_RELEASE_CHECKLIST.md). |
-| App label is "PRISM Club" but icon doesn't match | Same — pending brand assets. |
+| Launcher icon is the default Flutter "F" | Brand assets pending; placeholder + full regeneration pipeline documented in [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md) (gate in [MOBILE_RELEASE_CHECKLIST.md §3](MOBILE_RELEASE_CHECKLIST.md)). |
+| App label is "PRISM Club" but icon doesn't match | Same — pending brand assets. [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md) §8 has the status snapshot. |
 | Camera capture is not implemented | Only gallery image picker. `file_picker` uses Storage Access Framework — no permission prompt on Android 13+. |
 | Real password / email signup not available | M13 left auth passwordless for Beta ([NEXT_BACKLOG §1](NEXT_BACKLOG.md)). The login picker is dev/internal use. |
 | Logout is client-side only | Stateless JWT; the API call is a no-op stub. The token is deleted from the device's secure storage. ([NEXT_BACKLOG §6](NEXT_BACKLOG.md)). |

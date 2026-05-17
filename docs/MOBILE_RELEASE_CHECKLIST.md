@@ -68,6 +68,13 @@ repo (`find apps/mobile -name '*logo*'` returns nothing). This is
 acceptable for engineering builds and emulator testing but **MUST be
 replaced before any store upload**.
 
+Full pipeline (source files, sizes, adaptive icon XML, generation
+commands, QA checklist): see
+[APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md). This checklist tracks
+go/no-go; the pipeline doc tells the design owner / operator exactly
+what to hand off and how to regenerate every platform artefact from
+one source.
+
 - [ ] Branded launcher icon replaces the default Flutter "F" mark on
       Android (all `mipmap-*` densities) — see audit §8.
 - [ ] Adaptive icon (`mipmap-anydpi-v26/ic_launcher.xml` +
