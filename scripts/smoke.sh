@@ -251,4 +251,30 @@ unsaved=$(echo "$unsave_res" | j ".saved")
 unread=$(curl_as "$MINSEO" "$API/me/notifications/unread-count" | j ".count")
 [[ "$unread" -ge "1" ]] && pass "unread-count >= 1 for minseo (got $unread)" || fail "unread=$unread"
 
+section "home feed (M7)"
+
+# GET /v1/home returns 200 for minseo
+home_res=$(curl_as "$MINSEO" "$API/home")
+home_status=$(echo "$home_res" | j ".unread_notification_count !== undefined ? 'ok' : 'missing'")
+[[ "$home_status" == "ok" ]] && pass "GET /home -> 200 with unread_notification_count" || fail "home=$home_res"
+
+# followed_room_updates is an array
+followed_updates=$(echo "$home_res" | j ".Array.isArray(home_res?.followed_room_updates) ? 'array' : 'not'" 2>/dev/null || echo "array")
+home_followed=$(echo "$home_res" | j ".followed_room_updates")
+[[ "$home_followed" != "" ]] && pass "followed_room_updates present" || fail "missing followed_room_updates"
+
+# recommended_rooms is an array
+home_rooms=$(echo "$home_res" | j ".recommended_rooms")
+[[ "$home_rooms" != "" ]] && pass "recommended_rooms present" || fail "missing recommended_rooms"
+
+# GET /v1/home/feed returns items array
+feed_res=$(curl_as "$MINSEO" "$API/home/feed")
+feed_items=$(echo "$feed_res" | j ".items")
+[[ "$feed_items" != "" ]] && pass "GET /home/feed -> items present" || fail "feed_items=$feed_items"
+
+# joon with no follows sees empty followed_room_updates
+joon_home=$(curl_as "$JOON" "$API/home")
+joon_followed=$(echo "$joon_home" | j ".followed_room_updates.length")
+[[ "$joon_followed" == "0" ]] && pass "joon: followed_room_updates empty (no follows)" || fail "joon_followed=$joon_followed"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

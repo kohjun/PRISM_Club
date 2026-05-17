@@ -21,6 +21,7 @@ import { EventDetailModule } from './modules/event-detail/event-detail.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FollowsModule } from './modules/follows/follows.module';
 import { SavesModule } from './modules/saves/saves.module';
+import { HomeModule } from './modules/home/home.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { SavesModule } from './modules/saves/saves.module';
     NotificationsModule,
     FollowsModule,
     SavesModule,
+    HomeModule,
   ],
   providers: [
     // Order matters: AuthGuard runs first to populate req.user, RolesGuard

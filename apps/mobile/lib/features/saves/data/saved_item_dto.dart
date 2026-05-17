@@ -32,7 +32,13 @@ class SavedItemDto {
 
     if (targetMap != null) {
       if (type == 'POST') {
-        postTarget = PostDto.fromJson(targetMap);
+        // Server may return a full PostDTO shape or a flat preview (body_preview).
+        // Attempt full parse; fall back to null so the caller can skip gracefully.
+        try {
+          postTarget = PostDto.fromJson(targetMap);
+        } catch (_) {
+          postTarget = null;
+        }
       } else if (type == 'REFERENCE') {
         referenceTarget = ReferenceDto.fromJson(targetMap);
       } else if (type == 'EVENT_CARD') {

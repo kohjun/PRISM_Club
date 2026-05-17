@@ -58,12 +58,26 @@ bell icon + unread badge in `SpaceListScreen`, follow button in
 `RoomTimelineScreen`, bookmark icon in `PostDetailScreen` and
 `EventDetailScreen`.
 
+Milestone 7 — personalized home feed. A new `HomeModule` exposes two endpoints:
+`GET /v1/home` returns a one-shot bundle with 7 sections (unread notification
+count, followed-room updates, recommended rooms, recommended events, trending
+posts, active topic hubs, recent saves); `GET /v1/home/feed` returns a
+cursor-paginated flat list of the same content with typed `reason` labels.
+All scoring is deterministic — trending posts use `likeCount×3 + replyCount×2
++ bookmarkCount`; recommended rooms use `followerCount×2 + postCount` and
+exclude already-followed rooms — so tests remain stable without mocking.
+Access control is consistent with M4–M6: member viewers never see
+PLANNER_ONLY content in any section. No new schema. A new `HomeShellScreen`
+wraps the five main tabs (홈 / 검색 / 커뮤니티 / 저장 / 알림) in a Material 3
+`NavigationBar`; the post-login redirect now lands on `/home` instead of
+`/spaces`. All existing deep-link routes are preserved.
+
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 35 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts, follow/save/notification endpoints with spaceAccessPolicy filtering |
-| Mobile (Flutter) | Login picker, Space list (curator banner + planner lock dialog + 내 제안 entry + bell badge), Category list, Topic Hub (search icon + 관련 검색 chips + 정보 개선 제안 + per-block 개선; related-event tiles open Event Detail), Room create, Room timeline (FAB routes to recruitment composer in RECRUITMENT rooms; pinned EventCards open Event Detail; follow button in AppBar), Post compose (accepts `?attach_event_card_id` for pre-attached events), Recruitment composer, Post detail with RecruitmentPostCard + status toggle (attachment EventCards open Event Detail; bookmark icon), Contribution composer, My contributions, Curation queue, Curation detail, Search screen with type filter (event_card hits open Event Detail), Event Detail screen with hero card / related rooms / related posts / 글 작성 CTA + room picker + bookmark icon, Notification screen, Saved items screen |
-| Tests | 95 backend unit tests + 9 e2e + 40 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` — 49 curl-driven checks (M1 slice + M3 search + M4 planner / recruitment + M5 event detail + M6 follow / save / notifications) |
+| Backend (NestJS + Prisma) | 37 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts, follow/save/notification endpoints with spaceAccessPolicy filtering, home bundle + feed endpoints with deterministic scoring |
+| Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar: 홈/검색/커뮤니티/저장/알림), Home screen (7 sections: followed updates / recommended rooms / recommended events / trending posts / active hubs / saved recently / empty state), Space list (curator banner + planner lock dialog + 내 제안 entry + bell badge), Category list, Topic Hub, Room create, Room timeline (follow button in AppBar), Post compose, Recruitment composer, Post detail (bookmark icon), Contribution composer, My contributions, Curation queue, Curation detail, Search screen, Event Detail screen, Notification screen, Saved items screen |
+| Tests | 103 backend unit tests + 12 e2e + 43 Flutter widget tests, all green |
+| Smoke | `scripts/smoke.sh` — 55 curl-driven checks (M1–M7 inclusive) |
 
 ## Repo layout
 

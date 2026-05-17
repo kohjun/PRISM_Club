@@ -17,6 +17,7 @@ import '../features/search/ui/search_screen.dart';
 import '../features/room/ui/room_creator_screen.dart';
 import '../features/room/ui/room_timeline_screen.dart';
 import '../features/space/ui/space_list_screen.dart';
+import '../features/home/ui/home_shell_screen.dart';
 import '../features/notifications/ui/notification_screen.dart';
 import '../features/saves/ui/saved_items_screen.dart';
 import '../features/topic_hub/ui/topic_hub_screen.dart';
@@ -33,13 +34,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       final goingToLogin = state.matchedLocation == '/login';
 
       if (!loggedIn && !goingToLogin) return '/login';
-      if (loggedIn && goingToLogin) return '/spaces';
+      if (loggedIn && goingToLogin) return '/home';
       return null;
     },
     refreshListenable: _RouterRefresh(ref),
     routes: [
-      GoRoute(path: '/', redirect: (_, _) => '/spaces'),
+      GoRoute(path: '/', redirect: (_, _) => '/home'),
       GoRoute(path: '/login', builder: (_, _) => const LoginPickerScreen()),
+      GoRoute(path: '/home', builder: (_, _) => const HomeShellScreen()),
       GoRoute(path: '/spaces', builder: (_, _) => const SpaceListScreen()),
       GoRoute(
         path: '/spaces/:spaceSlug/categories',

@@ -42,16 +42,19 @@ class PostCardWidget extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(post.author.nickname,
-                      style: Theme.of(context).textTheme.bodyMedium),
-                  const Spacer(),
+                  Flexible(
+                    child: Text(post.author.nickname,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 8),
                   Text(_relativeTime(post.createdAt),
                       style: const TextStyle(
                           fontSize: 11, color: PrismColors.muted)),
                 ],
               ),
               const SizedBox(height: 10),
-              Text(post.body),
+              Text(post.body, maxLines: 3, overflow: TextOverflow.ellipsis),
               if (post.attachments.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 for (final a in post.attachments) ...[
