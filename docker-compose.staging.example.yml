@@ -1,0 +1,191 @@
+# ============================================================================
+# PRISM Club — staging runtime template (compose).
+#
+# Non-secret, placeholder-only template. Copy to docker-compose.staging.yml
+# (gitignored) on the staging host, fill in real values, then bring up:
+#   docker compose -f docker-compose.staging.yml up -d
+#
+# This file is intentionally SEPARATE from the dev `docker-compose.yml`.
+# Do NOT replace the dev compose with this one — they have different
+# trade-offs (the dev file binds 5433 to the host, exposes Postgres,
+# and uses default credentials; this file does the opposite).
+#
+# Companion docs:
+#   - docs/STAGING_SETUP.md   — full setup walkthrough
+#   - docs/STAGING_SMOKE.md   — how to smoke once it's up
+#   - docs/DEPLOYMENT.md      — env matrix
+#   - .env.staging.example    — variable inventory
+#
+# Conventions:
+#   - `${VAR}`               → required; bring up will fail if unset
+#   - `${VAR:-default}`      → optional; named default if unset
+#   - `# <placeholder>`      → human comment; do not paste as a value
+#
+# Provider-neutral on purpose. Run on any Docker host, swap in a managed
+# Postgres / S3 / load balancer as your platform allows.
+# ============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Postgres 16 — OPTIONAL.
+  #
+  # Two modes:
+  #   (A) Self-hosted Postgres for staging only (this service). Acceptable
+  #       for a single-engineer rehearsal environment. NOT recommended for
+  #       anything that needs HA or backup automation — use a managed DB.
+  #   (B) Managed Postgres (RDS / Cloud SQL / Supabase / Neon / …). In this
+  #       mode, REMOVE this service entirely and set DATABASE_URL on the api
+  #       service to the managed connection string.
+  #
+  # Default below assumes mode (A). To switch to (B): comment out this
+  # service + the `depends_on:` block in `api:` + the `prism_postgres_data`
+  # volume; then set DATABASE_URL on `api:` to the managed URI.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: prism_club_postgres_staging
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-prism_staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}    # required — set in the host shell or .env
+      POSTGRES_DB: ${POSTGRES_DB:-prism_club_staging}
+    volumes:
+      - prism_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prism_staging} -d ${POSTGRES_DB:-prism_club_staging}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Intentionally NOT exposed to the host. The api service reaches
+    # postgres on the compose network. To run `prisma migrate deploy`
+    # against this DB from outside, either uncomment the `ports:` block
+    # below, port-forward via `docker compose exec`, or use a managed DB
+    # (mode B).
+    # ports:
+    #   - "127.0.0.1:5433:5432"
+
+  # ---------------------------------------------------------------------------
+  # API container — REQUIRED.
+  #
+  # Image: build locally with `docker build -t prism-club-api:<sha>
+  #        -f apps/api/Dockerfile .` and push to your registry, OR build
+  # in-place on the staging host. Override via API_IMAGE.
+  # ---------------------------------------------------------------------------
+  api:
+    image: ${API_IMAGE:-prism-club-api:staging}
+    container_name: prism_club_api_staging
+    restart: unless-stopped
+    environment:
+      # --- DB ---
+      # Self-hosted mode (matches the postgres service above):
+      DATABASE_URL: ${DATABASE_URL:-postgresql://prism_staging:${POSTGRES_PASSWORD}@postgres:5432/prism_club_staging?schema=public}
+
+      # --- runtime ---
+      NODE_ENV: production
+      API_PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}                # required — generate fresh per docs/STAGING_SETUP.md §3
+      ALLOW_X_USER_ID: ${ALLOW_X_USER_ID:-1}   # acceptable for staging; production MUST leave this unset
+      CORS_ORIGINS: ${CORS_ORIGINS}            # required — explicit allowlist, no `*`
+
+      # --- M15: PRISM EVENT integration ---
+      # First-boot default is `mock` so staging works without upstream
+      # credentials. Flip to `prism` per docs/STAGING_SETUP.md §8 once
+      # the upstream URL + key are ready.
+      EVENTS_CLIENT_MODE: ${EVENTS_CLIENT_MODE:-mock}
+      PRISM_EVENTS_API_BASE_URL: ${PRISM_EVENTS_API_BASE_URL:-}
+      PRISM_EVENTS_API_KEY: ${PRISM_EVENTS_API_KEY:-}
+      PRISM_EVENTS_TIMEOUT_MS: ${PRISM_EVENTS_TIMEOUT_MS:-4000}
+
+      # --- M16: media storage ---
+      # First-boot default is `local` so the upload code path is
+      # exercisable without S3 credentials. Switch to `s3` before sharing
+      # the staging URL with external testers (docs/STAGING_SETUP.md §9).
+      MEDIA_STORAGE_MODE: ${MEDIA_STORAGE_MODE:-local}
+      UPLOADS_DIR: /app/uploads
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_OBJECT_PREFIX: ${S3_OBJECT_PREFIX:-staging-uploads}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-}
+
+      # --- M17: notification delivery ---
+      # Beta default. The email / push boundaries are stubs — flip only
+      # when a real provider lands (NEXT_BACKLOG §2).
+      NOTIFICATION_DELIVERY_MODE: ${NOTIFICATION_DELIVERY_MODE:-noop}
+
+    ports:
+      # Expose the API to the host loopback so a local reverse proxy
+      # (nginx, Caddy, Traefik) can terminate TLS and forward to it.
+      # Do NOT publish on 0.0.0.0 unless this host IS the public edge.
+      - "127.0.0.1:3000:3000"
+
+    volumes:
+      # Persistent dir for local-mode uploads. Safe to remove if running
+      # MEDIA_STORAGE_MODE=s3. The directory must be writable by the
+      # container's UID (the Dockerfile creates /app/uploads as root —
+      # adjust if you switch to a non-root runtime image).
+      - prism_uploads:/app/uploads
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      # Hit the readiness probe (returns 200 with DB connectivity, 503
+      # otherwise). docker compose will mark the container `unhealthy`
+      # rather than killing it — a reverse proxy in front should route
+      # away from unhealthy targets.
+      test:
+        - CMD-SHELL
+        - >
+          (
+            command -v wget >/dev/null && wget -q --spider --tries=1 --timeout=5 http://127.0.0.1:3000/v1/health/ready
+          ) || (
+            command -v curl >/dev/null && curl -sfS --max-time 5 http://127.0.0.1:3000/v1/health/ready >/dev/null
+          ) || (
+            node -e "require('http').get('http://127.0.0.1:3000/v1/health/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+          )
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # OPTIONAL: static web hosts (Flutter client + admin web).
+  #
+  # The recommended pattern for staging is to host both bundles behind
+  # the same reverse proxy that terminates TLS for the api, OR to push
+  # the static bundles to a CDN / object store with public-read access
+  # (S3 + CloudFront, Cloudflare Pages, nginx on the same VM, etc.).
+  #
+  # For convenience during a single-VM rehearsal, you can run nginx as
+  # a sibling container by uncommenting the block below. Build the
+  # bundles BEFORE compose up:
+  #   cd apps/mobile && flutter build web --no-tree-shake-icons \
+  #     --dart-define=API_BASE_URL=https://api.staging.<your-domain>/v1
+  #   cd apps/admin && VITE_API_BASE_URL=https://api.staging.<your-domain>/v1 npm run build
+  # Then mount apps/mobile/build/web → /usr/share/nginx/html/app and
+  # apps/admin/dist → /usr/share/nginx/html/admin.
+  #
+  # Provider-specific TLS termination is out of scope for this template.
+  # ---------------------------------------------------------------------------
+  # web:
+  #   image: nginx:1.27-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:8080:80"
+  #   volumes:
+  #     - ./apps/mobile/build/web:/usr/share/nginx/html/app:ro
+  #     - ./apps/admin/dist:/usr/share/nginx/html/admin:ro
+  #     - ./deploy/nginx.staging.conf:/etc/nginx/conf.d/default.conf:ro
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+
+volumes:
+  prism_postgres_data:
+  prism_uploads:

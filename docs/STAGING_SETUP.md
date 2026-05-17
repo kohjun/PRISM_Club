@@ -18,6 +18,7 @@ Pairs with:
 - [BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md) — execution-time guide
 - [STAGING_SMOKE.md](STAGING_SMOKE.md) — how to smoke against the staging host
 - [.env.staging.example](../.env.staging.example) — staging-shaped env template
+- [docker-compose.staging.example.yml](../docker-compose.staging.example.yml) — runtime template for a single-VM staging host
 
 ---
 
@@ -384,7 +385,72 @@ Most useful checks when staging breaks:
 
 ---
 
-## 12. Pre-cut-over checklist
+## 12. Single-VM runtime template
+
+If you are running staging on a single VM (the simplest possible
+deploy), `docker-compose.staging.example.yml` at the repo root is a
+turn-key starting point. It defines:
+
+- a Postgres 16 container with named-volume storage (NOT exposed to
+  the host; can be swapped for a managed DB by removing the service
+  and setting `DATABASE_URL` on the api service)
+- the API container with full env wiring (env vars referenced through
+  `${VAR}` / `${VAR:-default}` so the template carries no secrets)
+- a persistent volume for `MEDIA_STORAGE_MODE=local` uploads
+- a healthcheck against `GET /v1/health/ready` that marks the
+  container `unhealthy` (without killing it) when the DB is unreachable
+- an optional nginx static-host block (commented out) for serving the
+  Flutter web + admin web bundles alongside the API
+
+Usage:
+
+```bash
+# 1. Copy the template — DO NOT commit the populated copy.
+cp docker-compose.staging.example.yml docker-compose.staging.yml
+
+# 2. Populate required env vars in your shell or a sibling .env file
+#    (POSTGRES_PASSWORD, JWT_SECRET, CORS_ORIGINS at minimum).
+export POSTGRES_PASSWORD=<staging-db-password>
+export JWT_SECRET=<staging-jwt-secret>
+export CORS_ORIGINS=https://app.staging.<your-domain>,https://admin.staging.<your-domain>
+
+# 3. Validate before bring-up.
+docker compose -f docker-compose.staging.yml config
+
+# 4. Build the API image locally (or pull from your registry).
+docker build -t prism-club-api:staging -f apps/api/Dockerfile .
+
+# 5. Bring it up.
+docker compose -f docker-compose.staging.yml up -d
+
+# 6. Apply migrations from the host (the container does NOT migrate
+#    on boot — same as production).
+DATABASE_URL="postgresql://prism_staging:$POSTGRES_PASSWORD@127.0.0.1:5432/prism_club_staging?schema=public" \
+  npx prisma migrate deploy
+```
+
+> **Warnings.** This template is for a single-VM rehearsal staging:
+> - It does NOT terminate TLS. Put a reverse proxy (nginx, Caddy,
+>   Traefik, Cloud Load Balancer) in front of `127.0.0.1:3000` for
+>   HTTPS.
+> - It does NOT replace `docker-compose.yml`. The local dev compose
+>   binds Postgres on host 5433 with default credentials — fine for
+>   dev, never for staging.
+> - It is intentionally placeholder-only. Never commit the populated
+>   copy. `docker-compose.staging.yml` is gitignored by the existing
+>   `**/build/` and platform-specific patterns; double-check before
+>   pushing.
+> - It does not assume any paid provider. Swap in managed Postgres
+>   / S3 / CDN via env vars as your platform requires.
+
+When staging needs HA, autoscaling, or zero-downtime deploys, graduate
+to a Kubernetes / Cloud Run / ECS manifest. The env matrix
+([DEPLOYMENT.md](DEPLOYMENT.md) §2) does not change; only the runtime
+host does.
+
+---
+
+## 13. Pre-cut-over checklist
 
 Treat this list as the "staging is ready" gate. None of these block
 the rehearsal itself; missing any one of them means staging is not

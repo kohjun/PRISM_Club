@@ -21,6 +21,11 @@ prisma/migrations/migration_lock.toml.bak
 !.env.example
 !.env.staging.example
 
+# staging compose — operator-populated copy of docker-compose.staging.example.yml
+docker-compose.staging.yml
+docker-compose.staging.*.yml
+!docker-compose.staging.example.yml
+
 # logs
 logs/
 *.log
