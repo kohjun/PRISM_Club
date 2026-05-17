@@ -27,7 +27,9 @@ inventory) and [FLUTTER_NATIVE_SETUP.md](FLUTTER_NATIVE_SETUP.md)
       Club"**), not hardcoded to the Flutter default `"mobile"`.
 - [ ] `versionCode` and `versionName` derive from
       `apps/mobile/pubspec.yaml` `version:` (currently `0.1.0+1`).
-      Bumped per release: `0.1.0+1` → `0.1.0+2` → `0.1.1+3` etc.
+      Bumped per release: `0.1.0+1` → `0.1.0+2` → `0.1.1+3` etc. —
+      bump rules, RC tagging, and rollback warnings live in
+      [MOBILE_VERSIONING.md](MOBILE_VERSIONING.md).
 - [ ] `compileSdk` + `targetSdk` pinned explicitly to the current Play
       target (34 today). Do NOT rely on `flutter.targetSdkVersion`
       for the release build.
