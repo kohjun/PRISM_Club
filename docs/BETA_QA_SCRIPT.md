@@ -32,8 +32,21 @@ abbreviates as `<api-host>`, `<admin-host>`, `<club-host>`.
 
 ### 0.2 Test accounts
 
-Beta does NOT ship signup. Create these accounts via SQL **before** the
-QA window opens. Record each user_id in the cut-over log.
+Beta does NOT ship signup. Two options for QA accounts:
+
+- **Production cut-over:** create the QA accounts via SQL **before** the
+  QA window opens (the snippet below). Record each user_id in the
+  cut-over log. Production must NEVER be seeded — the seed CLI
+  truncates every table on entry and refuses to run against
+  `NODE_ENV=production` without `CONFIRM_DESTRUCTIVE_SEED=1`, but the
+  refusal is a safety net, not an invitation.
+- **Staging rehearsal:** the six demo personas (minseo / joon / haneul /
+  coral / studio_lead / studio_mate) are already seeded with
+  well-known UUIDs (see [STAGING_SETUP.md](STAGING_SETUP.md) §4.4
+  for the full table). Reuse them for staging QA; do NOT use them in
+  production.
+
+SQL for the production path:
 
 ```sql
 -- Member (qa_member)

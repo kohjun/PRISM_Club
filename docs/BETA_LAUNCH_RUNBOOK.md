@@ -77,7 +77,12 @@ signal.
 ### Identity + role bootstrap
 
 - [ ] At least one CURATOR / MODERATOR / ADMIN account exists in the
-      target DB. **The seed personas are dev-only.** Create the role row
+      target DB. **The seed personas are dev / staging only.** Never
+      run `npm run db:seed` against production — the seed begins with
+      `clearAll`, which truncates every table. The CLI refuses with
+      exit code 2 when `NODE_ENV=production` and
+      `CONFIRM_DESTRUCTIVE_SEED` is not set, but the guard is a
+      safety net, not a license. Create the production admin row
       manually via SQL:
       ```sql
       INSERT INTO user_roles (id, user_id, role, source)

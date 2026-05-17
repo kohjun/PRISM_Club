@@ -962,8 +962,68 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
   };
 }
 
+// ---------------------------------------------------------------------------
+// CLI safety guard
+//
+// `runSeed` first calls `clearAll`, which TRUNCATES every table in dependency
+// order. That is exactly what we want for local dev + the backend e2e test
+// bootstrap, and exactly what we MUST NOT do against a production database.
+//
+// `assertCliSafe` is invoked only from the CLI entrypoint (`npm run db:seed`
+// / `node --import tsx prisma/seed.ts`). The test harness imports `runSeed`
+// directly and intentionally bypasses this gate, since it manages its own
+// test database.
+//
+// Refuse to run when:
+//   NODE_ENV === 'production'  AND  CONFIRM_DESTRUCTIVE_SEED !== '1'
+//
+// The check is intentionally narrow: only NODE_ENV gates the refusal. We do
+// NOT try to infer "this looks like prod" from DATABASE_URL hostnames —
+// that's the kind of cleverness that fails closed in subtle ways. Operators
+// who genuinely want to seed a production-flagged DB (e.g. resetting a fresh
+// staging environment that happens to run with NODE_ENV=production) must
+// explicitly set CONFIRM_DESTRUCTIVE_SEED=1.
+// ---------------------------------------------------------------------------
+
+export function targetHostHint(databaseUrl: string | undefined): string {
+  if (!databaseUrl) return '(DATABASE_URL not set)';
+  try {
+    const u = new URL(databaseUrl);
+    // Echo the host and database name only — never the credentials.
+    return `${u.host}${u.pathname}`;
+  } catch {
+    return '(unparseable DATABASE_URL)';
+  }
+}
+
+export function assertCliSafe(env: NodeJS.ProcessEnv): void {
+  const nodeEnv = env.NODE_ENV ?? 'development';
+  if (nodeEnv === 'production' && env.CONFIRM_DESTRUCTIVE_SEED !== '1') {
+    // eslint-disable-next-line no-console
+    console.error(
+      [
+        'Refusing to seed: NODE_ENV=production and CONFIRM_DESTRUCTIVE_SEED is not set.',
+        '',
+        '  The seed truncates every table before re-seeding fixtures. That is',
+        '  catastrophic against a production database. To run anyway (e.g. to',
+        '  reset a fresh staging environment that runs with NODE_ENV=production):',
+        '',
+        '    CONFIRM_DESTRUCTIVE_SEED=1 npm run db:seed',
+        '',
+        `  Target: ${targetHostHint(env.DATABASE_URL)}`,
+      ].join('\n'),
+    );
+    process.exit(2);
+  }
+}
+
 // Allow `npm run db:seed` to invoke this file directly.
 if (require.main === module) {
+  assertCliSafe(process.env);
+  // eslint-disable-next-line no-console
+  console.log(
+    `Seeding ${targetHostHint(process.env.DATABASE_URL)} (NODE_ENV=${process.env.NODE_ENV ?? 'development'})`,
+  );
   const prisma = new PrismaClient();
   runSeed(prisma)
     .then((counts) => {

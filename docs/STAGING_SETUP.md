@@ -196,11 +196,49 @@ the staging DB once:
 DATABASE_URL="<staging-database-url>" npm run db:seed
 ```
 
-Be aware: this creates the personas with **well-known fixed UUIDs**
-(`11111111-1111-1111-1111-111111111111`, etc.). If staging is reachable
-from the public internet, anyone who reads this repo can log in as those
-personas. Either skip the seed entirely, or block public access to the
-staging API by IP allowlist.
+**Safety guard.** The seed CLI refuses to run when `NODE_ENV=production`
+unless `CONFIRM_DESTRUCTIVE_SEED=1` is also set. The seed truncates
+every table before reinserting fixtures, so this guard exists to make
+the "I forgot which env I was in" mistake impossible. If your staging
+environment runs with `NODE_ENV=production` (recommended — it matches
+the production guard surface), seed it explicitly:
+
+```bash
+CONFIRM_DESTRUCTIVE_SEED=1 \
+  DATABASE_URL="<staging-database-url>" \
+  NODE_ENV=production \
+  npm run db:seed
+```
+
+The script prints the target host (without credentials) before it
+truncates, so you have one more chance to abort.
+
+**Demo personas (well-known UUIDs).** All six personas have fixed
+UUIDs that are committed to this repo. Anyone who reads the repo can
+log in as them once the seed has run.
+
+| Persona | UUID | Roles |
+|---|---|---|
+| 민서 (minseo) | `11111111-1111-1111-1111-111111111111` | MEMBER |
+| joon | `22222222-2222-2222-2222-222222222222` | MEMBER |
+| haneul | `33333333-3333-3333-3333-333333333333` | MEMBER |
+| coral | `44444444-4444-4444-4444-444444444444` | CURATOR + MODERATOR |
+| studio_lead | `55555555-5555-5555-5555-555555555555` | VERIFIED_PLANNER |
+| studio_mate | `66666666-6666-6666-6666-666666666666` | VERIFIED_PLANNER |
+
+If staging is reachable from the public internet, either:
+
+- (a) skip the seed entirely (use SQL-bootstrap only — §4.3), OR
+- (b) block public access to the staging API by IP allowlist while the
+  demo personas exist, OR
+- (c) seed once for cut-over rehearsal, run the test you needed, then
+  `prisma migrate reset --force` to wipe the demo personas before
+  inviting external testers.
+
+**Never seed production.** Even with `CONFIRM_DESTRUCTIVE_SEED=1` the
+seed begins with `clearAll`, which truncates every table including
+real user data. There is no scenario in which production should be
+seeded.
 
 ---
 
