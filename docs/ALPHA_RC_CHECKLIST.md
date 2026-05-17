@@ -7,7 +7,7 @@ end to end.
 
 ---
 
-## 1. Feature map (M1–M13)
+## 1. Feature map (M1–M15)
 
 | Milestone | Surface | What's working |
 |---|---|---|
@@ -24,6 +24,8 @@ end to end.
 | M11 | Ops dashboard | `GET /v1/admin/ops/summary` (role-gated); Flutter `OpsDashboardScreen` with deep-link cards |
 | M12 | Activity signals | Computed TopicSignal entries (HOT_DEBATE / POPULAR_REF / VERIFIED_REVIEWS) recalculated from real activity via `POST /v1/admin/signals/refresh` |
 | M13 | Real auth sessions | JWT-backed login: `POST /v1/auth/login`, `GET /v1/auth/session`, `POST /v1/auth/logout`. AuthGuard accepts `Authorization: Bearer <jwt>`; legacy `X-User-Id` still works in non-production for tests/smoke. Flutter persists the access token and sends it automatically. |
+| M14 | Deployment readiness | Multi-stage API Dockerfile, env-driven CORS_ORIGINS + UPLOADS_DIR, real `/v1/health/ready` probe, root `build`/`start:prod`/`prisma:migrate:deploy` scripts, `docs/DEPLOYMENT.md`. |
+| M15 | PRISM EVENT integration boundary | `EVENTS_CLIENT_MODE=mock` (default; bundled fixture) OR `prism` (real HTTP client at `PRISM_EVENTS_API_BASE_URL`, optional `PRISM_EVENTS_API_KEY`, `PRISM_EVENTS_TIMEOUT_MS`). Failures degrade gracefully: search returns `[]`, getById returns `null`. Local `EventCard` remains the canonical snapshot. `docs/EVENTS_INTEGRATION.md`. |
 
 ---
 
@@ -120,7 +122,7 @@ bash scripts/smoke.sh
 ```
 
 Expected counts at Alpha RC:
-- 121 backend unit tests, 17 suites — all green
+- 128 backend unit tests, 18 suites — all green
 - 35 backend e2e tests, 13 suites — all green
 - 53 Flutter widget tests — all green
 - Smoke: 75 curl-driven assertions covering M1–M13
@@ -135,12 +137,12 @@ Things that are intentionally NOT yet production-shaped:
 |---|---|
 | **Auth** | M13 added real JWT sessions and a working `/auth/login` flow. Login is **still passwordless** (any seeded user id signs you in) — production needs email/password or SSO before exposing this to real users. `X-User-Id` remains as a fallback only when `NODE_ENV != production` or `ALLOW_X_USER_ID=1`. |
 | **Media storage** | Files land in `apps/api/uploads/` on the API host. No S3, no CDN, no antivirus, no resize pipeline. |
-| **Events client** | A mock `IEventsClient` returns hand-curated payloads. No real PRISM EVENT / CONTENIDO integration. |
+| **Events client** | The boundary is in place (`EVENTS_CLIENT_MODE=prism` activates a real HTTP client). The upstream PRISM EVENT / CONTENIDO API contract is not finalized yet — `mock` mode remains the default for dev/test/demo. |
 | **Notifications** | In-app only. No push, no email, no SMS, no realtime channel. |
 | **Search** | ILIKE on Postgres. No vector search, no relevance tuning, no synonym handling, no Korean morphological analysis. |
 | **Moderation hide** | Hide is implemented for POST and REPLY. ROOM / USER / REFERENCE hide is recorded as an audit row but doesn't yet flip any visibility flag. |
 | **Account settings** | No password change, no avatar upload, no nickname rename, no account deletion, no email verification. |
-| **Deployment** | Local-only. No Dockerfile for the API; no CI/CD; no env-specific configuration story beyond `.env.example`. |
+| **Deployment** | M14 added an API Dockerfile + `docs/DEPLOYMENT.md` + env-driven CORS / uploads. CI/CD is still out of scope. |
 
 ---
 

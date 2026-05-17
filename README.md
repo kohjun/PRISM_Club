@@ -7,12 +7,32 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
-**Alpha RC** — M1–M13 + hardening complete. See
+**Alpha RC** — M1–M15 + hardening complete. See
 [ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the feature map, demo
 walkthrough, fresh-start flow, and RC verification steps. See
 [NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized post-Alpha items
-(deployment, real PRISM EVENT integration, production media storage, push,
-admin web, analytics).
+(production media storage, push, admin web, analytics).
+
+Milestone 15 — PRISM EVENT / CONTENIDO integration boundary. `IEventsClient`
+gains a real `PrismEventsClient` implementation alongside the existing
+`MockEventsClient`. The client is selected at boot by `EVENTS_CLIENT_MODE`
+(`mock` default for dev/test/demo; `prism` for alpha/prod). The real
+client hits a configurable HTTP API
+(`PRISM_EVENTS_API_BASE_URL` / `PRISM_EVENTS_API_KEY` / `PRISM_EVENTS_TIMEOUT_MS`),
+maps the upstream payload into the local `ExternalEvent` shape, and
+degrades gracefully on timeout / 4xx / 5xx (`search` returns `[]`,
+`getById` returns `null`) so Club surfaces never explode when upstream is
+down. `event_cards` snapshots remain the canonical local source for
+Topic Hub, EventDetail, search, and the home feed — both clients hit the
+same upsert path. See [EVENTS_INTEGRATION](docs/EVENTS_INTEGRATION.md).
+
+Milestone 14 — deployment readiness. Multi-stage API Dockerfile,
+env-driven `CORS_ORIGINS` and `UPLOADS_DIR`, real `GET /v1/health/ready`
+DB connectivity probe, root `build` + `start:prod` +
+`prisma:migrate:deploy` scripts, and [DEPLOYMENT](docs/DEPLOYMENT.md)
+documenting the env matrix, native + container build, Flutter web build
+with `--dart-define=API_BASE_URL=...`, health endpoints, and the
+explicitly-out-of-scope list.
 
 Milestone 13 — real auth sessions. Replaces the stub `X-User-Id` with a
 JWT-backed flow. `POST /v1/auth/login` (passwordless: accept a seeded
@@ -167,7 +187,7 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 |---|---|
 | Backend (NestJS + Prisma) | 47 endpoints, role-gated guard, mock Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local dev storage at /uploads/*) |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 121 backend unit + 35 e2e + 53 Flutter widget, all green |
+| Tests | 128 backend unit + 35 e2e + 53 Flutter widget, all green |
 | Smoke | `scripts/smoke.sh` — 75 curl-driven checks (M1–M13 inclusive) |
 
 ## Repo layout
@@ -201,6 +221,7 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 - [Roadmap](docs/05_ROADMAP.md)
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — feature map, demo walkthrough, fresh-start flow, RC verification
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build
+- **[Events integration](docs/EVENTS_INTEGRATION.md)** — IEventsClient modes, expected upstream shape, mapping, failure behavior
 - **[Next backlog](docs/NEXT_BACKLOG.md)** — deferred production items
 
 ## Prerequisites
