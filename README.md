@@ -310,6 +310,7 @@ across all the planning and operational docs.
 - **[Handoff guide](docs/HANDOFF.md)** — single-page orientation for a new engineer / operator
 - **[Staging setup](docs/STAGING_SETUP.md)** — services + env + migration + builds for the rehearsal environment
 - **[Staging bring-up checklist](docs/STAGING_BRINGUP_CHECKLIST.md)** — the exact single-page checklist for an operator standing up staging for the first time
+- **[Local browser QA](docs/LOCAL_BROWSER_QA.md)** — fast path for running PRISM Club end-to-end in Chrome on `localhost`
 - **[Staging smoke](docs/STAGING_SMOKE.md)** — how to point `scripts/smoke.sh` at staging, what persists, how to clean up
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — historical Alpha RC view (feature map, demo walkthrough, fresh-start flow, RC verification)
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build
