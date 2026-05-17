@@ -279,16 +279,29 @@ This smoke is a live end-to-end gut check against the deployed
 environment.
 
 ```bash
+# Default (legacy header) — requires ALLOW_X_USER_ID=1 on the target.
 API=https://<api-host>/v1 bash scripts/smoke.sh
+
+# JWT mode — does NOT require the legacy header. Recommended when the
+# target has the seeded personas applied (typically: staging).
+SMOKE_AUTH_MODE=jwt API=https://<api-host>/v1 bash scripts/smoke.sh
 ```
 
-Per BETA_READINESS §7, the smoke script uses the legacy `X-User-Id`
-header. To run it during cut-over either:
+`SMOKE_AUTH_MODE=jwt` calls `POST /v1/auth/login` per persona at
+startup, caches the bearer tokens, and uses them for the rest of the
+run. Same assertions, same exit semantics, no widening of the legacy
+auth surface. See
+[STAGING_SMOKE.md](STAGING_SMOKE.md) §2 for the full token-flow
+description.
 
-- (a) Set `ALLOW_X_USER_ID=1` temporarily, run smoke, **then unset it**
-  and roll the pod once more, OR
+Per BETA_READINESS §7, smoke against **production** has three options:
+
+- (a) `SMOKE_AUTH_MODE=jwt` — works if the seeded personas are present
+  in production (NOT recommended — they have well-known UUIDs).
 - (b) Skip smoke and rely on the §9 persona QA (recommended for
-  production-grade Beta).
+  production-grade Beta — uses real ops-account JWTs).
+- (c) Set `ALLOW_X_USER_ID=1` temporarily for a legacy-mode smoke run,
+  **then unset it** and roll the pod once more.
 
 If you went with (a): confirm `ALLOW_X_USER_ID` is unset in the rolled
 pods before declaring "Beta live."

@@ -4,10 +4,24 @@
 #   -> reply (depth 2) -> reaction toggle -> patch/delete enforcement
 #
 # Run after `npm run db:seed && npm run api:dev`.
+#
+# Environment:
+#   API              Base URL of the API (default: http://localhost:3000/v1).
+#   SMOKE_AUTH_MODE  legacy | jwt (default: legacy)
+#     legacy → send X-User-Id: <persona-uuid> on every request. Requires
+#              ALLOW_X_USER_ID=1 on the target. Matches dev/local behavior.
+#     jwt    → exchange each persona-uuid for a JWT via POST /v1/auth/login
+#              once at startup, then send Authorization: Bearer <token>.
+#              Works against staging without widening the legacy header
+#              surface.
+#
+# Both modes call the same endpoints with the same assertions; only the
+# auth header changes.
 
 set -euo pipefail
 
 API="${API:-http://localhost:3000/v1}"
+SMOKE_AUTH_MODE="${SMOKE_AUTH_MODE:-legacy}"
 MINSEO="11111111-1111-1111-1111-111111111111"
 JOON="22222222-2222-2222-2222-222222222222"
 HANEUL="33333333-3333-3333-3333-333333333333"
@@ -18,12 +32,56 @@ pass() { printf "  \033[32mPASS\033[0m %s\n" "$1"; }
 fail() { printf "  \033[31mFAIL\033[0m %s\n" "$1"; exit 1; }
 section() { printf "\n\033[1m== %s ==\033[0m\n" "$1"; }
 
-curl_as() {
-  local user="$1"; shift
-  curl -sS -H "X-User-Id: $user" -H "Content-Type: application/json; charset=utf-8" "$@"
+j() { node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));process.stdout.write(String(d$1))"; }
+
+# Per-persona JWT cache; populated lazily in jwt mode. Keys are the
+# persona UUIDs, values are bearer tokens.
+declare -A SMOKE_TOKENS
+
+_mint_token() {
+  local user="$1"
+  local body
+  body=$(curl -sS -X POST "$API/auth/login" \
+    -H "Content-Type: application/json; charset=utf-8" \
+    -d "{\"user_id\":\"$user\"}")
+  local token
+  token=$(echo "$body" | j ".access_token")
+  if [[ -z "$token" || "$token" == "undefined" ]]; then
+    fail "JWT login for $user (response: $body)"
+  fi
+  printf "%s" "$token"
 }
 
-j() { node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));process.stdout.write(String(d$1))"; }
+_auth_header() {
+  local user="$1"
+  case "$SMOKE_AUTH_MODE" in
+    legacy)
+      printf "X-User-Id: %s" "$user"
+      ;;
+    jwt)
+      if [[ -z "${SMOKE_TOKENS[$user]:-}" ]]; then
+        SMOKE_TOKENS[$user]=$(_mint_token "$user")
+      fi
+      printf "Authorization: Bearer %s" "${SMOKE_TOKENS[$user]}"
+      ;;
+    *)
+      fail "Unknown SMOKE_AUTH_MODE=$SMOKE_AUTH_MODE (expected: legacy | jwt)"
+      ;;
+  esac
+}
+
+curl_as() {
+  local user="$1"; shift
+  curl -sS -H "$(_auth_header "$user")" -H "Content-Type: application/json; charset=utf-8" "$@"
+}
+
+printf "\n\033[1mSmoke target:\033[0m %s\n" "$API"
+printf "\033[1mAuth mode  :\033[0m %s\n" "$SMOKE_AUTH_MODE"
+if [[ "$SMOKE_AUTH_MODE" == "jwt" ]]; then
+  printf "             (persona-id -> /v1/auth/login -> Bearer <jwt>)\n"
+else
+  printf "             (X-User-Id header; requires ALLOW_X_USER_ID=1 on target)\n"
+fi
 
 section "health & dev users"
 [[ $(curl -sS "$API/health" | j ".ok") == "true" ]] && pass "/health ok" || fail "/health"
@@ -346,14 +404,14 @@ TMP_PNG="$(mktemp).png"
 # 1x1 transparent PNG bytes
 printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\x00\x01\x00\x00\x00\x05\x00\x01\x96\xfe,F\x00\x00\x00\x00IEND\xaeB`\x82' > "$TMP_PNG"
 
-# Upload
-upload_res=$(curl -sS -X POST "$API/media/upload" -H "X-User-Id: $MINSEO" -F "file=@$TMP_PNG;type=image/png")
+# Upload (multipart needs the auth header but no Content-Type override)
+upload_res=$(curl -sS -X POST "$API/media/upload" -H "$(_auth_header "$MINSEO")" -F "file=@$TMP_PNG;type=image/png")
 upload_url=$(echo "$upload_res" | j ".url")
 [[ "$upload_url" == "/uploads/"* ]] && pass "POST /media/upload -> url returned" || fail "upload_res=$upload_res"
 
 # Reject non-image MIME
 txt_status=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API/media/upload" \
-  -H "X-User-Id: $MINSEO" -F "file=@$TMP_PNG;type=text/plain;filename=note.txt")
+  -H "$(_auth_header "$MINSEO")" -F "file=@$TMP_PNG;type=text/plain;filename=note.txt")
 [[ "$txt_status" == "400" ]] && pass "non-image MIME -> 400" || fail "txt_status=$txt_status"
 
 rm -f "$TMP_PNG"

@@ -56,9 +56,17 @@ Before you run smoke against staging:
 
 ## 2. How to mint or obtain test tokens
 
-Smoke does **not** mint JWTs for most of its checks. The seeded persona
-UUIDs are the "tokens" — `curl_as <uuid>` sets the `X-User-Id` header
-and the API treats it as authentication when `ALLOW_X_USER_ID=1`.
+`scripts/smoke.sh` ships with two auth modes, selected by
+`SMOKE_AUTH_MODE`:
+
+| Mode | What the script sends | Target requirement |
+|---|---|---|
+| `legacy` (default) | `X-User-Id: <persona-uuid>` | `ALLOW_X_USER_ID=1` on the API pod |
+| `jwt` | `POST /v1/auth/login` once per persona; subsequent calls send `Authorization: Bearer <token>` | None — works against any reachable API with the seed applied |
+
+In **legacy** mode, the "tokens" are simply the seeded persona UUIDs.
+In **jwt** mode, the script mints a real JWT on first use and caches it
+for the rest of the run.
 
 | Persona | UUID (constant in `scripts/smoke.sh`) | Roles |
 |---|---|---|
@@ -69,10 +77,12 @@ and the API treats it as authentication when `ALLOW_X_USER_ID=1`.
 | studio_lead | `55555555-5555-5555-5555-555555555555` | VERIFIED_PLANNER |
 | studio_mate | `66666666-6666-6666-6666-666666666666` | VERIFIED_PLANNER |
 
-The M13 section of the smoke script also exercises the real JWT flow:
+The M13 section of the smoke script also exercises the real JWT flow
+explicitly (login → bearer → /me round-trip), regardless of the chosen
+auth mode:
 
 ```bash
-# Equivalent to what smoke.sh runs internally:
+# Equivalent to what smoke.sh runs internally during the M13 section:
 TOKEN=$(curl -sS -X POST "$API/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"user_id":"11111111-1111-1111-1111-111111111111"}' | jq -r .access_token)
@@ -80,9 +90,12 @@ TOKEN=$(curl -sS -X POST "$API/auth/login" \
 curl -sS -H "Authorization: Bearer $TOKEN" "$API/me"
 ```
 
-If staging has `ALLOW_X_USER_ID` unset (production-shaped), only the
-JWT path works and smoke will fail at the first persona-driven check.
-That's by design — see §6.
+If staging has `ALLOW_X_USER_ID` unset (production-shaped), run smoke
+in `jwt` mode — the same assertions still hold:
+
+```bash
+SMOKE_AUTH_MODE=jwt API=https://api.staging.<your-domain>/v1 bash scripts/smoke.sh
+```
 
 ---
 
@@ -122,12 +135,20 @@ aborts.
 ### One-line trigger from your workstation
 
 ```bash
-# Smoke against staging:
+# Smoke against staging (legacy header path; needs ALLOW_X_USER_ID=1):
 API=https://api.staging.<your-domain>/v1 bash scripts/smoke.sh
+
+# Smoke against staging (JWT path; works without the legacy header):
+SMOKE_AUTH_MODE=jwt API=https://api.staging.<your-domain>/v1 bash scripts/smoke.sh
 
 # Smoke against localhost (after npm run api:dev):
 bash scripts/smoke.sh
 ```
+
+The script prints both `Smoke target:` and `Auth mode:` at the top of
+the run so a copy of the output records which configuration was
+exercised. Operators should attach this header to launch / rehearsal
+logs.
 
 ---
 
@@ -280,36 +301,47 @@ operator owns the post-run cleanup decision.
 
 ## 7. Production note
 
-The same `scripts/smoke.sh` can be pointed at production, but
-production normally has `ALLOW_X_USER_ID` **unset**. In that
-configuration the API rejects the `X-User-Id` header with 401 / 403
-and smoke fails at the first persona-driven check.
+`scripts/smoke.sh` can be pointed at production. Production normally
+has `ALLOW_X_USER_ID` **unset**, so the default `legacy` mode would
+fail at the first persona-driven check.
 
-You have two options for production verification:
+You have three options for production verification:
 
-- **(a)** Set `ALLOW_X_USER_ID=1` for the duration of the smoke run,
-  then unset it and roll the pod once. This is what
-  [BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md) §5 documents as the
-  cut-over-only option. It widens the auth surface during the run, so
-  do it inside the planned maintenance window only.
-- **(b)** Skip smoke against production and rely on the targeted curl
-  checks ([BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md) §5) plus
-  the manual persona QA ([BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md)). Both
-  authenticate via real JWTs and require no auth widening. This is the
-  **recommended** path for production cut-over.
+- **(a)** Run smoke in `jwt` mode — `SMOKE_AUTH_MODE=jwt` logs in each
+  persona via `/v1/auth/login` and uses the returned JWT for the rest
+  of the run. No auth surface widening needed. **Recommended** when
+  the seeded personas exist in the target DB (which is normally not
+  the case for production — see the caveat below).
+- **(b)** Skip smoke against production entirely and rely on the
+  targeted curl checks ([BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md)
+  §5) plus the manual persona QA
+  ([BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md)) — both already use real
+  JWTs.
+- **(c)** Set `ALLOW_X_USER_ID=1` for the duration of a legacy-mode
+  smoke run, then unset it and roll the pod once.
+  [BETA_LAUNCH_RUNBOOK.md](BETA_LAUNCH_RUNBOOK.md) §5 documents this as
+  the cut-over-only option.
 
-Auth migration for the smoke script (call `/v1/auth/login` and use the
-JWT instead of `X-User-Id`) is tracked in
-[NEXT_BACKLOG.md](NEXT_BACKLOG.md). When that lands, `ALLOW_X_USER_ID`
-can be unset everywhere by default.
+**Caveat about jwt mode in production:** the script's persona UUIDs
+(`11111111-…`, etc.) are the seeded demo accounts. They normally do
+NOT exist in production. Either seed them deliberately for smoke (not
+recommended — they're well-known UUIDs) or take path (b).
+
+Staging usually has the seed applied, so `jwt` mode against staging is
+both safe and recommended.
 
 ---
 
 ## 8. Quick reference card
 
 ```bash
-# Prereqs: staging API reachable, seed applied, ALLOW_X_USER_ID=1
+# Prereqs: staging API reachable, seed applied.
+# Legacy header (requires ALLOW_X_USER_ID=1 on the target):
 API=https://api.staging.<your-domain>/v1 bash scripts/smoke.sh
+
+# JWT mode (works without the legacy header — recommended for
+# production-shaped staging):
+SMOKE_AUTH_MODE=jwt API=https://api.staging.<your-domain>/v1 bash scripts/smoke.sh
 
 # Reset staging DB between runs:
 DATABASE_URL="<staging-database-url>" npx prisma migrate reset --force
