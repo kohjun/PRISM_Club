@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
 import '../data/moderation_repository.dart';
 
@@ -19,7 +20,10 @@ class ModerationQueueScreen extends ConsumerWidget {
       ),
       body: queue.when(
         loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(message: e.toString()),
+        error: (e, _) => ErrorView(
+          message: e is ApiError ? e.message : '모더레이션 큐를 불러오지 못했어요.',
+          onRetry: () => ref.invalidate(moderationQueueProvider),
+        ),
         data: (list) => list.items.isEmpty
             ? const EmptyView(message: '대기 중인 신고가 없습니다.')
             : ListView.separated(

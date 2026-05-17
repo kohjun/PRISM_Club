@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
 import '../data/ops_dto.dart';
 import '../data/ops_repository.dart';
@@ -48,7 +49,10 @@ class OpsDashboardScreen extends ConsumerWidget {
       ),
       body: summary.when(
         loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(message: e.toString()),
+        error: (e, _) => ErrorView(
+          message: e is ApiError ? e.message : '대시보드를 불러오지 못했어요.',
+          onRetry: () => ref.invalidate(opsSummaryProvider),
+        ),
         data: (s) => RefreshIndicator(
           onRefresh: () async => ref.invalidate(opsSummaryProvider),
           child: ListView(

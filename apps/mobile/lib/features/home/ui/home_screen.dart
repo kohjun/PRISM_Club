@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/state_views.dart';
@@ -23,8 +24,11 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('홈')),
       body: bundle.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorView(message: e.toString()),
+        loading: () => const LoadingView(),
+        error: (e, _) => ErrorView(
+          message: e is ApiError ? e.message : '홈을 불러오지 못했어요.',
+          onRetry: () => ref.invalidate(homeBundleProvider),
+        ),
         data: (b) => _HomeBody(bundle: b),
       ),
     );

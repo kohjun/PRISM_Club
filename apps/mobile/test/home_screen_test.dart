@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/api_error.dart';
 import 'package:mobile/features/event_card/data/event_card_dto.dart';
 import 'package:mobile/features/home/data/home_dto.dart';
 import 'package:mobile/features/home/data/home_repository.dart';
@@ -108,5 +109,43 @@ void main() {
     expect(find.textContaining('아직 표시할 콘텐츠가 없어요'), findsOneWidget);
     expect(find.text('팔로우한 방 업데이트'), findsNothing);
     expect(find.text('추천 방'), findsNothing);
+  });
+
+  testWidgets(
+      'ApiError surfaces its message and a 다시 시도 retry button',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        homeBundleProvider.overrideWith((_) async {
+          throw ApiError('SERVER_ERROR', '서버에 연결할 수 없어요', 503);
+        }),
+      ],
+      child: const MaterialApp(home: HomeScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('서버에 연결할 수 없어요'), findsOneWidget);
+    expect(find.text('다시 시도'), findsOneWidget);
+  });
+
+  testWidgets(
+      'non-ApiError falls back to a Korean copy + retry button (no raw stack)',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        homeBundleProvider.overrideWith((_) async {
+          throw Exception('lower-level details should NOT be shown to users');
+        }),
+      ],
+      child: const MaterialApp(home: HomeScreen()),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('홈을 불러오지 못했어요.'), findsOneWidget);
+    expect(find.text('다시 시도'), findsOneWidget);
+    // Raw exception text MUST NOT be surfaced.
+    expect(find.textContaining('lower-level details'), findsNothing);
   });
 }

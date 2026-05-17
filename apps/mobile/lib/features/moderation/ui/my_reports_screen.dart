@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
 import '../data/moderation_repository.dart';
 
@@ -14,7 +15,10 @@ class MyReportsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('내 신고')),
       body: mine.when(
         loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(message: e.toString()),
+        error: (e, _) => ErrorView(
+          message: e is ApiError ? e.message : '신고 내역을 불러오지 못했어요.',
+          onRetry: () => ref.invalidate(myReportsProvider),
+        ),
         data: (list) => list.items.isEmpty
             ? const EmptyView(message: '아직 신고한 내역이 없어요.')
             : ListView.separated(

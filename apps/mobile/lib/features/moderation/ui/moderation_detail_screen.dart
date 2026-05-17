@@ -56,7 +56,10 @@ class _ModerationDetailScreenState
       appBar: AppBar(title: const Text('신고 상세')),
       body: detail.when(
         loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(message: e.toString()),
+        error: (e, _) => ErrorView(
+          message: e is ApiError ? e.message : '신고를 불러오지 못했어요.',
+          onRetry: () => ref.invalidate(reportDetailProvider(widget.id)),
+        ),
         data: (r) => ListView(
           padding: const EdgeInsets.all(16),
           children: [

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/api_error.dart';
 import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/role_badge.dart';
 import '../../../widgets/state_views.dart';
@@ -45,7 +46,10 @@ class ProfileScreen extends ConsumerWidget {
       ),
       body: bundle.when(
         loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(message: e.toString()),
+        error: (e, _) => ErrorView(
+          message: e is ApiError ? e.message : '프로필을 불러오지 못했어요.',
+          onRetry: () => ref.invalidate(userProfileProvider(userId)),
+        ),
         data: (b) => _ProfileBody(bundle: b, userId: userId),
       ),
     );
