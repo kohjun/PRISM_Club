@@ -121,6 +121,24 @@ migrations without prompting, never resets, never generates new migrations.
 
 ---
 
+## 4b. Admin web console (M18)
+
+```bash
+cd apps/admin
+npm install
+npm run dev               # http://localhost:5180
+
+# Production build (static bundle in apps/admin/dist)
+VITE_API_BASE_URL=https://api.example.com/v1 npm run build
+```
+
+The admin app is a Vite + React + TypeScript SPA. It authenticates against
+the existing API via `POST /v1/auth/login`, reads the access token from
+local storage, and renders the M11 ops dashboard + M9 moderation queue +
+M12 signal refresh in a denser, desktop-first layout. The bundle is a
+static `dist/` folder served behind any HTTP host. Role gate
+(CURATOR/MODERATOR/ADMIN) is enforced client-side AND by the API.
+
 ## 5. Flutter web build
 
 ```bash

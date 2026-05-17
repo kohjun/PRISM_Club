@@ -7,11 +7,30 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
-**Alpha RC** — M1–M16 + hardening complete. See
+**Alpha RC** — M1–M18 + hardening complete. See
 [ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the feature map, demo
 walkthrough, fresh-start flow, and RC verification steps. See
 [NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized post-Alpha items
-(notification delivery, admin web, analytics).
+(analytics, real email/push provider wiring).
+
+Milestone 18 — admin web console. A separate Vite + React + TypeScript app
+under `apps/admin/`. Authenticates against the existing API via
+`POST /v1/auth/login`, persists the JWT in local storage, and renders a
+desktop-first ops surface: ops summary, open report queue, recruitment
+counts, recent users / rooms / posts, signal-refresh button, event
+integration status. Role-gated to CURATOR / MODERATOR / ADMIN on both
+sides. Run with `npm run admin:dev` (port 5180); build a static bundle
+with `npm run admin:build`. The Flutter app is not replaced.
+
+Milestone 17 — notification delivery adapters. New `INotificationDeliverer`
+abstraction. `NOTIFICATION_DELIVERY_MODE=noop` (default) writes IN_APP
+notifications only. `email` and `push` modes activate boundary stubs
+(`EmailDelivery`, `PushDelivery`) that document the integration contract
+without wiring a real provider yet. Delivery is fire-and-forget through
+`NotificationService.dispatchDelivery()` — failures are caught, logged,
+and never block notification row creation. Providers MUST NOT throw;
+they return a `DeliveryAttempt[]` so callers always see channel-level
+status.
 
 Milestone 16 — production media storage adapter. `MediaService` now writes
 through an `IMediaStorage` abstraction. `MEDIA_STORAGE_MODE=local` (default)
@@ -197,7 +216,7 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 |---|---|
 | Backend (NestJS + Prisma) | 47 endpoints, role-gated guard, mock Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local dev storage at /uploads/*) |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 135 backend unit + 35 e2e + 53 Flutter widget, all green |
+| Tests | 140 backend unit + 35 e2e + 53 Flutter widget + admin typecheck, all green |
 | Smoke | `scripts/smoke.sh` — 75 curl-driven checks (M1–M13 inclusive) |
 
 ## Repo layout
