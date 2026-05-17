@@ -70,6 +70,7 @@ class SpaceListScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               const _CuratorBanner(),
+              const _OpsBanner(),
               for (var i = 0; i < items.length; i++) ...[
                 if (i > 0) const SizedBox(height: 12),
                 _SpaceCard(space: items[i]),
@@ -124,6 +125,59 @@ class _CuratorBanner extends ConsumerWidget {
                       const SizedBox(height: 2),
                       const Text(
                         '대기 중인 지식 기여 제안을 검토하세요.',
+                        style: TextStyle(color: PrismColors.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: PrismColors.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Operational dashboard entry. Visible only for CURATOR/MODERATOR/ADMIN.
+class _OpsBanner extends ConsumerWidget {
+  const _OpsBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final me = ref.watch(meProvider);
+    final isOps = me.valueOrNull?.isOps ?? false;
+    if (!isOps) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: PrismColors.border),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.go('/admin/ops'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.dashboard_outlined,
+                    color: PrismColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('운영 대시보드',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(color: PrismColors.primary)),
+                      const SizedBox(height: 2),
+                      const Text(
+                        '신고/기여/모집/신규 가입 현황을 한눈에 보세요.',
                         style: TextStyle(color: PrismColors.muted),
                       ),
                     ],

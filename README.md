@@ -72,6 +72,16 @@ wraps the five main tabs (홈 / 검색 / 커뮤니티 / 저장 / 알림) in a Ma
 `NavigationBar`; the post-login redirect now lands on `/home` instead of
 `/spaces`. All existing deep-link routes are preserved.
 
+Milestone 11 — ops dashboard. A single role-gated operational surface inside
+the Flutter app (no separate Next.js admin yet). `GET /v1/admin/ops/summary`
+returns pending knowledge contribution count, open report count, recruitment
+post counts (open / total), and 30-day-recent users / rooms / posts with up
+to 5 sample items each. Endpoint requires CURATOR, MODERATOR, or ADMIN.
+Flutter `OpsDashboardScreen` at `/admin/ops` renders counter cards that
+deep-link into the existing curation queue, moderation queue, profile, room
+timeline, and post detail surfaces. SpaceListScreen gains an `_OpsBanner`
+visible only when `MeDto.isOps == true` (curator OR moderator OR admin).
+
 Milestone 10 — media attachments. Adds `MediaAsset` table (id, owner_id,
 kind, filename, mime_type, size_bytes, path) and `POST /v1/media/upload`
 (multipart, image-only, 5MB cap, jpg/png/webp/gif). Files are stored locally
@@ -126,8 +136,8 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 |---|---|
 | Backend (NestJS + Prisma) | 47 endpoints, role-gated guard, mock Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local dev storage at /uploads/*) |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 121 backend unit + 21 e2e + 50 Flutter widget, all green |
-| Smoke | `scripts/smoke.sh` — 68 curl-driven checks (M1–M10 inclusive) |
+| Tests | 121 backend unit + 24 e2e + 51 Flutter widget, all green |
+| Smoke | `scripts/smoke.sh` — 70 curl-driven checks (M1–M11 inclusive) |
 
 ## Repo layout
 

@@ -358,4 +358,15 @@ txt_status=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API/media/upload"
 
 rm -f "$TMP_PNG"
 
+section "ops dashboard (M11)"
+
+# Non-ops user gets 403
+ops_status=$(curl_as "$JOON" -s -o /dev/null -w "%{http_code}" "$API/admin/ops/summary")
+[[ "$ops_status" == "403" ]] && pass "member -> /admin/ops/summary 403" || fail "ops_status=$ops_status"
+
+# Curator (coral) sees summary
+ops_summary=$(curl_as "$CORAL" "$API/admin/ops/summary")
+pending=$(echo "$ops_summary" | j ".pending_contributions.count")
+[[ "$pending" =~ ^[0-9]+$ ]] && pass "ops summary: pending_contributions=$pending" || fail "summary=$ops_summary"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

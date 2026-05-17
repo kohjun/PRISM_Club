@@ -24,6 +24,7 @@ import '../features/topic_hub/ui/topic_hub_screen.dart';
 import '../features/moderation/ui/moderation_detail_screen.dart';
 import '../features/moderation/ui/moderation_queue_screen.dart';
 import '../features/moderation/ui/my_reports_screen.dart';
+import '../features/ops/ui/ops_dashboard_screen.dart';
 import '../features/user_profile/ui/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -132,6 +133,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, st) =>
             ModerationDetailScreen(id: st.pathParameters['id']!),
       ),
+      // Milestone 11: ops dashboard
+      GoRoute(path: '/admin/ops', builder: (_, _) => const OpsDashboardScreen()),
       // Milestone 3: unified search
       GoRoute(
         path: '/search',
