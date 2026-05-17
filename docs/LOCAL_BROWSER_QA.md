@@ -104,6 +104,24 @@ automatically. The `apiBaseUrl` resolver in
 `apps/mobile/lib/core/config.dart` defaults to `http://localhost:3000/v1`
 for the web target — no override needed for this flow.
 
+If you want to point Chrome at a different API (e.g. local staging
+container on a different port, or a remote dev API), pass
+`--dart-define=API_BASE_URL=...` — the override always wins:
+
+```bash
+# Chrome against a custom local port:
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=http://localhost:8080/v1
+
+# Chrome against a remote dev API:
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=https://api.dev.<your-domain>/v1
+```
+
+Trailing slashes are stripped automatically. See
+[FLUTTER_NATIVE_SETUP.md](FLUTTER_NATIVE_SETUP.md) §4 for the full
+target × override matrix.
+
 ### 2.5 Admin web (terminal 4, optional)
 
 Useful when you want to drive the curator / moderator surfaces in a

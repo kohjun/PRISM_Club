@@ -195,7 +195,38 @@ override needed when the local API is running on `localhost:3000`.)
 | Production (any device) | n/a | **Yes** — `--dart-define=API_BASE_URL=https://api.club.prism.app/v1` (final URL TBD) |
 
 The resolver lives at `apps/mobile/lib/core/config.dart` —
-`String.fromEnvironment('API_BASE_URL')` always wins when set.
+`String.fromEnvironment('API_BASE_URL')` always wins when set. The
+override is **trimmed** and any **trailing slash** is stripped so
+`https://api.example.com/v1/` and `https://api.example.com/v1` are
+treated identically. The pure form (`resolveApiBaseUrl(...)`) is
+exhaustively tested in `apps/mobile/test/config_test.dart` (11
+cases).
+
+Concrete examples:
+
+```bash
+# Chrome (local dev) — no override needed:
+flutter run -d chrome
+
+# Chrome against a remote dev API:
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=https://api.dev.<your-domain>/v1
+
+# Android emulator (local API) — no override needed:
+flutter run -d <emu-id>
+
+# Physical Android device against your laptop's API:
+flutter run -d <device-id> \
+  --dart-define=API_BASE_URL=http://192.168.1.42:3000/v1
+
+# Physical Android device against staging:
+flutter run -d <device-id> \
+  --dart-define=API_BASE_URL=https://api.staging.<your-domain>/v1
+
+# Production app store build:
+flutter build appbundle --release \
+  --dart-define=API_BASE_URL=https://api.club.prism.app/v1
+```
 
 ---
 
