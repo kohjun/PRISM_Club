@@ -311,6 +311,9 @@ across all the planning and operational docs.
 - **[Staging setup](docs/STAGING_SETUP.md)** — services + env + migration + builds for the rehearsal environment
 - **[Staging bring-up checklist](docs/STAGING_BRINGUP_CHECKLIST.md)** — the exact single-page checklist for an operator standing up staging for the first time
 - **[Local browser QA](docs/LOCAL_BROWSER_QA.md)** — fast path for running PRISM Club end-to-end in Chrome on `localhost`
+- **[Flutter app release audit](docs/FLUTTER_APP_RELEASE_AUDIT.md)** — inventory of what exists vs. missing for native Flutter release
+- **[Flutter native setup](docs/FLUTTER_NATIVE_SETUP.md)** — day-to-day Android + iOS run / build / troubleshooting
+- **[Mobile release checklist](docs/MOBILE_RELEASE_CHECKLIST.md)** — discrete go/no-go list for the first App Store / Play Store upload
 - **[Staging smoke](docs/STAGING_SMOKE.md)** — how to point `scripts/smoke.sh` at staging, what persists, how to clean up
 - **[Alpha RC checklist](docs/ALPHA_RC_CHECKLIST.md)** — historical Alpha RC view (feature map, demo walkthrough, fresh-start flow, RC verification)
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, production build, Dockerfile, Flutter web build

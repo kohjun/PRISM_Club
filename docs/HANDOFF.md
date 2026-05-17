@@ -166,9 +166,16 @@ If you are picking this up cold, the recommended reading path is:
    `EVENTS_CLIENT_MODE=prism`. ~10 min.
 10. **[ANALYTICS.md](ANALYTICS.md)** — first-party event taxonomy and
     privacy rules. Read if you are touching the analytics surfaces. ~10 min.
-11. **[NEXT_BACKLOG.md](NEXT_BACKLOG.md)** — what is intentionally still
+11. **[FLUTTER_APP_RELEASE_AUDIT.md](FLUTTER_APP_RELEASE_AUDIT.md)** +
+    **[FLUTTER_NATIVE_SETUP.md](FLUTTER_NATIVE_SETUP.md)** +
+    **[MOBILE_RELEASE_CHECKLIST.md](MOBILE_RELEASE_CHECKLIST.md)** —
+    read these together when picking up the native release path
+    (App Store / Play Store). Audit lists what's missing; native setup
+    is the daily commands; checklist is the go/no-go for first
+    upload.
+12. **[NEXT_BACKLOG.md](NEXT_BACKLOG.md)** — what is intentionally still
     deferred. Read to understand what you should NOT promise. ~10 min.
-12. **[ALPHA_RC_CHECKLIST.md](ALPHA_RC_CHECKLIST.md)** — historical Alpha
+13. **[ALPHA_RC_CHECKLIST.md](ALPHA_RC_CHECKLIST.md)** — historical Alpha
     RC view. Read only if you need the M1–M12 + hardening provenance. Optional.
 
 Planning context (deep background, not load-bearing for the cut-over):
