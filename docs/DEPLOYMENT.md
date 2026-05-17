@@ -32,7 +32,16 @@ The single source of truth is `.env.example`. Copy it to `.env` and adjust.
 | `JWT_SECRET` | yes | dev placeholder | A long random string. **Rotate to invalidate all tokens.** |
 | `ALLOW_X_USER_ID` | no | `1` (dev) | Leave unset in production. Setting to `1` in production re-enables the legacy header — only do this for incident response. |
 | `CORS_ORIGINS` | no | `*` (dev) | Comma-separated origin list. `*` allows everything; production MUST restrict. |
-| `UPLOADS_DIR` | no | `uploads` (relative) | Absolute path or mounted volume. Future M-? will replace with object storage. |
+| `UPLOADS_DIR` | no | `uploads` (relative) | Used only when `MEDIA_STORAGE_MODE=local`. Absolute path or mounted volume. |
+| `MEDIA_STORAGE_MODE` | no | `local` | `local` (filesystem) or `s3` (S3-compatible). |
+| `MEDIA_PUBLIC_BASE_URL` | yes for s3 | _(empty)_ | Public URL prefix for media in S3 mode. |
+| `S3_BUCKET` | yes for s3 | _(empty)_ | Bucket name. |
+| `S3_REGION` | yes for s3 | _(empty)_ | AWS region, or `auto` for R2. |
+| `S3_ACCESS_KEY_ID` | yes for s3 | _(empty)_ | IAM access key id. |
+| `S3_SECRET_ACCESS_KEY` | yes for s3 | _(empty)_ | IAM secret key. |
+| `S3_ENDPOINT` | no | AWS default | Override for R2 / MinIO / etc. |
+| `S3_OBJECT_PREFIX` | no | `uploads` | Object key prefix inside the bucket. |
+| `S3_FORCE_PATH_STYLE` | no | `false` | `1`/`true` for MinIO-style hosts. |
 
 ---
 

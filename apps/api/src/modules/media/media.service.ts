@@ -1,12 +1,15 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../shared/prisma.service';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as crypto from 'crypto';
+import { PrismaService } from '../../shared/prisma.service';
+import {
+  IMediaStorage,
+  MEDIA_STORAGE,
+} from './storage/media-storage.interface';
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME = new Set([
@@ -34,20 +37,13 @@ export interface MediaAssetDTO {
 
 @Injectable()
 export class MediaService {
-  // M14: configurable via UPLOADS_DIR env. Defaults to ./uploads relative
-  // to the API process cwd. Keep in sync with main.ts's useStaticAssets call.
-  private readonly uploadsDir = (() => {
-    const env = process.env.UPLOADS_DIR;
-    if (!env || env.trim() === '') {
-      return path.join(process.cwd(), 'uploads');
-    }
-    return path.isAbsolute(env) ? env : path.join(process.cwd(), env);
-  })();
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(MEDIA_STORAGE) private readonly storage: IMediaStorage,
+  ) {}
 
-  constructor(private readonly prisma: PrismaService) {
-    if (!fs.existsSync(this.uploadsDir)) {
-      fs.mkdirSync(this.uploadsDir, { recursive: true });
-    }
+  storageMode(): string {
+    return this.storage.mode();
   }
 
   async uploadImage(
@@ -55,7 +51,9 @@ export class MediaService {
     ownerId: string,
   ): Promise<MediaAssetDTO> {
     if (!file) {
-      throw new BadRequestException('file is required (multipart field: file)');
+      throw new BadRequestException(
+        'file is required (multipart field: file)',
+      );
     }
     if (!ALLOWED_MIME.has(file.mimetype)) {
       throw new BadRequestException(
@@ -70,20 +68,23 @@ export class MediaService {
 
     const id = crypto.randomUUID();
     const ext = MIME_TO_EXT[file.mimetype];
-    const storedName = `${id}.${ext}`;
-    const filePath = path.join(this.uploadsDir, storedName);
-    fs.writeFileSync(filePath, file.buffer);
 
-    const relPath = `/uploads/${storedName}`;
+    const stored = await this.storage.upload({
+      id,
+      ext,
+      contentType: file.mimetype,
+      body: file.buffer,
+    });
+
     const row = await this.prisma.mediaAsset.create({
       data: {
         id,
         ownerId,
         kind: 'IMAGE',
-        filename: file.originalname || storedName,
+        filename: file.originalname || `${id}.${ext}`,
         mimeType: file.mimetype,
         sizeBytes: file.size,
-        path: relPath,
+        path: stored.urlPath,
       },
     });
 

@@ -7,11 +7,21 @@ PRISM Club은 예능 콘텐츠, 오프라인 이벤트, 놀이 경험, 프로그
 
 ## Status
 
-**Alpha RC** — M1–M15 + hardening complete. See
+**Alpha RC** — M1–M16 + hardening complete. See
 [ALPHA_RC_CHECKLIST](docs/ALPHA_RC_CHECKLIST.md) for the feature map, demo
 walkthrough, fresh-start flow, and RC verification steps. See
 [NEXT_BACKLOG](docs/NEXT_BACKLOG.md) for the prioritized post-Alpha items
-(production media storage, push, admin web, analytics).
+(notification delivery, admin web, analytics).
+
+Milestone 16 — production media storage adapter. `MediaService` now writes
+through an `IMediaStorage` abstraction. `MEDIA_STORAGE_MODE=local` (default)
+preserves the existing `/uploads/*` flow used by dev / tests / smoke.
+`MEDIA_STORAGE_MODE=s3` activates an S3-compatible client (AWS S3,
+Cloudflare R2, MinIO — anything that speaks the S3 API) via `@aws-sdk/client-s3`.
+S3 config is validated lazily on first upload, so registering the provider
+when local mode is selected never crashes API boot. Storage failures
+surface as `500 Internal Server Error` instead of leaking driver-specific
+errors. Existing local uploads on disk are NOT migrated automatically.
 
 Milestone 15 — PRISM EVENT / CONTENIDO integration boundary. `IEventsClient`
 gains a real `PrismEventsClient` implementation alongside the existing
@@ -187,7 +197,7 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 |---|---|
 | Backend (NestJS + Prisma) | 47 endpoints, role-gated guard, mock Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local dev storage at /uploads/*) |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 128 backend unit + 35 e2e + 53 Flutter widget, all green |
+| Tests | 135 backend unit + 35 e2e + 53 Flutter widget, all green |
 | Smoke | `scripts/smoke.sh` — 75 curl-driven checks (M1–M13 inclusive) |
 
 ## Repo layout
