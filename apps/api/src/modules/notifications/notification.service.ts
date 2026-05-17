@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import {
+  DeliveryAttempt,
+  DeliveryRequest,
+  INotificationDeliverer,
+  NOTIFICATION_DELIVERY,
+} from './delivery/notification-delivery.interface';
 import {
   NotificationDTO,
   NotificationListDTO,
@@ -18,10 +24,50 @@ export interface ListOpts {
 
 @Injectable()
 export class NotificationService {
+  private readonly log = new Logger(NotificationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    @Inject(NOTIFICATION_DELIVERY)
+    private readonly delivery: INotificationDeliverer,
   ) {}
+
+  deliveryMode(): string {
+    return this.delivery.mode();
+  }
+
+  /**
+   * Fire-and-forget delivery dispatch. Triggering services (ReplyService,
+   * PostService.create, etc.) can call this after writing notification
+   * rows to fan out to email / push. Errors are swallowed and logged —
+   * the caller never has to await or handle a rejection.
+   */
+  dispatchDelivery(req: DeliveryRequest): void {
+    void this.deliverSafely(req);
+  }
+
+  private async deliverSafely(
+    req: DeliveryRequest,
+  ): Promise<DeliveryAttempt[]> {
+    try {
+      const attempts = await this.delivery.deliver(req);
+      const failed = attempts.filter((a) => a.status === 'FAILED');
+      if (failed.length > 0) {
+        this.log.warn(
+          `notification[${req.type}] delivery had ${failed.length} failed channel(s): ${failed
+            .map((f) => `${f.channel}=${f.error ?? '-'}`)
+            .join('; ')}`,
+        );
+      }
+      return attempts;
+    } catch (e) {
+      this.log.warn(
+        `notification[${req.type}] deliverer threw (${e instanceof Error ? e.message : String(e)}); swallowing`,
+      );
+      return [];
+    }
+  }
 
   async listForUser(
     userId: string,
