@@ -21,6 +21,7 @@ import '../features/home/ui/home_shell_screen.dart';
 import '../features/notifications/ui/notification_screen.dart';
 import '../features/saves/ui/saved_items_screen.dart';
 import '../features/topic_hub/ui/topic_hub_screen.dart';
+import '../features/user_profile/ui/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -113,6 +114,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Milestone 6: notifications + saves
       GoRoute(path: '/me/notifications', builder: (_, _) => const NotificationScreen()),
       GoRoute(path: '/me/saves', builder: (_, _) => const SavedItemsScreen()),
+      // Milestone 8: user profile
+      GoRoute(
+        path: '/users/:id',
+        builder: (_, st) => ProfileScreen(userId: st.pathParameters['id']!),
+      ),
       // Milestone 3: unified search
       GoRoute(
         path: '/search',

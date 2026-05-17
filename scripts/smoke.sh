@@ -277,4 +277,30 @@ joon_home=$(curl_as "$JOON" "$API/home")
 joon_followed=$(echo "$joon_home" | j ".followed_room_updates.length")
 [[ "$joon_followed" == "0" ]] && pass "joon: followed_room_updates empty (no follows)" || fail "joon_followed=$joon_followed"
 
+section "user profiles + follow (M8)"
+
+# GET /v1/users/:id/profile as joon
+profile=$(curl_as "$JOON" "$API/users/$MINSEO/profile")
+profile_nick=$(echo "$profile" | j ".user.nickname")
+[[ "$profile_nick" == "민서" ]] && pass "profile fetch: nickname=민서" || fail "profile=$profile"
+
+# is_following: joon → minseo per seed
+profile_following=$(echo "$profile" | j ".is_following")
+[[ "$profile_following" == "true" ]] && pass "joon already follows minseo (seed)" || fail "is_following=$profile_following"
+
+# PATCH /v1/me/profile updates bio
+patch_res=$(curl_as "$MINSEO" -X PATCH "$API/me/profile" -d '{"bio":"smoke test bio","interests":["smoke"]}')
+patch_bio=$(echo "$patch_res" | j ".bio")
+[[ "$patch_bio" == "smoke test bio" ]] && pass "PATCH /me/profile updates bio" || fail "patch_bio=$patch_bio"
+
+# Follow toggle: haneul → coral round-trip
+ft1=$(curl_as "$HANEUL" -X POST "$API/users/$JOON/follow-toggle")
+ft1_followed=$(echo "$ft1" | j ".followed")
+[[ "$ft1_followed" == "true" ]] && pass "follow toggle -> followed=true" || fail "ft1=$ft1"
+
+# Member view of studio_lead profile: no recruitment posts visible
+plan_profile=$(curl_as "$MINSEO" "$API/users/$STUDIO_LEAD/profile")
+plan_post_count=$(echo "$plan_profile" | j ".counts.post_count")
+[[ "$plan_post_count" == "0" ]] && pass "member view of planner profile: post_count=0" || fail "plan_post_count=$plan_post_count"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

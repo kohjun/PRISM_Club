@@ -7,6 +7,8 @@ class MeDto {
     required this.nickname,
     required this.region,
     required this.roles,
+    this.avatarUrl,
+    this.bio,
   });
 
   final String id;
@@ -14,6 +16,8 @@ class MeDto {
   final String? nickname;
   final String? region;
   final List<String> roles;
+  final String? avatarUrl;
+  final String? bio;
 
   bool get isCurator => roles.contains('CURATOR') || roles.contains('ADMIN');
 
@@ -25,6 +29,8 @@ class MeDto {
         status: json['status'] as String? ?? 'ACTIVE',
         nickname: json['nickname'] as String?,
         region: json['region'] as String?,
+        avatarUrl: json['avatar_url'] as String?,
+        bio: json['bio'] as String?,
         roles: ((json['roles'] as List?) ?? const [])
             .whereType<String>()
             .toList(growable: false),

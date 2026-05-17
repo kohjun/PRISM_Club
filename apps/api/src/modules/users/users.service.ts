@@ -18,6 +18,7 @@ export class UsersService {
       status: user.status,
       nickname: user.profile?.nickname ?? null,
       avatar_url: user.profile?.avatarUrl ?? null,
+      bio: user.profile?.bio ?? null,
       region: user.profile?.region ?? null,
       interests: user.profile?.interests ?? [],
       roles: user.roles.map((r) => r.role),

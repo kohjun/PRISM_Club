@@ -11,14 +11,40 @@ class PostCardWidget extends StatelessWidget {
     required this.post,
     this.onTap,
     this.onLikePressed,
+    this.onAuthorTap,
   });
 
   final PostDto post;
   final VoidCallback? onTap;
   final VoidCallback? onLikePressed;
+  final ValueChanged<String>? onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
+    final authorRow = Row(
+      children: [
+        CircleAvatar(
+          radius: 14,
+          backgroundColor: PrismColors.soft,
+          child: Text(
+            post.author.nickname.isNotEmpty
+                ? post.author.nickname.characters.first
+                : '?',
+            style: const TextStyle(color: PrismColors.primary, fontSize: 12),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(post.author.nickname,
+              style: Theme.of(context).textTheme.bodyMedium,
+              overflow: TextOverflow.ellipsis),
+        ),
+        const SizedBox(width: 8),
+        Text(_relativeTime(post.createdAt),
+            style: const TextStyle(fontSize: 11, color: PrismColors.muted)),
+      ],
+    );
+
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -28,31 +54,13 @@ class PostCardWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: PrismColors.soft,
-                    child: Text(
-                      post.author.nickname.isNotEmpty
-                          ? post.author.nickname.characters.first
-                          : '?',
-                      style:
-                          const TextStyle(color: PrismColors.primary, fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(post.author.nickname,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        overflow: TextOverflow.ellipsis),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(_relativeTime(post.createdAt),
-                      style: const TextStyle(
-                          fontSize: 11, color: PrismColors.muted)),
-                ],
-              ),
+              onAuthorTap != null
+                  ? InkWell(
+                      onTap: () => onAuthorTap!(post.author.id),
+                      borderRadius: BorderRadius.circular(6),
+                      child: authorRow,
+                    )
+                  : authorRow,
               const SizedBox(height: 10),
               Text(post.body, maxLines: 3, overflow: TextOverflow.ellipsis),
               if (post.attachments.isNotEmpty) ...[

@@ -31,14 +31,31 @@ model User {
   follows                RoomFollow[]
   savedItems             SavedItem[]
   notifications          Notification[]
+  following              UserFollow[] @relation("UserFollowing")
+  followers              UserFollow[] @relation("UserFollowers")
 
   @@map("users")
+}
+
+model UserFollow {
+  id         String   @id @default(uuid()) @db.Uuid
+  followerId String   @map("follower_id") @db.Uuid
+  followedId String   @map("followed_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  follower User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  followed User @relation("UserFollowers", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followedId])
+  @@map("user_follows")
 }
 
 model Profile {
   userId     String   @id @map("user_id") @db.Uuid
   nickname   String   @unique
   avatarUrl  String?  @map("avatar_url")
+  bio        String?
   region     String?
   interests  Json     @default("[]")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

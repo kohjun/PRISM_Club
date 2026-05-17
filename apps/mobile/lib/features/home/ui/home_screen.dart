@@ -82,6 +82,7 @@ class _HomeBody extends StatelessWidget {
                 child: PostCardWidget(
                   post: p,
                   onTap: () => context.go('/posts/${p.id}'),
+                  onAuthorTap: (uid) => context.go('/users/$uid'),
                 ),
               ))
           .toList();
@@ -164,6 +165,7 @@ class _HorizontalPostRow extends StatelessWidget {
             child: PostCardWidget(
               post: posts[i],
               onTap: () => context.go('/posts/${posts[i].id}'),
+              onAuthorTap: (uid) => context.go('/users/$uid'),
             ),
           ),
         ),

@@ -11,6 +11,7 @@ class ReplyTreeWidget extends StatelessWidget {
     required this.onReply,
     required this.onLike,
     this.replyTarget,
+    this.onAuthorTap,
   });
 
   /// Flat list from the server; client groups depth-1 + depth-2.
@@ -23,6 +24,8 @@ class ReplyTreeWidget extends StatelessWidget {
 
   /// If set, this reply is the active "replying to" target (highlighted).
   final ReplyDto? replyTarget;
+
+  final ValueChanged<String>? onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +57,7 @@ class ReplyTreeWidget extends StatelessWidget {
             highlighted: replyTarget?.id == parent.id,
             onReply: () => onReply(parent),
             onLike: () => onLike(parent),
+            onAuthorTap: onAuthorTap,
           ),
           for (final child in childrenByParent[parent.id] ?? const <ReplyDto>[])
             Padding(
@@ -62,6 +66,7 @@ class ReplyTreeWidget extends StatelessWidget {
                 reply: child,
                 isChild: true,
                 onLike: () => onLike(child),
+                onAuthorTap: onAuthorTap,
               ),
             ),
           const SizedBox(height: 6),
@@ -78,6 +83,7 @@ class _ReplyTile extends StatelessWidget {
     this.onLike,
     this.isChild = false,
     this.highlighted = false,
+    this.onAuthorTap,
   });
 
   final ReplyDto reply;
@@ -85,6 +91,7 @@ class _ReplyTile extends StatelessWidget {
   final VoidCallback? onLike;
   final bool isChild;
   final bool highlighted;
+  final ValueChanged<String>? onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
@@ -110,8 +117,15 @@ class _ReplyTile extends StatelessWidget {
                     size: 14, color: PrismColors.muted),
                 const SizedBox(width: 4),
               ],
-              Text(reply.author.nickname,
-                  style: Theme.of(context).textTheme.bodyMedium),
+              onAuthorTap != null
+                  ? InkWell(
+                      onTap: () => onAuthorTap!(reply.author.id),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Text(reply.author.nickname,
+                          style: Theme.of(context).textTheme.bodyMedium),
+                    )
+                  : Text(reply.author.nickname,
+                      style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(width: 6),
               Text(_relativeTime(reply.createdAt),
                   style:

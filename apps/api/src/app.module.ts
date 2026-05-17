@@ -22,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { FollowsModule } from './modules/follows/follows.module';
 import { SavesModule } from './modules/saves/saves.module';
 import { HomeModule } from './modules/home/home.module';
+import { UserProfileModule } from './modules/user-profile/user-profile.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { HomeModule } from './modules/home/home.module';
     FollowsModule,
     SavesModule,
     HomeModule,
+    UserProfileModule,
   ],
   providers: [
     // Order matters: AuthGuard runs first to populate req.user, RolesGuard

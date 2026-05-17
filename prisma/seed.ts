@@ -100,6 +100,11 @@ export const U = {
     joonReplied: 'b2000000-0000-0000-0000-000000000001',
     approvedFaqNotif: 'b2000000-0000-0000-0000-000000000002',
   },
+  // Milestone 8 — User profiles + user-follow
+  userFollow: {
+    minseoToHaneul: 'b3000000-0000-0000-0000-000000000001',
+    joonToMinseo: 'b3000000-0000-0000-0000-000000000002',
+  },
 } as const;
 
 // Dates relative to a fixed "today" for stable seeds.
@@ -110,6 +115,7 @@ const DAYS = (n: number): Date => new Date(TODAY.getTime() + n * 86_400_000);
 
 async function clearAll(prisma: PrismaClient): Promise<void> {
   // Order matters: children before parents.
+  await prisma.userFollow.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.savedItem.deleteMany();
   await prisma.roomFollow.deleteMany();
@@ -147,12 +153,48 @@ async function seedUsers(prisma: PrismaClient): Promise<void> {
   });
   await prisma.profile.createMany({
     data: [
-      { userId: U.user.minseo, nickname: '민서', region: '서울', interests: [] },
-      { userId: U.user.joon, nickname: 'joon', region: '서울', interests: [] },
-      { userId: U.user.haneul, nickname: 'haneul', region: '서울', interests: [] },
-      { userId: U.user.coral, nickname: 'coral', region: '서울', interests: [] },
-      { userId: U.user.studio_lead, nickname: 'studio_lead', region: '서울', interests: [] },
-      { userId: U.user.studio_mate, nickname: 'studio_mate', region: '서울', interests: [] },
+      {
+        userId: U.user.minseo,
+        nickname: '민서',
+        region: '서울',
+        bio: '이벤트 후기 쓰는 게 취미예요.',
+        interests: ['소개팅', '후기', '페스티벌'],
+      },
+      {
+        userId: U.user.joon,
+        nickname: 'joon',
+        region: '서울',
+        bio: '질문 많은 신규 멤버.',
+        interests: ['소개팅', 'Q&A'],
+      },
+      {
+        userId: U.user.haneul,
+        nickname: 'haneul',
+        region: '서울',
+        bio: '놀이 기획자. 토크라운드 자주 가요.',
+        interests: ['스왑톡', '토크라운드'],
+      },
+      {
+        userId: U.user.coral,
+        nickname: 'coral',
+        region: '서울',
+        bio: '큐레이터. 토픽 허브 정리 담당.',
+        interests: ['큐레이션', 'FAQ'],
+      },
+      {
+        userId: U.user.studio_lead,
+        nickname: 'studio_lead',
+        region: '서울',
+        bio: '플래너 스튜디오 리드. 모집 글 자주 올려요.',
+        interests: ['기획', '모집'],
+      },
+      {
+        userId: U.user.studio_mate,
+        nickname: 'studio_mate',
+        region: '서울',
+        bio: '플래너 메이트. 소규모 이벤트 기획.',
+        interests: ['기획', '스왑톡'],
+      },
     ],
   });
   // Milestone 2: grant CURATOR role to coral. Others stay implicit MEMBER.
@@ -840,6 +882,23 @@ async function seedFollowsSavesNotifications(prisma: PrismaClient): Promise<void
   });
 }
 
+async function seedUserFollows(prisma: PrismaClient): Promise<void> {
+  await prisma.userFollow.createMany({
+    data: [
+      {
+        id: U.userFollow.minseoToHaneul,
+        followerId: U.user.minseo,
+        followedId: U.user.haneul,
+      },
+      {
+        id: U.userFollow.joonToMinseo,
+        followerId: U.user.joon,
+        followedId: U.user.minseo,
+      },
+    ],
+  });
+}
+
 export async function runSeed(prisma: PrismaClient): Promise<Record<string, number>> {
   await clearAll(prisma);
   await seedUsers(prisma);
@@ -853,6 +912,7 @@ export async function runSeed(prisma: PrismaClient): Promise<Record<string, numb
   await seedPlannerRooms(prisma);
   await seedPlannerPosts(prisma);
   await seedFollowsSavesNotifications(prisma);
+  await seedUserFollows(prisma);
 
   return {
     users: await prisma.user.count(),

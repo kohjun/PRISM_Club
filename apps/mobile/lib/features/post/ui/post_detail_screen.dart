@@ -198,6 +198,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         onReply: (parent) =>
                             setState(() => _replyTarget = parent),
                         onLike: _toggleLikeReply,
+                        onAuthorTap: (uid) => context.go('/users/$uid'),
                       ),
                     ),
                     const SizedBox(height: 80),

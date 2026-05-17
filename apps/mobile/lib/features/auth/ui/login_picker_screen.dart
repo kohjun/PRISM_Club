@@ -43,18 +43,30 @@ class _UserTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Future<void> loginAndGo(String path) async {
+      await ref
+          .read(currentUserProvider.notifier)
+          .setUser(CurrentUser(id: user.id, nickname: user.nickname));
+      if (context.mounted) context.go(path);
+    }
+
     return Card(
       child: ListTile(
         leading: CircleAvatar(child: Text(user.nickname.characters.first)),
         title: Text(user.nickname),
         subtitle: Text(user.id, style: const TextStyle(fontSize: 11)),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () async {
-          await ref
-              .read(currentUserProvider.notifier)
-              .setUser(CurrentUser(id: user.id, nickname: user.nickname));
-          if (context.mounted) context.go('/spaces');
-        },
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.person_outline),
+              tooltip: '프로필 보기',
+              onPressed: () => loginAndGo('/users/${user.id}'),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: () => loginAndGo('/home'),
       ),
     );
   }

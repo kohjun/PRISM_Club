@@ -74,6 +74,7 @@ class _CurationQueueScreenState extends ConsumerState<CurationQueueScreen> {
                           return ContributionCardWidget(
                             contribution: c,
                             onTap: () => context.go('/curate/${c.id}'),
+                            onAuthorTap: (uid) => context.go('/users/$uid'),
                           );
                         },
                       ),

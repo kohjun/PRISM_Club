@@ -46,6 +46,7 @@ class MyContributionsScreen extends ConsumerWidget {
                   contribution: c,
                   onTap: () => context.go(
                       '/categories/${c.categorySlug}'),
+                  onAuthorTap: (uid) => context.go('/users/$uid'),
                 );
               },
             ),

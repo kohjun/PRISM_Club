@@ -8,10 +8,12 @@ class ContributionCardWidget extends StatelessWidget {
     super.key,
     required this.contribution,
     this.onTap,
+    this.onAuthorTap,
   });
 
   final ContributionDto contribution;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
@@ -44,11 +46,22 @@ class ContributionCardWidget extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Text(
-                    contribution.contributor.nickname,
-                    style: const TextStyle(
-                        fontSize: 12, color: PrismColors.muted),
-                  ),
+                  onAuthorTap != null
+                      ? InkWell(
+                          onTap: () =>
+                              onAuthorTap!(contribution.contributor.id),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Text(
+                            contribution.contributor.nickname,
+                            style: const TextStyle(
+                                fontSize: 12, color: PrismColors.muted),
+                          ),
+                        )
+                      : Text(
+                          contribution.contributor.nickname,
+                          style: const TextStyle(
+                              fontSize: 12, color: PrismColors.muted),
+                        ),
                   const Text(' · ',
                       style: TextStyle(color: PrismColors.muted)),
                   Text(

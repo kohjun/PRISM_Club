@@ -121,6 +121,8 @@ class RoomTimelineScreen extends ConsumerWidget {
                               post: post,
                               onTap: () =>
                                   context.go('/posts/${post.id}'),
+                              onAuthorTap: (uid) =>
+                                  context.go('/users/$uid'),
                             ),
                             const SizedBox(height: 10),
                           ],

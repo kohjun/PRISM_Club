@@ -72,12 +72,35 @@ wraps the five main tabs (홈 / 검색 / 커뮤니티 / 저장 / 알림) in a Ma
 `NavigationBar`; the post-login redirect now lands on `/home` instead of
 `/spaces`. All existing deep-link routes are preserved.
 
+Milestone 8 — user profiles and lightweight social graph. PRISM Club now
+has people, not just posts. `Profile.bio` is added (String?, 500-char cap)
+and a new `UserFollow` table links followers↔followed with a unique
+constraint. Four endpoints: `GET /v1/users/:id/profile` returns the full
+profile bundle (user, bio/region/interests, role badges, counts, recent
+posts, owned rooms, approved contributions, `is_self` / `is_following`);
+`PATCH /v1/me/profile` updates bio/region/interests with server-side
+validation (trim, dedupe, lowercase interests, max-counts); `POST /v1/users/:id/follow-toggle`
+and `GET /v1/users/:id/follow-state` mirror M6's room-follow pattern but
+reject self-follow with 400. Every activity list inside the profile bundle
+runs through `accessPoliciesAllowedFor(viewer)` so a member viewing a
+planner's profile never sees PLANNER_ONLY recruitment content. Counts also
+filter, so the UI stays internally consistent. New Flutter screens:
+`ProfileScreen` at `/users/:id` with hero block, role badges, count row,
+sections (최근 글 / 만든 방 / 승인된 기여), and a follow CTA; an edit-profile
+bottom sheet shows when `isSelf`. A new reusable `RoleBadgeRow` widget
+renders chips for VERIFIED_PLANNER / CURATOR / ADMIN (MEMBER is implicit
+and not rendered). `PostCardWidget`, `ReplyTreeWidget`, and
+`ContributionCardWidget` gained an optional `onAuthorTap` callback; caller
+screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
+`MyContributionsScreen`, `CurationQueueScreen`) wire it to navigate to
+`/users/:id`. The dev login picker also gets a "프로필 보기" affordance.
+
 | Surface | What works |
 |---|---|
-| Backend (NestJS + Prisma) | 37 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts, follow/save/notification endpoints with spaceAccessPolicy filtering, home bundle + feed endpoints with deterministic scoring |
-| Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar: 홈/검색/커뮤니티/저장/알림), Home screen (7 sections: followed updates / recommended rooms / recommended events / trending posts / active hubs / saved recently / empty state), Space list (curator banner + planner lock dialog + 내 제안 entry + bell badge), Category list, Topic Hub, Room create, Room timeline (follow button in AppBar), Post compose, Recruitment composer, Post detail (bookmark icon), Contribution composer, My contributions, Curation queue, Curation detail, Search screen, Event Detail screen, Notification screen, Saved items screen |
-| Tests | 103 backend unit tests + 12 e2e + 43 Flutter widget tests, all green |
-| Smoke | `scripts/smoke.sh` — 55 curl-driven checks (M1–M7 inclusive) |
+| Backend (NestJS + Prisma) | 41 endpoints, stub auth + role gate, `AccessControlService` reading `Space.access_policy`, mock Events client, deterministic seed with curator + 2 planner personas + 6 enriched profiles, ILIKE-based search filtered per viewer, EventDetail bundle endpoint with paged related posts, follow/save/notification endpoints with spaceAccessPolicy filtering, home bundle + feed endpoints with deterministic scoring, public profile bundle + edit + user-follow endpoints with access-filtered activity |
+| Mobile (Flutter) | Login picker (with 프로필 보기 affordance) → `/home` shell (5-tab NavigationBar: 홈/검색/커뮤니티/저장/알림), Home screen, Space list, Category list, Topic Hub, Room create, Room timeline (follow button; author tap), Post compose, Recruitment composer, Post detail (bookmark icon; author taps on replies), Contribution composer, My contributions (author taps), Curation queue (author taps), Curation detail, Search screen, Event Detail screen, Notification screen, Saved items screen, Profile screen at /users/:id (hero, role badges, counts, recent activity sections, follow button, edit-profile bottom sheet when isSelf) |
+| Tests | 114 backend unit tests + 16 e2e + 47 Flutter widget tests, all green |
+| Smoke | `scripts/smoke.sh` — 60 curl-driven checks (M1–M8 inclusive) |
 
 ## Repo layout
 
