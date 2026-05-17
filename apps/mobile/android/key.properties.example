@@ -1,0 +1,38 @@
+# PRISM Club — Android release signing template.
+#
+# Copy this file to apps/mobile/android/key.properties (gitignored) and
+# fill in REAL values from your team password vault. Never commit the
+# populated key.properties or the keystore (.jks) file.
+#
+# Companion docs:
+#   - docs/ANDROID_RELEASE_DRY_RUN.md  — what builds without these
+#   - docs/PLAY_INTERNAL_TESTING.md    — first Play upload flow
+#   - docs/MOBILE_RELEASE_CHECKLIST.md §4 — signing checklist
+#
+# Generating the keystore (one-time, per app lifecycle — keep the output
+# in the team password vault and NEVER in the repo):
+#
+#   keytool -genkey -v \
+#     -keystore prism-club-upload.jks \
+#     -keyalg RSA -keysize 2048 \
+#     -validity 10000 \
+#     -alias prism-club-upload
+#
+# Path conventions: store the keystore outside the repo. The Gradle
+# script resolves storeFile relative to the project root if the path is
+# relative, so an absolute path is recommended.
+
+# Absolute path to the .jks keystore. Example:
+#   storeFile=/Users/<you>/keystores/prism-club-upload.jks
+#   storeFile=C:\\keystores\\prism-club-upload.jks   (Windows: escape backslashes)
+storeFile=<absolute-path-to-prism-club-upload.jks>
+
+# Keystore password set when `keytool -genkey` was run.
+storePassword=<keystore-password>
+
+# Key alias used when `keytool -genkey -alias <alias>` was run.
+keyAlias=prism-club-upload
+
+# Key password. By convention identical to storePassword unless you
+# explicitly created a separate key password during keystore creation.
+keyPassword=<key-password>

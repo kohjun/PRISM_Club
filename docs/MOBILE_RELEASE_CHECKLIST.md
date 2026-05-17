@@ -107,11 +107,13 @@ inventory of what works and what's missing.
 - [ ] Keystore file generated (`keytool -genkey -v ...`) and stored
       in the team password vault. **Do NOT commit.**
 - [ ] `android/key.properties` (gitignored) lists `storeFile`,
-      `storePassword`, `keyAlias`, `keyPassword`.
-- [ ] `android/app/build.gradle.kts` `signingConfigs.release` reads
+      `storePassword`, `keyAlias`, `keyPassword`. Copy
+      `android/key.properties.example` as the starting point.
+- [x] `android/app/build.gradle.kts` `signingConfigs.release` reads
       from `key.properties` and `buildTypes.release.signingConfig`
-      points at it (replaces the current debug-signed fallback —
-      audit §2.3 / ANDROID_RELEASE_DRY_RUN §3.3).
+      picks the release config when present, falling back to debug
+      with a Gradle warning when absent — see
+      ANDROID_RELEASE_DRY_RUN §3.3.
 - [ ] Play App Signing enabled in the Play Console so we only manage
       the upload key.
 
