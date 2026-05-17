@@ -72,6 +72,18 @@ wraps the five main tabs (홈 / 검색 / 커뮤니티 / 저장 / 알림) in a Ma
 `NavigationBar`; the post-login redirect now lands on `/home` instead of
 `/spaces`. All existing deep-link routes are preserved.
 
+Milestone 12 — activity signals. TopicSignal rows are now computed from real
+post activity instead of static seed data. `POST /v1/admin/signals/refresh`
+(role-gated to CURATOR/MODERATOR/ADMIN) walks every TopicHub, looks at the
+posts in its category's rooms over a 30-day window, and writes deterministic
+signal entries: HOT_DEBATE (post with most replies), POPULAR_REF (post with
+most likes), VERIFIED_REVIEWS (count of recruitment posts). Existing
+TopicHub bundle continues to surface signals via the `signals` field, but
+now reflects live activity. `GET /v1/topic-hubs/:id/signals` returns
+computed signals for any single hub with access-policy filtering — member
+viewers get an empty array for PLANNER_ONLY hubs. OpsDashboardScreen gains
+a "시그널 새로고침" action that calls the refresh endpoint and shows a snackbar.
+
 Milestone 11 — ops dashboard. A single role-gated operational surface inside
 the Flutter app (no separate Next.js admin yet). `GET /v1/admin/ops/summary`
 returns pending knowledge contribution count, open report count, recruitment
@@ -136,8 +148,8 @@ screens (`RoomTimelineScreen`, `PostDetailScreen`, `HomeScreen`,
 |---|---|
 | Backend (NestJS + Prisma) | 47 endpoints, role-gated guard, mock Events client, deterministic seed with all five roles, ILIKE-based search filtered per viewer, EventDetail bundle, follow/save/notification, home bundle + feed, profile bundle + edit + user-follow, moderation reports + audit, media upload (local dev storage at /uploads/*) |
 | Mobile (Flutter) | Login picker → `/home` shell (5-tab NavigationBar), Home, Space list, Category list, Topic Hub, Room create, Room timeline, Post compose (with image picker), Recruitment composer, Post detail (image thumbnails), Contribution composer, My contributions, Curation queue, Curation detail, Search, Event Detail, Notifications, Saved items, Profile at /users/:id, Report sheet + /me/reports + /admin/reports queue + /admin/reports/:id detail |
-| Tests | 121 backend unit + 24 e2e + 51 Flutter widget, all green |
-| Smoke | `scripts/smoke.sh` — 70 curl-driven checks (M1–M11 inclusive) |
+| Tests | 121 backend unit + 28 e2e + 51 Flutter widget, all green |
+| Smoke | `scripts/smoke.sh` — 72 curl-driven checks (M1–M12 inclusive) |
 
 ## Repo layout
 

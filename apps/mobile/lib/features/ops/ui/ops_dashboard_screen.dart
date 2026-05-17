@@ -10,11 +10,42 @@ import '../data/ops_repository.dart';
 class OpsDashboardScreen extends ConsumerWidget {
   const OpsDashboardScreen({super.key});
 
+  Future<void> _refreshSignals(BuildContext context, WidgetRef ref) async {
+    try {
+      final result =
+          await ref.read(opsRepositoryProvider).refreshSignals();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '시그널 새로고침 완료: ${result.hubsProcessed} hub / ${result.signalsWritten} signals',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('시그널 새로고침 실패: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(opsSummaryProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('운영 대시보드')),
+      appBar: AppBar(
+        title: const Text('운영 대시보드'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => _refreshSignals(context, ref),
+            icon: const Icon(Icons.refresh),
+            label: const Text('시그널 새로고침'),
+          ),
+        ],
+      ),
       body: summary.when(
         loading: () => const LoadingView(),
         error: (e, _) => ErrorView(message: e.toString()),

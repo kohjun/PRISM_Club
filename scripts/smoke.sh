@@ -369,4 +369,15 @@ ops_summary=$(curl_as "$CORAL" "$API/admin/ops/summary")
 pending=$(echo "$ops_summary" | j ".pending_contributions.count")
 [[ "$pending" =~ ^[0-9]+$ ]] && pass "ops summary: pending_contributions=$pending" || fail "summary=$ops_summary"
 
+section "activity signals (M12)"
+
+# Refresh signals as curator
+refresh_res=$(curl_as "$CORAL" -X POST "$API/admin/signals/refresh")
+hubs_processed=$(echo "$refresh_res" | j ".hubs_processed")
+[[ "$hubs_processed" =~ ^[0-9]+$ && "$hubs_processed" -gt "0" ]] && pass "signal refresh: $hubs_processed hubs processed" || fail "refresh_res=$refresh_res"
+
+# Non-ops cannot refresh
+non_ops_status=$(curl_as "$JOON" -s -o /dev/null -w "%{http_code}" -X POST "$API/admin/signals/refresh")
+[[ "$non_ops_status" == "403" ]] && pass "non-ops signal refresh -> 403" || fail "non_ops_status=$non_ops_status"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

@@ -26,6 +26,7 @@ import { UserProfileModule } from './modules/user-profile/user-profile.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { MediaModule } from './modules/media/media.module';
 import { OpsModule } from './modules/ops/ops.module';
+import { SignalsModule } from './modules/signals/signals.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { OpsModule } from './modules/ops/ops.module';
     ModerationModule,
     MediaModule,
     OpsModule,
+    SignalsModule,
   ],
   providers: [
     // Order matters: AuthGuard runs first to populate req.user, RolesGuard
