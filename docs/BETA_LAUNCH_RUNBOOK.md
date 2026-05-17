@@ -6,6 +6,8 @@ environment. Pairs with:
 - [BETA_READINESS.md](BETA_READINESS.md) — what the code looks like at
   the freeze
 - [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md) — manual QA flows for cut-over
+- [CUTOVER_REHEARSAL.md](CUTOVER_REHEARSAL.md) — **staging dry-run of
+  this runbook; required before production cut-over**
 - [DEPLOYMENT.md](DEPLOYMENT.md) — env matrix + container build
 - [EVENTS_INTEGRATION.md](EVENTS_INTEGRATION.md) — upstream events
 - [ANALYTICS.md](ANALYTICS.md) — analytics taxonomy + privacy rules

@@ -264,6 +264,8 @@ If you are picking this repo up to deploy Beta, start here:
 - **[Beta QA script](docs/BETA_QA_SCRIPT.md)** — manual QA flows for
   cut-over (member / planner / curator+moderator / admin / media /
   events / analytics).
+- **[Cutover rehearsal](docs/CUTOVER_REHEARSAL.md)** — staging dry-run
+  of the production cut-over with sign-off + failure-log templates.
 - **[Deployment guide](docs/DEPLOYMENT.md)** — env matrix, container
   build, Flutter / admin web build, health endpoints.
 
@@ -302,6 +304,7 @@ across all the planning and operational docs.
 - **[Beta readiness](docs/BETA_READINESS.md)** — Beta feature map, architecture snapshot, persona walkthrough, production readiness, monitoring hooks, go/no-go
 - **[Beta launch runbook](docs/BETA_LAUNCH_RUNBOOK.md)** — pre-launch checklist, deploy sequence, env / migration / smoke / rollback / incident response / monitoring
 - **[Beta QA script](docs/BETA_QA_SCRIPT.md)** — manual QA flows for cut-over (member / planner / curator+moderator / admin / media / events / analytics)
+- **[Cutover rehearsal](docs/CUTOVER_REHEARSAL.md)** — staging dry-run of the production cut-over (timeline, deploy + migration + smoke + QA + rollback rehearsal, sign-off + failure log templates)
 - **[Handoff guide](docs/HANDOFF.md)** — single-page orientation for a new engineer / operator
 - **[Staging setup](docs/STAGING_SETUP.md)** — services + env + migration + builds for the rehearsal environment
 - **[Staging smoke](docs/STAGING_SMOKE.md)** — how to point `scripts/smoke.sh` at staging, what persists, how to clean up
