@@ -13,64 +13,105 @@ import '../data/event_detail_dto.dart';
 import '../data/event_detail_repository.dart';
 import 'widgets/compose_room_picker.dart';
 
-class EventDetailScreen extends ConsumerWidget {
+class EventDetailScreen extends ConsumerStatefulWidget {
   const EventDetailScreen({super.key, required this.cardId});
   final String cardId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bundle = ref.watch(eventDetailProvider(cardId));
+  ConsumerState<EventDetailScreen> createState() =>
+      _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
+  /// Scroll offset at which we hand the AppBar over to its "content" state
+  /// — solid white background + ink-1 icons + visible title. Below this,
+  /// the app bar stays transparent over the gradient hero.
+  ///
+  /// The hero is 320px tall and the floating date card is offset -32, so
+  /// content effectively starts around y = 288. We trigger a bit earlier
+  /// (240) so the title fades in cleanly while the hero is still
+  /// scrolling out.
+  static const double _heroFadeThreshold = 240;
+
+  bool _overContent = false;
+
+  void _onScroll(double offset) {
+    final next = offset > _heroFadeThreshold;
+    if (next != _overContent) {
+      setState(() => _overContent = next);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bundle = ref.watch(eventDetailProvider(widget.cardId));
 
     return Scaffold(
       backgroundColor: PrismColors.bg,
       extendBodyBehindAppBar: true,
-      appBar: bundle.maybeWhen(
-        data: (b) => _FrostedAppBar(title: b.eventCard.title, cardId: b.eventCard.id),
-        orElse: () => AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
+      appBar: _EventAppBar(
+        title: bundle.maybeWhen(
+          data: (b) => b.eventCard.title,
+          orElse: () => '이벤트',
         ),
+        cardId: widget.cardId,
+        overContent: _overContent,
       ),
       body: bundle.when(
-        loading: () => const LoadingView(),
-        error: (e, _) => ErrorView(
-          message: e is ApiError ? e.message : '이벤트 정보를 불러오지 못했어요.',
-          onRetry: () => ref.invalidate(eventDetailProvider(cardId)),
+        loading: () => const Padding(
+          padding: EdgeInsets.only(top: kToolbarHeight),
+          child: LoadingView(),
+        ),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.only(top: kToolbarHeight),
+          child: ErrorView(
+            message: e is ApiError ? e.message : '이벤트 정보를 불러오지 못했어요.',
+            onRetry: () =>
+                ref.invalidate(eventDetailProvider(widget.cardId)),
+          ),
         ),
         data: (b) => RefreshIndicator(
           color: PrismColors.pp600,
-          onRefresh: () async => ref.invalidate(eventDetailProvider(cardId)),
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _Hero(card: b.eventCard)),
-              SliverToBoxAdapter(child: _DateVenueCard(card: b.eventCard)),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  PrismSpacing.xl,
-                  PrismSpacing.lg,
-                  PrismSpacing.xl,
-                  0,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: _RelatedRoomsSection(rooms: b.relatedRooms),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  PrismSpacing.xl,
-                  PrismSpacing.xl,
-                  PrismSpacing.xl,
-                  100,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: _RelatedPostsSection(
-                    posts: b.relatedPosts,
-                    postCount: b.postCount,
+          onRefresh: () async =>
+              ref.invalidate(eventDetailProvider(widget.cardId)),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n.metrics.axis == Axis.vertical) {
+                _onScroll(n.metrics.pixels);
+              }
+              return false;
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: _Hero(card: b.eventCard)),
+                SliverToBoxAdapter(child: _DateVenueCard(card: b.eventCard)),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    PrismSpacing.xl,
+                    PrismSpacing.lg,
+                    PrismSpacing.xl,
+                    0,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _RelatedRoomsSection(rooms: b.relatedRooms),
                   ),
                 ),
-              ),
-            ],
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    PrismSpacing.xl,
+                    PrismSpacing.xl,
+                    PrismSpacing.xl,
+                    100,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _RelatedPostsSection(
+                      posts: b.relatedPosts,
+                      postCount: b.postCount,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -82,49 +123,83 @@ class EventDetailScreen extends ConsumerWidget {
   }
 }
 
-class _FrostedAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _FrostedAppBar({required this.title, required this.cardId});
+/// AppBar that swaps between two states without rebuilding the whole
+/// route. Over the gradient hero: transparent background + white
+/// icons + invisible title. Over content: solid white background +
+/// ink-1 icons + visible title + a hairline bottom border.
+class _EventAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _EventAppBar({
+    required this.title,
+    required this.cardId,
+    required this.overContent,
+  });
+
   final String title;
   final String cardId;
+  final bool overContent;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      surfaceTintColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      iconTheme: const IconThemeData(color: Colors.white),
-      title: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: Colors.white),
-      ),
-      actions: [
-        Consumer(
-          builder: (ctx, ref, _) {
-            final saveKey = 'EVENT_CARD:$cardId';
-            final saved =
-                ref.watch(saveStateProvider(saveKey)).valueOrNull ?? false;
-            return IconButton(
-              icon: Icon(
-                saved ? Icons.bookmark : Icons.bookmark_outline,
-                color: Colors.white,
-              ),
-              tooltip: saved ? '저장 취소' : '저장',
-              onPressed: () => ref
-                  .read(saveStateProvider(saveKey).notifier)
-                  .toggle(),
-            );
-          },
+    final iconColor = overContent ? PrismColors.ink1 : Colors.white;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color: overContent ? PrismColors.bg : Colors.transparent,
+        border: Border(
+          bottom: BorderSide(
+            color: overContent ? PrismColors.line : Colors.transparent,
+          ),
         ),
-        const SizedBox(width: 4),
-      ],
+      ),
+      child: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: iconColor,
+        iconTheme: IconThemeData(color: iconColor),
+        title: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          opacity: overContent ? 1 : 0,
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: iconColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ),
+        actions: [
+          Consumer(
+            builder: (ctx, ref, _) {
+              final saveKey = 'EVENT_CARD:$cardId';
+              final saved =
+                  ref.watch(saveStateProvider(saveKey)).valueOrNull ?? false;
+              return IconButton(
+                icon: Icon(
+                  saved ? Icons.bookmark : Icons.bookmark_outline,
+                  color: iconColor,
+                ),
+                tooltip: saved ? '저장 취소' : '저장',
+                onPressed: () => ref
+                    .read(saveStateProvider(saveKey).notifier)
+                    .toggle(),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
     );
   }
 }
