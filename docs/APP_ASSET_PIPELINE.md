@@ -193,6 +193,9 @@ Add when the macOS engineer creates `apps/mobile/ios/` (see
 
 After regenerating assets:
 
+- [ ] `npm run mobile:check-assets` (or `bash scripts/check-mobile-assets.sh`)
+      passes — guards against `<inset>` reinjection and missing
+      source / generated files. See §9.
 - [ ] `flutter build apk --debug` succeeds.
 - [ ] Launcher icon on a fresh install (`adb shell pm clear` →
       re-launch) shows the brand mark, not the Flutter "F".
@@ -285,3 +288,44 @@ After every `dart run flutter_launcher_icons`, hand-restore
 
 If the brand source is ever redrawn as a full-bleed canvas, drop this
 note and accept the plugin default.
+
+---
+
+## 9. Drift guard — `scripts/check-mobile-assets.sh`
+
+The two operator footguns above (silent `<inset>` reinjection + a
+forgotten regen step) fail loudly in
+[`scripts/check-mobile-assets.sh`](../scripts/check-mobile-assets.sh).
+Runs in Git Bash on Windows and bash on Linux / macOS, no extra deps.
+
+```bash
+# From repo root:
+bash scripts/check-mobile-assets.sh
+# Or via the wrapper npm script:
+npm run mobile:check-assets
+```
+
+What it asserts (39 checks):
+
+- `mipmap-anydpi-v26/ic_launcher.xml` has no `<inset>` elements
+  outside XML comments (so explanatory prose about insets doesn't
+  trigger a false positive).
+- All five brand source PNGs exist under `apps/mobile/assets/branding/`
+  (including the Pillow-composited `app_icon_legacy.png`).
+- Legacy launcher mipmaps exist at all five densities.
+- Adaptive icon foreground / background / monochrome layers exist at
+  all five densities.
+- Pre-Android-12 `splash.png` and Android 12+ `android12splash.png`
+  exist at all five densities.
+- `launch_background.xml` (+ `drawable-v21/…`) and `values-v31/styles.xml`
+  exist (theme wiring).
+
+Exit code is non-zero on any failure with a one-line FAIL reason per
+broken check and a tail summary like:
+
+```
+1 of 39 check(s) failed. See docs/APP_ASSET_PIPELINE.md §8 for the operator flow.
+```
+
+Run it as part of the asset refresh flow (§4) and again before
+shipping any release AAB.

@@ -16,6 +16,7 @@
     "admin:dev": "npm run dev -w admin",
     "admin:build": "npm run build -w admin",
     "admin:typecheck": "npm run typecheck -w admin",
+    "mobile:check-assets": "bash scripts/check-mobile-assets.sh",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
