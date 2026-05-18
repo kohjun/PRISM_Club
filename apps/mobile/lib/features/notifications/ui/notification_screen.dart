@@ -210,10 +210,11 @@ class _NotificationTile extends StatelessWidget {
                   children: [
                     Text(
                       _titleFor(notif),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13.5,
                         height: 1.45,
-                        letterSpacing: -0.2,
                         color: PrismColors.ink1,
                         fontWeight:
                             isUnread ? FontWeight.w700 : FontWeight.w500,

@@ -302,6 +302,8 @@ class _HeroBlock extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         bundle.profile.region!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: PrismColors.ink3,
                           fontSize: 13,

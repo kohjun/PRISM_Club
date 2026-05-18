@@ -27,20 +27,25 @@ class SpaceListScreen extends ConsumerWidget {
           if (user != null)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: PrismColors.bgTint,
-                  borderRadius: BorderRadius.circular(PrismRadius.pill),
-                ),
-                child: Text(
-                  user.nickname,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
-                    color: PrismColors.ink2,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: PrismColors.bgTint,
+                    borderRadius: BorderRadius.circular(PrismRadius.pill),
+                  ),
+                  child: Text(
+                    user.nickname,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: PrismColors.ink2,
+                    ),
                   ),
                 ),
               ),

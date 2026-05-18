@@ -267,6 +267,8 @@ class _Hero extends StatelessWidget {
               const SizedBox(height: PrismSpacing.md),
               Text(
                 card.title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 28,

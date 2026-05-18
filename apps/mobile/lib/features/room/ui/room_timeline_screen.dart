@@ -287,12 +287,16 @@ class _RoomHeader extends StatelessWidget {
               ),
               if (room.ownerNickname != null) ...[
                 const SizedBox(width: PrismSpacing.sm),
-                Text(
-                  'by ${room.ownerNickname}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: PrismColors.ink4,
-                    fontWeight: FontWeight.w500,
+                Flexible(
+                  child: Text(
+                    'by ${room.ownerNickname}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: PrismColors.ink4,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
