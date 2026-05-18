@@ -174,50 +174,62 @@ class _ActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        InkWell(
-          onTap: onLikePressed,
-          borderRadius: BorderRadius.circular(PrismRadius.sm),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        Semantics(
+          button: true,
+          toggled: likedByMe,
+          label: likedByMe ? '좋아요 취소' : '좋아요',
+          child: InkWell(
+            onTap: onLikePressed,
+            borderRadius: BorderRadius.circular(PrismRadius.sm),
+            child: Container(
+              constraints:
+                  const BoxConstraints(minHeight: 44, minWidth: 44),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    likedByMe ? Icons.favorite : Icons.favorite_border,
+                    size: 20,
+                    color: likedByMe ? PrismColors.danger : PrismColors.ink4,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$likeCount',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: likedByMe ? PrismColors.danger : PrismColors.ink3,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: PrismSpacing.sm),
+        Semantics(
+          label: '답글 $replyCount개',
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Row(
               children: [
-                Icon(
-                  likedByMe ? Icons.favorite : Icons.favorite_border,
-                  size: 18,
-                  color: likedByMe ? PrismColors.danger : PrismColors.ink4,
-                ),
+                const Icon(Icons.mode_comment_outlined,
+                    size: 20, color: PrismColors.ink4),
                 const SizedBox(width: 6),
                 Text(
-                  '$likeCount',
-                  style: TextStyle(
+                  '$replyCount',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: likedByMe ? PrismColors.danger : PrismColors.ink3,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: PrismColors.ink3,
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-        const SizedBox(width: PrismSpacing.lg),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          child: Row(
-            children: [
-              const Icon(Icons.mode_comment_outlined,
-                  size: 18, color: PrismColors.ink4),
-              const SizedBox(width: 6),
-              Text(
-                '$replyCount',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: PrismColors.ink3,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
           ),
         ),
       ],

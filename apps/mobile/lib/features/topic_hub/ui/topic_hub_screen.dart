@@ -357,16 +357,18 @@ class _KnowledgeBlockCard extends StatelessWidget {
               ),
               const Spacer(),
               if (onPropose != null)
-                InkWell(
-                  onTap: onPropose,
-                  borderRadius: BorderRadius.circular(PrismRadius.sm),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.edit_outlined,
-                      size: 16,
-                      color: PrismColors.pp700,
-                    ),
+                IconButton(
+                  onPressed: onPropose,
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: PrismColors.pp700,
+                  ),
+                  tooltip: '이 블록 개선 제안',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
                   ),
                 ),
             ],
@@ -681,29 +683,42 @@ class _RelatedSearches extends ConsumerWidget {
                 runSpacing: 6,
                 children: items
                     .map(
-                      (s) => GestureDetector(
-                        onTap: () => context.go(
-                          '/search?q=${Uri.encodeQueryComponent(s)}&categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
-                        ),
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          height: 28,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 11),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: PrismColors.pp50,
-                            borderRadius:
-                                BorderRadius.circular(PrismRadius.pill),
-                            border: Border.all(color: PrismColors.pp100),
+                      (s) => Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => context.go(
+                            '/search?q=${Uri.encodeQueryComponent(s)}&categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
                           ),
-                          child: Text(
-                            s,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.2,
-                              color: PrismColors.pp700,
+                          borderRadius:
+                              BorderRadius.circular(PrismRadius.pill),
+                          child: Semantics(
+                            button: true,
+                            label: '관련 검색 $s',
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minHeight: 44,
+                                minWidth: 44,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: PrismColors.pp50,
+                                borderRadius:
+                                    BorderRadius.circular(PrismRadius.pill),
+                                border:
+                                    Border.all(color: PrismColors.pp100),
+                              ),
+                              child: Text(
+                                s,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: PrismColors.pp700,
+                                ),
+                              ),
                             ),
                           ),
                         ),

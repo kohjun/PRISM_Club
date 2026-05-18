@@ -108,39 +108,51 @@ class _ProfileBody extends ConsumerWidget {
               runSpacing: 8,
               children: bundle.userRooms
                   .map(
-                    (r) => GestureDetector(
-                      onTap: () => context.go('/rooms/${r.slug}'),
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        height: 32,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: PrismSpacing.md,
-                        ),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: PrismColors.pp50,
-                          borderRadius: BorderRadius.circular(PrismRadius.pill),
-                          border: Border.all(color: PrismColors.pp100),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.tag,
-                              size: 13,
-                              color: PrismColors.pp700,
+                    (r) => Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => context.go('/rooms/${r.slug}'),
+                        borderRadius:
+                            BorderRadius.circular(PrismRadius.pill),
+                        child: Semantics(
+                          button: true,
+                          label: '방 ${r.name}',
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minHeight: 44,
+                              minWidth: 44,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              r.name,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.2,
-                                color: PrismColors.pp700,
-                              ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: PrismSpacing.cardPad,
+                              vertical: 10,
                             ),
-                          ],
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: PrismColors.pp50,
+                              borderRadius: BorderRadius.circular(
+                                  PrismRadius.pill),
+                              border: Border.all(color: PrismColors.pp100),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.tag,
+                                  size: 14,
+                                  color: PrismColors.pp700,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  r.name,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: PrismColors.pp700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),

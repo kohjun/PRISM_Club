@@ -253,12 +253,15 @@ class _SearchField extends StatelessWidget {
             ),
           ),
           if (onClear != null)
-            GestureDetector(
-              onTap: onClear,
-              behavior: HitTestBehavior.opaque,
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.close, size: 16, color: PrismColors.ink3),
+            IconButton(
+              onPressed: onClear,
+              icon: const Icon(Icons.close, size: 18),
+              color: PrismColors.ink3,
+              tooltip: '검색어 지우기',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(
+                width: 44,
+                height: 44,
               ),
             ),
         ],
@@ -326,24 +329,37 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.md),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? PrismColors.ink1 : PrismColors.bgTint,
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: '$label 필터',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(PrismRadius.pill),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : PrismColors.ink2,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: 44,
+              minWidth: 44,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.cardPad,
+              vertical: 8,
+            ),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? PrismColors.ink1 : PrismColors.bgTint,
+              borderRadius: BorderRadius.circular(PrismRadius.pill),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : PrismColors.ink2,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
       ),
@@ -432,27 +448,39 @@ class _EmptyStateSuggestions extends ConsumerWidget {
               runSpacing: 8,
               children: items
                   .map(
-                    (s) => GestureDetector(
-                      onTap: () => onTap(s),
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        height: 32,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: PrismSpacing.md + 1,
-                        ),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: PrismColors.pp50,
-                          borderRadius: BorderRadius.circular(PrismRadius.pill),
-                          border: Border.all(color: PrismColors.pp100),
-                        ),
-                        child: Text(
-                          s,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                            color: PrismColors.pp700,
+                    (s) => Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => onTap(s),
+                        borderRadius:
+                            BorderRadius.circular(PrismRadius.pill),
+                        child: Semantics(
+                          button: true,
+                          label: '추천 검색 $s',
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minHeight: 44,
+                              minWidth: 44,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: PrismSpacing.cardPad,
+                              vertical: 10,
+                            ),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: PrismColors.pp50,
+                              borderRadius:
+                                  BorderRadius.circular(PrismRadius.pill),
+                              border: Border.all(color: PrismColors.pp100),
+                            ),
+                            child: Text(
+                              s,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: PrismColors.pp700,
+                              ),
+                            ),
                           ),
                         ),
                       ),

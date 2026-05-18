@@ -82,10 +82,10 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.auto_awesome_outlined, size: 22),
+          icon: const Icon(Icons.search, size: 22),
           color: PrismColors.ink2,
-          onPressed: null,
-          tooltip: '추천',
+          onPressed: () => context.go('/search'),
+          tooltip: '검색',
         ),
         IconButton(
           icon: const Icon(Icons.bookmark_outline, size: 22),

@@ -139,24 +139,37 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.md),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? PrismColors.ink1 : PrismColors.bgTint,
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: '$label 필터',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(PrismRadius.pill),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : PrismColors.ink2,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: 44,
+              minWidth: 44,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.cardPad,
+              vertical: 8,
+            ),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? PrismColors.ink1 : PrismColors.bgTint,
+              borderRadius: BorderRadius.circular(PrismRadius.pill),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : PrismColors.ink2,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
       ),
@@ -176,11 +189,11 @@ class _SavedItemTile extends StatelessWidget {
     final eventCard = item.eventCardTarget;
 
     final trailing = IconButton(
-      icon: const Icon(Icons.bookmark, size: 20, color: PrismColors.pp700),
+      icon: const Icon(Icons.bookmark, size: 22, color: PrismColors.pp700),
       tooltip: '저장 취소',
       onPressed: onUnsave,
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
     );
 
     if (post != null) {

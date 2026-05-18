@@ -205,11 +205,14 @@ class PrismType {
     color: PrismColors.ink1,
   );
 
+  // Body / caption / label keep letter-spacing near 0 — Korean glyph
+  // rendering reads worse than Latin under negative tracking. Negative
+  // letter-spacing is reserved for display / title sizes.
   static const TextStyle bodyLg = TextStyle(
     fontSize: 16,
     height: 1.55,
     fontWeight: FontWeight.w500,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     color: PrismColors.ink1,
   );
 
@@ -217,7 +220,7 @@ class PrismType {
     fontSize: 14,
     height: 1.5,
     fontWeight: FontWeight.w500,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     color: PrismColors.ink2,
   );
 
@@ -225,7 +228,7 @@ class PrismType {
     fontSize: 13,
     height: 1.4,
     fontWeight: FontWeight.w600,
-    letterSpacing: -0.3,
+    letterSpacing: -0.1,
     color: PrismColors.ink2,
   );
 
@@ -233,7 +236,7 @@ class PrismType {
     fontSize: 12,
     height: 1.5,
     fontWeight: FontWeight.w500,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     color: PrismColors.ink3,
   );
 

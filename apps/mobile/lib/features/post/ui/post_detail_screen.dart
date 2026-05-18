@@ -393,38 +393,49 @@ class _PostBody extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                InkWell(
-                  onTap: onLike,
-                  borderRadius: BorderRadius.circular(PrismRadius.sm),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: PrismSpacing.sm,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          post.likedByMe
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          size: 20,
-                          color: post.likedByMe
-                              ? PrismColors.danger
-                              : PrismColors.ink4,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${post.likeCount}',
-                          style: TextStyle(
+                Semantics(
+                  button: true,
+                  toggled: post.likedByMe,
+                  label: post.likedByMe ? '좋아요 취소' : '좋아요',
+                  child: InkWell(
+                    onTap: onLike,
+                    borderRadius: BorderRadius.circular(PrismRadius.sm),
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        minHeight: 44,
+                        minWidth: 44,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: PrismSpacing.sm,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            post.likedByMe
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            size: 22,
                             color: post.likedByMe
                                 ? PrismColors.danger
-                                : PrismColors.ink3,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12.5,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                                : PrismColors.ink4,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            '${post.likeCount}',
+                            style: TextStyle(
+                              color: post.likedByMe
+                                  ? PrismColors.danger
+                                  : PrismColors.ink3,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12.5,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -449,11 +460,14 @@ class _PostBody extends ConsumerWidget {
                   icon: Icon(
                     saved ? Icons.bookmark : Icons.bookmark_outline,
                     color: saved ? PrismColors.pp700 : PrismColors.ink4,
-                    size: 20,
+                    size: 22,
                   ),
                   tooltip: saved ? '저장 취소' : '저장',
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
+                  ),
                   onPressed: () => ref
                       .read(saveStateProvider(saveKey).notifier)
                       .toggle(),
