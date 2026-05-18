@@ -49,5 +49,49 @@ dev_dependencies:
   freezed: ^2.5.7
   json_serializable: ^6.8.0
 
+  # Brand asset generators (compile-time only — see
+  # docs/APP_ASSET_PIPELINE.md §4 and
+  # docs/ANDROID_RELEASE_IDENTITY_AUDIT.md §4.2 for the operator flow).
+  # Sources live under apps/mobile/assets/branding/; running these two
+  # commands rewrites the Android mipmap/drawable/values resources from
+  # those sources:
+  #   dart run flutter_launcher_icons
+  #   dart run flutter_native_splash:create
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.4
+
 flutter:
   uses-material-design: true
+
+# Launcher icon — Android adaptive icon (foreground + background +
+# Android 13+ monochrome). iOS is gated on the iOS scaffold landing
+# (see FLUTTER_NATIVE_SETUP.md §3) — flip `ios: true` and provide a
+# full-bleed `image_path` then. Sources: assets/branding/.
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  remove_alpha_ios: true
+  adaptive_icon_foreground: "assets/branding/adaptive_icon_foreground.png"
+  adaptive_icon_background: "assets/branding/adaptive_icon_background.png"
+  adaptive_icon_monochrome: "assets/branding/monochrome_icon.png"
+  min_sdk_android: 21
+  # Legacy mipmap-*/ic_launcher.png densities (mdpi..xxxhdpi) — used by
+  # API < 26 launchers that don't read the adaptive-icon XML. We feed
+  # a pre-composited PNG (foreground over the purple-gradient
+  # background) so legacy launchers show the same visual as the
+  # adaptive icon, not a transparent prism floating on the launcher
+  # grid. The composite is generated from the two adaptive layers via
+  # Pillow — see docs/APP_ASSET_PIPELINE.md §4 for the one-liner.
+  image_path_android: "assets/branding/app_icon_legacy.png"
+
+# Splash — purple brand color behind the white splash mark. Drawables
+# are regenerated under android/app/src/main/res/{drawable,drawable-v21,
+# values,values-night,values-v31}/ — committed alongside the source PNG.
+flutter_native_splash:
+  color: "#6D28D9"
+  image: "assets/branding/splash_mark.png"
+  android_12:
+    color: "#6D28D9"
+    image: "assets/branding/splash_mark.png"
+  ios: false
+  web: false

@@ -9,6 +9,16 @@ to populate. **No code is changed beyond documentation by this audit.**
 > on 2026-05-18. Working tree clean before this commit; only Flutter
 > mobile / Android metadata / docs changed.
 
+> **Status update (2026-05-18):** every §3 gap (launcher icon,
+> adaptive icon, monochrome icon, splash drawable, branding source
+> folder) was resolved in a follow-up commit that landed brand source
+> PNGs under `apps/mobile/assets/branding/` and regenerated the
+> Android resources via `flutter_launcher_icons` + `flutter_native_splash`.
+> Current status table is in
+> [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md) §8. The gap snapshot
+> below is preserved verbatim for forensic context — sha1s + dimensions
+> describe the **pre-asset state**, not the current tree.
+
 Pairs with:
 
 - [MOBILE_RELEASE_CHECKLIST.md](MOBILE_RELEASE_CHECKLIST.md) §1, §3, §7 —

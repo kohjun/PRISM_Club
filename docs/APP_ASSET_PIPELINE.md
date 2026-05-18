@@ -216,25 +216,72 @@ After regenerating assets:
 
 ## 8. Status snapshot (today)
 
-Forensic re-audit (file dimensions, sha1 hashes per density, exact list
-of missing files) in
+Forensic audit (the pre-asset gap state, with sha1 hashes of the
+Flutter "F" placeholders) is preserved in
 [ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md)
-§3 as of commit `f4433f4`.
+§3 as of commit `f4433f4`. The brand-asset commit that flipped every
+row in this table to ✅ landed on top of that audit — `git log
+apps/mobile/assets/branding/` for the exact commit.
 
 | Asset | Path | State |
 |---|---|---|
-| `mipmap-mdpi/ic_launcher.png` | apps/mobile/android/app/src/main/res/ | Default Flutter "F" |
-| `mipmap-hdpi/ic_launcher.png` | … | Default Flutter "F" |
-| `mipmap-xhdpi/ic_launcher.png` | … | Default Flutter "F" |
-| `mipmap-xxhdpi/ic_launcher.png` | … | Default Flutter "F" |
-| `mipmap-xxxhdpi/ic_launcher.png` | … | Default Flutter "F" |
-| Adaptive icon XML | `mipmap-anydpi-v26/` | ❌ Missing |
-| Adaptive icon foreground | `drawable/ic_launcher_foreground` | ❌ Missing |
-| Adaptive icon background | `values/ic_launcher_background.xml` | ❌ Missing |
-| Launch background | `drawable/launch_background.xml` | Plain white (`@android:color/white`) |
-| iOS app icon set | n/a | iOS scaffold not present |
+| `mipmap-mdpi/ic_launcher.png` | apps/mobile/android/app/src/main/res/ | ✅ PRISM purple-gradient legacy icon |
+| `mipmap-hdpi/ic_launcher.png` | … | ✅ PRISM purple-gradient legacy icon |
+| `mipmap-xhdpi/ic_launcher.png` | … | ✅ PRISM purple-gradient legacy icon |
+| `mipmap-xxhdpi/ic_launcher.png` | … | ✅ PRISM purple-gradient legacy icon |
+| `mipmap-xxxhdpi/ic_launcher.png` | … | ✅ PRISM purple-gradient legacy icon |
+| Adaptive icon XML | `mipmap-anydpi-v26/ic_launcher.xml` | ✅ background + foreground + monochrome (no insets — matches brand handoff) |
+| Adaptive icon foreground | `drawable-*/ic_launcher_foreground.png` (5 densities) | ✅ White prism, transparent bg |
+| Adaptive icon background | `drawable-*/ic_launcher_background.png` (5 densities) | ✅ Purple gradient |
+| Adaptive icon monochrome | `drawable-*/ic_launcher_monochrome.png` (5 densities) | ✅ Single-color silhouette (Android 13+ themed) |
+| Launch background | `drawable/launch_background.xml` + `drawable-v21/…` | ✅ `#6D28D9` fill + centered splash mark |
+| Android 12+ splash | `values-v31/styles.xml` + `drawable-*/android12splash.png` | ✅ `windowSplashScreenBackground = #6D28D9` + animated icon |
+| iOS app icon set | n/a | ❌ iOS scaffold not present (defer per FLUTTER_NATIVE_SETUP.md §3) |
 | Launcher label | `values/strings.xml` `app_name` | ✅ "PRISM Club" |
 
-When the design owner hands over the source files in §1, this status
-table flips to ✅ row-by-row after a single
-`dart run flutter_launcher_icons` + commit.
+### Composite legacy icon
+
+`flutter_launcher_icons` reads `image_path_android` to produce the
+legacy `mipmap-*/ic_launcher.png` densities used by API < 26 launchers
+(no adaptive-icon XML support). The brand foreground PNG is
+transparent, so feeding it directly would make legacy launchers show a
+floating prism with no background. We pre-composite foreground over
+background with Pillow:
+
+```bash
+cd apps/mobile/assets/branding
+python -c "
+from PIL import Image
+bg = Image.open('adaptive_icon_background.png').convert('RGBA')
+fg = Image.open('adaptive_icon_foreground.png').convert('RGBA')
+Image.alpha_composite(bg, fg).save('app_icon_legacy.png', optimize=True)
+"
+```
+
+`pubspec.yaml`'s `flutter_launcher_icons.image_path_android` points at
+that composite. Regenerate the composite whenever either source layer
+changes, then re-run `dart run flutter_launcher_icons`.
+
+### Adaptive icon XML — no-inset hand-tweak
+
+`flutter_launcher_icons` 0.14 always emits the adaptive-icon XML with
+a 16% `<inset>` on the foreground + monochrome layers, assuming the
+input PNG is full-bleed and needs a safe-zone margin. Our brand source
+PNGs are pre-sized for the 66dp/108dp safe-zone (see
+`assets/branding/README.md`), so adding another inset shrinks the
+glyph past the designer-intended size.
+
+After every `dart run flutter_launcher_icons`, hand-restore
+`mipmap-anydpi-v26/ic_launcher.xml` to the no-inset variant:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+</adaptive-icon>
+```
+
+If the brand source is ever redrawn as a full-bleed canvas, drop this
+note and accept the plugin default.

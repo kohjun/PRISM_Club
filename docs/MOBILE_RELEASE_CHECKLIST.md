@@ -66,12 +66,13 @@ Files:
 
 ## 3. App icon / splash
 
-**Current state (placeholder):** Android ships with the **default
-Flutter "F" launcher icon** in every `mipmap-*` density. The launch
-background is the Flutter default white. No brand assets exist in the
-repo (`find apps/mobile -name '*logo*'` returns nothing). This is
-acceptable for engineering builds and emulator testing but **MUST be
-replaced before any store upload**.
+**Current state:** Brand launcher icon + adaptive icon (background +
+foreground + Android 13+ monochrome) + splash drawables are landed.
+Sources live in `apps/mobile/assets/branding/`; Android resources were
+regenerated via `flutter_launcher_icons` + `flutter_native_splash`.
+Pre-asset gap snapshot is preserved in
+[ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md)
+§3 for historical context.
 
 Full pipeline (source files, sizes, adaptive icon XML, generation
 commands, QA checklist): see
@@ -83,29 +84,35 @@ the Flutter placeholder (with sha1s + dimensions) is in
 [ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md)
 §3.
 
-- [ ] Branded launcher icon replaces the default Flutter "F" mark on
+- [x] Branded launcher icon replaces the default Flutter "F" mark on
       Android (all `mipmap-*` densities) — see audit §8.
-- [ ] Adaptive icon (`mipmap-anydpi-v26/ic_launcher.xml` +
-      `ic_launcher_foreground` + `ic_launcher_background`).
-- [ ] Android launch background updated (`drawable/launch_background.xml`).
+- [x] Adaptive icon (`mipmap-anydpi-v26/ic_launcher.xml` +
+      `ic_launcher_foreground` + `ic_launcher_background` +
+      `ic_launcher_monochrome` for Android 13+ themed icons).
+- [x] Android launch background updated (`drawable/launch_background.xml`
+      + `drawable-v21/` + `values-v31/styles.xml` for the Android 12+
+      splash-screen API).
 - [ ] iOS app icon set generated in `ios/Runner/Assets.xcassets/
-      AppIcon.appiconset/` — all required sizes.
+      AppIcon.appiconset/` — all required sizes. (Blocked on iOS
+      scaffold — see FLUTTER_NATIVE_SETUP.md §3.)
 - [ ] iOS launch storyboard reviewed (Flutter default is acceptable
       for Beta).
-- [ ] Generated via `flutter_launcher_icons` and
-      `flutter_native_splash` for reproducibility (one config block
-      in `pubspec.yaml`, one `dart run` step per asset refresh).
+- [x] Generated via `flutter_launcher_icons` and
+      `flutter_native_splash` for reproducibility (config blocks in
+      `pubspec.yaml`, one `dart run` per asset refresh).
 
-**When the brand assets land**, the recommended path is:
+**Operator refresh** (when the brand source files change):
 
-1. Drop the source SVG/PNG into `apps/mobile/assets/branding/` (a
-   new folder).
-2. Add `flutter_launcher_icons` + `flutter_native_splash` as dev
-   dependencies.
-3. Configure both in `pubspec.yaml` pointing at the source files.
-4. `dart run flutter_launcher_icons` + `dart run flutter_native_splash:create`.
-5. The `mipmap-*/ic_launcher.png` + adaptive icon XML files in
-   `android/app/src/main/res/` will be regenerated. Commit those.
+1. Drop the new source SVG/PNG into `apps/mobile/assets/branding/`.
+2. If the foreground or background changed, regenerate the
+   `app_icon_legacy.png` composite — see
+   [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md) §8 for the one-liner.
+3. `dart run flutter_launcher_icons` + `dart run flutter_native_splash:create`.
+4. Hand-restore `mipmap-anydpi-v26/ic_launcher.xml` to the no-inset
+   variant — the plugin reinjects 16% insets every run; see
+   [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md) §8.
+5. Commit the regenerated `android/app/src/main/res/` files alongside
+   the new source.
 
 ---
 

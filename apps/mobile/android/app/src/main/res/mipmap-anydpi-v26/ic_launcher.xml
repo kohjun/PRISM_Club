@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon (Android 8.0+ / API 26+). Three layers:
+
+    • background  : purple gradient with subtle decorative circles
+                    (`drawable-*/ic_launcher_background.png`).
+    • foreground  : white prism, sized for the 66dp/108dp safe-zone
+                    (`drawable-*/ic_launcher_foreground.png`).
+    • monochrome  : single-color silhouette used by Android 13+ when
+                    the user enables themed icons
+                    (`drawable-*/ic_launcher_monochrome.png`).
+
+  No `<inset>` wrappers — the source PNGs in `assets/branding/` are
+  designed to fit the safe-zone directly per the brand handoff
+  (`assets/branding/README.md`). If `dart run flutter_launcher_icons`
+  is re-run, that plugin reinjects `<inset android:inset="16%">` on the
+  foreground + monochrome layers, which shrinks the glyph past the
+  designer-intended size — hand-restore this no-inset XML after every
+  regeneration, or update the brand handoff if the inset is wanted.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+</adaptive-icon>
