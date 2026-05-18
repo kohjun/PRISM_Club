@@ -9,8 +9,9 @@ Widget _wrap() => const ProviderScope(
       ),
     );
 
-// Find the AppBar action "게시" TextButton — it's the only one in this screen.
-Finder _submitButton() => find.widgetWithText(TextButton, '게시');
+// Find the AppBar submit "게시" button — restyled to FilledButton in the
+// composer refresh.
+Finder _submitButton() => find.widgetWithText(FilledButton, '게시');
 
 void main() {
   setUp(() async {
@@ -29,7 +30,7 @@ void main() {
     await tester.pumpWidget(_wrap());
     await tester.pump();
 
-    final btn = tester.widget<TextButton>(_submitButton());
+    final btn = tester.widget<FilledButton>(_submitButton());
     expect(btn.onPressed, isNull);
   });
 
@@ -50,7 +51,7 @@ void main() {
     await tester.enterText(textFields.at(6), '모집합니다.');
     await tester.pump();
 
-    final btn = tester.widget<TextButton>(_submitButton());
+    final btn = tester.widget<FilledButton>(_submitButton());
     expect(btn.onPressed, isNotNull);
   });
 
@@ -71,11 +72,11 @@ void main() {
     // capacity = 0 → invalid
     await tester.enterText(textFields.at(4), '0');
     await tester.pump();
-    expect(tester.widget<TextButton>(_submitButton()).onPressed, isNull);
+    expect(tester.widget<FilledButton>(_submitButton()).onPressed, isNull);
 
     // capacity = abc → invalid
     await tester.enterText(textFields.at(4), 'abc');
     await tester.pump();
-    expect(tester.widget<TextButton>(_submitButton()).onPressed, isNull);
+    expect(tester.widget<FilledButton>(_submitButton()).onPressed, isNull);
   });
 }

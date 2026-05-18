@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
@@ -188,26 +188,62 @@ class _ContributionComposerScreenState
         title: const Text('정보 개선 제안'),
         leading: IconButton(
           icon: const Icon(Icons.close),
+          tooltip: '닫기',
           onPressed: () => context.go('/categories/${widget.categorySlug}'),
         ),
         actions: [
-          TextButton(
-            onPressed: _submitting ? null : _submit,
-            child: _submitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('검수 요청'),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.sm,
+              vertical: 8,
+            ),
+            child: FilledButton(
+              onPressed: _submitting ? null : _submit,
+              style: FilledButton.styleFrom(
+                backgroundColor: PrismColors.pp600,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(PrismRadius.pill),
+                ),
+              ),
+              child: _submitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      '검수 요청',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+            ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          PrismSpacing.xl,
+          PrismSpacing.lg,
+          PrismSpacing.xl,
+          PrismSpacing.xl4,
+        ),
         children: [
-          Text('카테고리: ${widget.categorySlug}',
-              style: const TextStyle(color: PrismColors.muted)),
-          const SizedBox(height: 16),
+          Text(
+            '카테고리: ${widget.categorySlug}',
+            style: const TextStyle(
+              color: PrismColors.ink3,
+              fontSize: 12.5,
+            ),
+          ),
+          const SizedBox(height: PrismSpacing.lg),
           Wrap(
             spacing: 8,
             children: [
@@ -269,20 +305,14 @@ class _ContributionComposerScreenState
           const SizedBox(height: 16),
           TextField(
             controller: _title,
-            decoration: const InputDecoration(
-              labelText: '제목',
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(labelText: '제목'),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: PrismSpacing.md),
           TextField(
             controller: _body,
             maxLines: 8,
             minLines: 5,
-            decoration: const InputDecoration(
-              labelText: '본문',
-              border: OutlineInputBorder(),
-            ),
+            decoration: const InputDecoration(labelText: '본문'),
           ),
           const SizedBox(height: 20),
           Text('근거 (선택 — 한 가지만)',
@@ -309,47 +339,65 @@ class _ContributionComposerScreenState
             ],
           ),
           if (_evidenceEvent != null) ...[
-            const SizedBox(height: 10),
-            Stack(
-              children: [
-                EventCardWidget(card: _evidenceEvent!, compact: true),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () =>
-                        setState(() => _evidenceEvent = null),
-                    tooltip: '제거',
-                  ),
-                ),
-              ],
+            const SizedBox(height: PrismSpacing.md),
+            _EvidenceTile(
+              child: EventCardWidget(
+                card: _evidenceEvent!,
+                compact: true,
+              ),
+              onRemove: () => setState(() => _evidenceEvent = null),
             ),
           ],
           if (_evidenceReference != null) ...[
-            const SizedBox(height: 10),
-            Stack(
-              children: [
-                ReferenceCardWidget(
-                    reference: _evidenceReference!, compact: true),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () =>
-                        setState(() => _evidenceReference = null),
-                    tooltip: '제거',
-                  ),
-                ),
-              ],
+            const SizedBox(height: PrismSpacing.md),
+            _EvidenceTile(
+              child: ReferenceCardWidget(
+                reference: _evidenceReference!,
+                compact: true,
+              ),
+              onRemove: () => setState(() => _evidenceReference = null),
             ),
           ],
-          const SizedBox(height: 48),
+          SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
         ],
       ),
+    );
+  }
+}
+
+class _EvidenceTile extends StatelessWidget {
+  const _EvidenceTile({required this.child, required this.onRemove});
+  final Widget child;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        Positioned(
+          top: 4,
+          right: 4,
+          child: Semantics(
+            button: true,
+            label: '근거 제거',
+            child: InkWell(
+              onTap: onRemove,
+              borderRadius: BorderRadius.circular(PrismRadius.pill),
+              child: Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0xCC0B0B0F),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 16, color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

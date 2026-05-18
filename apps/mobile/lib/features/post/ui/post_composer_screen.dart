@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/media_image.dart';
@@ -175,123 +175,98 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('글쓰기'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.go('/rooms/${widget.roomSlug}'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _submitting ? null : _submit,
-            child: _submitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('게시'),
-          ),
-        ],
+      appBar: _ComposerAppBar(
+        title: '글쓰기',
+        submitting: _submitting,
+        onClose: () => context.go('/rooms/${widget.roomSlug}'),
+        onSubmit: _submit,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          PrismSpacing.xl,
+          PrismSpacing.lg,
+          PrismSpacing.xl,
+          PrismSpacing.xl4,
+        ),
         children: [
-          Text('방: ${widget.roomSlug}',
-              style: const TextStyle(color: PrismColors.muted)),
-          const SizedBox(height: 12),
+          _ComposerCaption(text: '방: ${widget.roomSlug}'),
+          const SizedBox(height: PrismSpacing.md),
           TextField(
             controller: _body,
             maxLines: 8,
             minLines: 5,
             decoration: const InputDecoration(
               hintText: '무슨 이야기를 나눌까요?',
-              border: OutlineInputBorder(),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: PrismSpacing.lg),
+          const _ComposerSectionHeader(text: '첨부'),
+          const SizedBox(height: PrismSpacing.sm),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
-              OutlinedButton.icon(
+              _AttachActionButton(
                 onPressed: _pickEvent,
-                icon: const Icon(Icons.event),
-                label: const Text('이벤트'),
+                icon: Icons.event_outlined,
+                label: '이벤트',
               ),
-              OutlinedButton.icon(
+              _AttachActionButton(
                 onPressed: _pickReference,
-                icon: const Icon(Icons.link),
-                label: const Text('레퍼런스'),
+                icon: Icons.link,
+                label: '레퍼런스',
               ),
-              OutlinedButton.icon(
+              _AttachActionButton(
                 onPressed: _uploadingImage ? null : _pickImage,
-                icon: _uploadingImage
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.image_outlined),
-                label: const Text('이미지'),
+                icon: Icons.image_outlined,
+                label: '이미지',
+                busy: _uploadingImage,
               ),
             ],
           ),
           if (_attachedImages.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: PrismSpacing.lg),
+            const _ComposerSectionHeader(text: '첨부된 이미지'),
+            const SizedBox(height: PrismSpacing.sm),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: _attachedImages
-                  .map((m) => Stack(
-                        children: [
-                          SizedBox(
+                  .map((m) => ClipRRect(
+                        borderRadius: BorderRadius.circular(PrismRadius.md),
+                        child: Stack(
+                          children: [
+                            SizedBox(
                               width: 100,
                               height: 100,
-                              child: MediaImage(asset: m, fit: BoxFit.cover)),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              icon: const Icon(Icons.cancel,
-                                  size: 20, color: Colors.black54),
-                              onPressed: () =>
-                                  setState(() => _attachedImages.remove(m)),
+                              child: MediaImage(asset: m, fit: BoxFit.cover),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              right: 4,
+                              top: 4,
+                              child: _RemoveAttachmentButton(
+                                onTap: () => setState(
+                                    () => _attachedImages.remove(m)),
+                              ),
+                            ),
+                          ],
+                        ),
                       ))
                   .toList(),
             ),
           ],
           if (_prefetchingEvent) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '이벤트 카드 불러오는 중…',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: PrismColors.muted),
-                ),
-              ],
-            ),
+            const SizedBox(height: PrismSpacing.lg),
+            const _ComposerInlineLoading(text: '이벤트 카드 불러오는 중…'),
           ],
           if (_attachedEvents.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('첨부된 이벤트',
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 6),
+            const SizedBox(height: PrismSpacing.lg),
+            const _ComposerSectionHeader(text: '첨부된 이벤트'),
+            const SizedBox(height: PrismSpacing.sm),
             for (var i = 0; i < _attachedEvents.length; i++) ...[
               _AttachmentTile(
-                child: EventCardWidget(card: _attachedEvents[i], compact: true),
+                child: EventCardWidget(
+                    card: _attachedEvents[i], compact: true),
                 onRemove: () =>
                     setState(() => _attachedEvents.removeAt(i)),
               ),
@@ -299,10 +274,9 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             ],
           ],
           if (_attachedRefs.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('첨부된 레퍼런스',
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 6),
+            const SizedBox(height: PrismSpacing.lg),
+            const _ComposerSectionHeader(text: '첨부된 레퍼런스'),
+            const SizedBox(height: PrismSpacing.sm),
             for (var i = 0; i < _attachedRefs.length; i++) ...[
               _AttachmentTile(
                 child: ReferenceCardWidget(
@@ -312,8 +286,73 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               const SizedBox(height: 6),
             ],
           ],
-          const SizedBox(height: 48),
+          SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
         ],
+      ),
+    );
+  }
+}
+
+class _AttachActionButton extends StatelessWidget {
+  const _AttachActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    this.busy = false,
+  });
+
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: busy
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon, size: 18),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.md),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PrismRadius.pill),
+        ),
+        side: const BorderSide(color: PrismColors.line2),
+        foregroundColor: PrismColors.ink2,
+      ),
+    );
+  }
+}
+
+class _RemoveAttachmentButton extends StatelessWidget {
+  const _RemoveAttachmentButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '첨부 제거',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(PrismRadius.pill),
+        child: Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Color(0xCC0B0B0F),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.close, size: 16, color: Colors.white),
+        ),
       ),
     );
   }
@@ -330,13 +369,136 @@ class _AttachmentTile extends StatelessWidget {
       children: [
         child,
         Positioned(
-          top: 0,
-          right: 0,
-          child: IconButton(
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.close, size: 18),
-            onPressed: onRemove,
-            tooltip: '제거',
+          top: 4,
+          right: 4,
+          child: _RemoveAttachmentButton(onTap: onRemove),
+        ),
+      ],
+    );
+  }
+}
+
+class _ComposerAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _ComposerAppBar({
+    required this.title,
+    required this.submitting,
+    required this.onClose,
+    required this.onSubmit,
+  });
+
+  final String title;
+  final bool submitting;
+  final VoidCallback onClose;
+  final VoidCallback onSubmit;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      title: Text(title),
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        tooltip: '닫기',
+        onPressed: onClose,
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: PrismSpacing.sm,
+            vertical: 8,
+          ),
+          child: FilledButton(
+            onPressed: submitting ? null : onSubmit,
+            style: FilledButton.styleFrom(
+              backgroundColor: PrismColors.pp600,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(PrismRadius.pill),
+              ),
+            ),
+            child: submitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    '게시',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ComposerSectionHeader extends StatelessWidget {
+  const _ComposerSectionHeader({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+        color: PrismColors.ink2,
+      ),
+    );
+  }
+}
+
+class _ComposerCaption extends StatelessWidget {
+  const _ComposerCaption({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: PrismColors.ink3,
+        fontSize: 12.5,
+      ),
+    );
+  }
+}
+
+class _ComposerInlineLoading extends StatelessWidget {
+  const _ComposerInlineLoading({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: PrismColors.pp600,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(
+            color: PrismColors.ink3,
+            fontSize: 12,
           ),
         ),
       ],
