@@ -18,6 +18,9 @@ inventory) and [FLUTTER_NATIVE_SETUP.md](FLUTTER_NATIVE_SETUP.md)
 
 ## 1. Android — package / applicationId
 
+Snapshot re-verified in
+[ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md) §2.
+
 - [x] `applicationId = "club.prism.mobile"` set in
       `android/app/build.gradle.kts`. Will be locked once the first
       AAB is uploaded to Play.
@@ -75,7 +78,10 @@ commands, QA checklist): see
 [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md). This checklist tracks
 go/no-go; the pipeline doc tells the design owner / operator exactly
 what to hand off and how to regenerate every platform artefact from
-one source.
+one source. Point-in-time audit of which Android paths are still on
+the Flutter placeholder (with sha1s + dimensions) is in
+[ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md)
+§3.
 
 - [ ] Branded launcher icon replaces the default Flutter "F" mark on
       Android (all `mipmap-*` densities) — see audit §8.

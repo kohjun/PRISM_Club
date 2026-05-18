@@ -216,6 +216,11 @@ After regenerating assets:
 
 ## 8. Status snapshot (today)
 
+Forensic re-audit (file dimensions, sha1 hashes per density, exact list
+of missing files) in
+[ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md)
+§3 as of commit `f4433f4`.
+
 | Asset | Path | State |
 |---|---|---|
 | `mipmap-mdpi/ic_launcher.png` | apps/mobile/android/app/src/main/res/ | Default Flutter "F" |
