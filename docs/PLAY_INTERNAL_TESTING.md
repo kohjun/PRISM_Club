@@ -86,7 +86,7 @@ app listing. Verify before pressing upload.
 | `applicationId` | `club.prism.mobile` | `apps/mobile/android/app/build.gradle.kts` `defaultConfig.applicationId` |
 | `namespace` | `club.prism.mobile` | Same file, namespace block |
 | App label | "PRISM Club" | `apps/mobile/android/app/src/main/res/values/strings.xml` `app_name` |
-| Launcher icon | (placeholder — Flutter "F") | See [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md) — must replace before any Play upload |
+| Launcher icon | ✅ PRISM purple-gradient prism (adaptive + monochrome + 5 legacy densities) | `apps/mobile/android/app/src/main/res/{mipmap-*,drawable-*}/` — sources at `apps/mobile/assets/branding/`. Guarded by `npm run mobile:check-assets`. |
 
 Once `club.prism.mobile` is uploaded, every future AAB MUST use the
 same applicationId. Renaming requires a new app listing and loses
@@ -236,6 +236,42 @@ Mandatory dashboard sections Play surfaces before the first release:
 Tester capacity: **100** per Internal track. Plenty for first cuts.
 When PRISM expands the beta circle beyond that, promote to **Closed
 testing** (still no public listing; capacity scales).
+
+### 6.5 Store listing graphics + copy
+
+Play Console's **Main store listing** page surfaces these assets to
+testers (Internal track shows a stripped-down version, but the fields
+are the same as Production — they only become required when promoting
+out of Internal). Engineering has put the brand-derived assets in the
+repo; the copy + screenshots remain operator paperwork.
+
+| Asset | Spec | Status | Source |
+|---|---|---|---|
+| **App icon** (Play listing) | 512 × 512 PNG, 32-bit | ⏳ Operator generates from adaptive icon | Play Console auto-renders from the brand mark; or upload an explicit 512×512 export of the adaptive composite. The brand foreground + background under `apps/mobile/assets/branding/` are the source of truth. |
+| **Feature graphic** | 1024 × 500 PNG / JPEG, 24-bit (no alpha) preferred | ✅ In repo | `apps/mobile/assets/branding/play_feature_graphic.png` (matches Play spec, 1024×500). Upload directly. |
+| **Phone screenshots** | 1080 × 1920 portrait (or 1920 × 1080 landscape), 2–8 frames, PNG / JPEG | ⏳ Operator captures | Take from real screens once the Internal AAB is installed. Cover at minimum: login picker, home feed, a Topic Hub, a Room timeline, a Post detail. See §10 QA for the device-install flow. |
+| **7-inch tablet screenshots** | 1080 × 1920 minimum on a tablet form factor | ⏳ Operator (optional for Internal, required before Production) | Take after a tablet device is allocated to QA. |
+| **Short description** | ≤ 80 characters, Korean | ⏳ Operator drafts | Suggested skeleton: "주제별 토픽 허브 + 이벤트 + 레퍼런스를 모아 함께 이야기하는 PRISM 커뮤니티." Validate against PRISM brand voice before posting. |
+| **Full description** | ≤ 4000 characters, Korean | ⏳ Operator drafts | Should mirror the README §1 framing (Topic Hub + 방 + 이벤트 + 레퍼런스) and call out: passwordless Beta auth, image upload limits, no third-party tracking. |
+| **What's new** (release notes) | ≤ 500 characters per release | ⏳ Operator drafts per release | First Internal cut: "Initial internal testing build. PRISM Club Beta." |
+| **App category** | "Social" or "Communication" | ⏳ Operator picks in console | Recommend **Social** — closer to community / forum apps Play already groups PRISM with. |
+| **Tags** | up to 5 from Play's controlled vocabulary | ⏳ Operator picks | Candidates: Community, Discussion, Events, Topics. |
+| **Contact email** | public-facing support email | ⏳ Operator confirms | A monitored inbox (NOT a personal address). |
+| **Privacy policy URL** | public, no auth wall | ⏳ Operator confirms | See §7. |
+
+**What "✅ In repo" means.** The asset bytes are committed under
+`apps/mobile/assets/branding/`. The operator still has to upload them
+to Play Console via the listing UI — there is no automated push.
+
+**What "⏳ Operator" means.** Engineering can't pre-fill these. They
+require either real product screens (screenshots), brand copy
+decisions (descriptions), or organizational decisions (category,
+tags, support email). Track them in the release ticket alongside the
+§13 sign-off block.
+
+`npm run mobile:check-assets` already verifies the in-repo branding
+files (39 checks covering icon, adaptive layers, splash). Run it
+before the Play upload to catch any drift since the brand commit.
 
 ---
 
@@ -477,17 +513,43 @@ the bad one.
 
 A one-page recap to skim before pressing "Start rollout":
 
+**Engineering gates** (run from the repo, no Play Console required):
+
+- [ ] `npm run mobile:check-assets` passes — guards adaptive icon
+      `<inset>` reinjection + every density of every layered drawable
+      (39 checks).
+- [ ] `npm run mobile:check-signing` passes — gitignore covers
+      `key.properties` / `*.jks` / `*.keystore`, the `.example`
+      template is tracked, build.gradle.kts retains the
+      `key.properties`-or-debug wiring (8 structural checks). Absence
+      of `key.properties` on a dev machine is reported as NOTE, not
+      FAIL — only the release-build host needs it.
 - [ ] Upload keystore generated, vaulted, NOT in repo.
-- [ ] `key.properties` populated on the build host.
+- [ ] `key.properties` populated on the **release-build host** (see
+      §2). On other hosts it stays absent.
 - [ ] `flutter build appbundle --release --dart-define=...` succeeds
       with NO `[prism-club] android/key.properties not found` warning.
 - [ ] `keytool -list -printcert -jarfile app-release.aab` shows the
       operator's upload-key fingerprint, not the debug-keystore one.
 - [ ] versionCode in `pubspec.yaml` is HIGHER than any prior upload.
-- [ ] Launcher icon replaced (no more Flutter "F").
+- [x] Launcher icon replaced (no more Flutter "F") — shipped in
+      `chore(mobile): land brand launcher icon and splash`.
+
+**Play Console gates**:
+
+- [ ] Feature graphic uploaded
+      (`apps/mobile/assets/branding/play_feature_graphic.png`).
+- [ ] At least 2 phone screenshots uploaded (captured from the
+      installed Internal build).
+- [ ] Short + full description in Korean.
+- [ ] App category + tags selected.
+- [ ] Public-facing contact email set.
 - [ ] Privacy policy URL public, Korean copy ready.
 - [ ] Data Safety form filled to match code.
 - [ ] App content sections all green in Play Console.
+
+**Verification + sign-off**:
+
 - [ ] [BETA_QA_SCRIPT.md](BETA_QA_SCRIPT.md) ran against the
       Internal-installed build on ≥1 physical Android device.
 - [ ] [MOBILE_RELEASE_CHECKLIST.md](MOBILE_RELEASE_CHECKLIST.md) §14

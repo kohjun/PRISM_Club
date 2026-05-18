@@ -136,6 +136,11 @@ inventory of what works and what's missing.
       picks the release config when present, falling back to debug
       with a Gradle warning when absent — see
       ANDROID_RELEASE_DRY_RUN §3.3.
+- [x] `npm run mobile:check-signing` confirms gitignore covers
+      `key.properties` / `*.jks` / `*.keystore`, the `.example`
+      template is tracked, and the `key.properties`-or-debug wiring
+      is intact (8 structural checks; absence of `key.properties` on
+      this host reports as NOTE, not FAIL).
 - [ ] Play App Signing enabled in the Play Console so we only manage
       the upload key.
 
@@ -394,8 +399,12 @@ for the first AAB upload.
 - [ ] Store listing copy: short description, full description,
       what's new (1.0 release notes), keywords (iOS).
 - [ ] Screenshots: required sizes (phone + 7-inch tablet for Play;
-      iPhone 6.7" + 5.5" for App Store).
-- [ ] Feature graphic (Play) — 1024 × 500.
+      iPhone 6.7" + 5.5" for App Store). Captured from the installed
+      Internal build — see
+      [PLAY_INTERNAL_TESTING.md](PLAY_INTERNAL_TESTING.md) §6.5.
+- [x] Feature graphic (Play) — 1024 × 500 — committed at
+      `apps/mobile/assets/branding/play_feature_graphic.png`. Operator
+      uploads to Play Console (no automated push).
 - [ ] App preview video (iOS, optional).
 - [ ] Privacy policy URL (per §6).
 - [ ] Content rating (Play IARC questionnaire + App Store age
