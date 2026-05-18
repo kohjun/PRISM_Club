@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../app/theme.dart';
+import '../app/design_tokens.dart';
 import '../features/event_card/data/event_card_dto.dart';
+import 'status_pill.dart';
 
+/// PRISM EVENT card — appears inside posts, Topic Hub event sections,
+/// search hits, EventDetail's "linked rooms / related posts" surfaces.
+///
+/// Two layouts:
+/// • Standard (default): date block + overline + title + meta + status pill.
+/// • Compact (`compact: true`): a tight pill row used inside post bodies
+///   and the composer's "attached event" tile — same data, less paint.
+///
+/// The big gradient-hero variant for `EventDetailScreen` is rendered inline
+/// in that screen (background gradient depends on the screen layout, not
+/// the card itself).
 class EventCardWidget extends StatelessWidget {
   const EventCardWidget({
     super.key,
@@ -13,73 +25,208 @@ class EventCardWidget extends StatelessWidget {
 
   final EventCardDto card;
   final bool compact;
-
-  /// Optional tap handler. When omitted, the card renders as a passive chip
-  /// (e.g., inside the composer attachment tile where a close button owns
-  /// interaction). M5: callers in TopicHub / RoomTimeline / PostDetail /
-  /// Search wire this to navigate to `/events/<card.id>`.
   final VoidCallback? onTap;
+
+  static const _monthAbbrevs = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final dateStr =
-        '${card.startsAt.year}.${_two(card.startsAt.month)}.${_two(card.startsAt.day)}';
+    final body = compact ? _CompactLayout(card: card) : _InlineLayout(card: card);
 
-    final body = Padding(
-      padding: EdgeInsets.all(compact ? 10 : 14),
-      child: Row(
+    final container = Container(
+      decoration: BoxDecoration(
+        color: PrismColors.pp50,
+        borderRadius: BorderRadius.circular(PrismRadius.md),
+        border: Border.all(color: PrismColors.pp100),
+      ),
+      child: body,
+    );
+
+    if (onTap == null) return container;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(PrismRadius.md),
+        onTap: onTap,
+        child: container,
+      ),
+    );
+  }
+
+  static String monthOf(DateTime t) => _monthAbbrevs[t.month - 1];
+}
+
+class _DateBlock extends StatelessWidget {
+  const _DateBlock({required this.date, this.width = 50, this.height = 56});
+  final DateTime date;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final monoSize = height >= 56 ? 22.0 : 18.0;
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: PrismColors.bg,
+        borderRadius: BorderRadius.circular(PrismRadius.sm),
+        border: Border.all(color: PrismColors.pp100),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: PrismColors.soft,
-              borderRadius: BorderRadius.circular(8),
+          Text(
+            EventCardWidget.monthOf(date),
+            style: const TextStyle(
+              color: PrismColors.pp700,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              height: 1,
             ),
-            child: const Icon(Icons.event,
-                color: PrismColors.primary, size: 20),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(height: 3),
+          Text(
+            '${date.day}',
+            style: TextStyle(
+              color: PrismColors.ink1,
+              fontSize: monoSize,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.6,
+              height: 1,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineLayout extends StatelessWidget {
+  const _InlineLayout({required this.card});
+  final EventCardDto card;
+
+  String _two(int n) => n.toString().padLeft(2, '0');
+
+  @override
+  Widget build(BuildContext context) {
+    final t = card.startsAt;
+    final timeStr = '${t.hour.toString().padLeft(2, '0')}:${_two(t.minute)}';
+    final dateStr = '${t.month}/${t.day}';
+
+    return Padding(
+      padding: const EdgeInsets.all(PrismSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _DateBlock(date: t),
+          const SizedBox(width: PrismSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(card.title,
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: card.isCompleted
-                            ? PrismColors.border
-                            : PrismColors.soft,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        card.isCompleted ? '진행 완료' : '진행 예정',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: card.isCompleted
-                              ? PrismColors.muted
-                              : PrismColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'PRISM EVENT',
+                  style: TextStyle(
+                    color: PrismColors.pp700,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    height: 1,
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  '$dateStr · ${card.venueName} · ${card.region}',
+                  card.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    height: 1.3,
+                    color: PrismColors.ink1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$dateStr $timeStr · ${card.venueName} · ${card.region}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: PrismColors.muted, fontSize: 12),
+                    fontSize: 11.5,
+                    color: PrismColors.ink3,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: PrismSpacing.sm),
+          StatusPill.event(card.eventStatus),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactLayout extends StatelessWidget {
+  const _CompactLayout({required this.card});
+  final EventCardDto card;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = card.startsAt;
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        children: [
+          _DateBlock(date: t, width: 40, height: 44),
+          const SizedBox(width: PrismSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'PRISM EVENT',
+                  style: TextStyle(
+                    color: PrismColors.pp700,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  card.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    height: 1.3,
+                    color: PrismColors.ink1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${t.month}/${t.day} · ${card.venueName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: PrismColors.ink3,
+                  ),
                 ),
               ],
             ),
@@ -87,17 +234,5 @@ class EventCardWidget extends StatelessWidget {
         ],
       ),
     );
-
-    return Card(
-      child: onTap == null
-          ? body
-          : InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: onTap,
-              child: body,
-            ),
-    );
   }
-
-  String _two(int n) => n.toString().padLeft(2, '0');
 }

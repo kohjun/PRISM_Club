@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../core/current_user.dart';
 import '../../../widgets/event_card_widget.dart';
+import '../../../widgets/prism_avatar.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/reply_tree_widget.dart';
 import '../../../widgets/state_views.dart';
-import '../../../features/saves/data/saves_repository.dart';
+import '../../saves/data/saves_repository.dart';
 import '../data/post_dto.dart';
 import '../data/post_repository.dart';
 import '../data/reaction_repository.dart';
@@ -45,8 +46,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             duration: const Duration(milliseconds: 600),
-            content:
-                Text(res.liked ? '좋아요 (${res.likeCount})' : '좋아요 취소'),
+            content: Text(res.liked ? '좋아요 (${res.likeCount})' : '좋아요 취소'),
           ),
         );
       }
@@ -159,46 +159,76 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           children: [
             Expanded(
               child: RefreshIndicator(
+                color: PrismColors.pp600,
                 onRefresh: () async {
                   ref.invalidate(_postProvider(widget.postId));
                   ref.invalidate(repliesProvider(widget.postId));
                 },
                 child: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.zero,
                   children: [
                     if (p.isRecruitment && p.recruitmentFields != null) ...[
-                      RecruitmentPostCard(
-                        fields: p.recruitmentFields!,
-                        isAuthor: me?.id == p.author.id,
-                        onSetStatus: (status) =>
-                            _setRecruitmentStatus(p, status),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          PrismSpacing.xl,
+                          PrismSpacing.lg,
+                          PrismSpacing.xl,
+                          0,
+                        ),
+                        child: RecruitmentPostCard(
+                          fields: p.recruitmentFields!,
+                          isAuthor: me?.id == p.author.id,
+                          onSetStatus: (status) =>
+                              _setRecruitmentStatus(p, status),
+                        ),
                       ),
-                      const SizedBox(height: 12),
                     ],
                     _PostBody(post: p, onLike: () => _toggleLikePost(p)),
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Text('댓글',
-                        style: Theme.of(context).textTheme.titleSmall),
-                    const SizedBox(height: 8),
-                    replies.when(
-                      loading: () => const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: LoadingView(),
+                    const _BandSeparator(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        PrismSpacing.xl,
+                        PrismSpacing.lg,
+                        PrismSpacing.xl,
+                        PrismSpacing.sm,
                       ),
-                      error: (e, _) => ErrorView(
-                        message: e is ApiError ? e.message : '댓글 로드 실패',
-                        onRetry: () =>
-                            ref.invalidate(repliesProvider(widget.postId)),
+                      child: Row(
+                        children: [
+                          Text(
+                            '답글 ${p.replyCount}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                              color: PrismColors.ink2,
+                            ),
+                          ),
+                        ],
                       ),
-                      data: (items) => ReplyTreeWidget(
-                        replies: items,
-                        replyTarget: _replyTarget,
-                        onReply: (parent) =>
-                            setState(() => _replyTarget = parent),
-                        onLike: _toggleLikeReply,
-                        onAuthorTap: (uid) => context.go('/users/$uid'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: PrismSpacing.lg,
+                      ),
+                      child: replies.when(
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(
+                              vertical: PrismSpacing.xl2),
+                          child: LoadingView(),
+                        ),
+                        error: (e, _) => ErrorView(
+                          message: e is ApiError ? e.message : '댓글 로드 실패',
+                          onRetry: () =>
+                              ref.invalidate(repliesProvider(widget.postId)),
+                        ),
+                        data: (items) => ReplyTreeWidget(
+                          replies: items,
+                          replyTarget: _replyTarget,
+                          onReply: (parent) =>
+                              setState(() => _replyTarget = parent),
+                          onLike: _toggleLikeReply,
+                          onAuthorTap: (uid) => context.go('/users/$uid'),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 80),
@@ -227,11 +257,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         content: const Text('이 게시글을 삭제할까요?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('삭제')),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('삭제'),
+          ),
         ],
       ),
     );
@@ -251,6 +283,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 }
 
+class _BandSeparator extends StatelessWidget {
+  const _BandSeparator();
+
+  @override
+  Widget build(BuildContext context) =>
+      Container(height: 8, color: PrismColors.bgSoft);
+}
+
 class _PostBody extends ConsumerWidget {
   const _PostBody({required this.post, required this.onLike});
   final PostDto post;
@@ -260,102 +300,206 @@ class _PostBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final saveKey = 'POST:${post.id}';
     final saved = ref.watch(saveStateProvider(saveKey)).valueOrNull ?? false;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: PrismColors.soft,
-              child: Text(
-                post.author.nickname.isNotEmpty
-                    ? post.author.nickname.characters.first
-                    : '?',
-                style: const TextStyle(color: PrismColors.primary),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.lg,
+        PrismSpacing.xl,
+        PrismSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => context.go('/users/${post.author.id}'),
+            behavior: HitTestBehavior.opaque,
+            child: Row(
               children: [
-                Text(post.author.nickname,
-                    style: Theme.of(context).textTheme.titleSmall),
-                Text(
-                  '${post.roomName} · ${_fullTime(post.createdAt)}',
-                  style: const TextStyle(
-                      fontSize: 11, color: PrismColors.muted),
+                PrismAvatar(name: post.author.nickname, size: 44),
+                const SizedBox(width: PrismSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        post.author.nickname,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: PrismColors.ink1,
+                        ),
+                      ),
+                      Text(
+                        '${post.roomName} · ${_fullTime(post.createdAt)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: PrismColors.ink3,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(post.body, style: Theme.of(context).textTheme.bodyLarge),
-        if (post.attachments.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          for (final a in post.attachments) ...[
-            if (a.asEventCard != null)
-              EventCardWidget(
-                card: a.asEventCard!,
-                onTap: () => context.go('/events/${a.asEventCard!.id}'),
-              ),
-            if (a.asReference != null)
-              ReferenceCardWidget(reference: a.asReference!),
-            const SizedBox(height: 6),
-          ],
-        ],
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            InkWell(
-              onTap: onLike,
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  children: [
-                    Icon(
-                      post.likedByMe ? Icons.favorite : Icons.favorite_border,
-                      color: post.likedByMe
-                          ? PrismColors.primary
-                          : PrismColors.muted,
-                    ),
-                    const SizedBox(width: 6),
-                    Text('${post.likeCount}',
-                        style: const TextStyle(color: PrismColors.muted)),
-                  ],
+          ),
+          const SizedBox(height: PrismSpacing.cardPad),
+          Text(
+            post.body,
+            style: const TextStyle(
+              fontSize: 16.5,
+              height: 1.6,
+              letterSpacing: -0.2,
+              color: PrismColors.ink1,
+            ),
+          ),
+          if (post.attachments.isNotEmpty) ...[
+            const SizedBox(height: PrismSpacing.cardPad),
+            for (final a in post.attachments) ...[
+              if (a.asEventCard != null)
+                EventCardWidget(
+                  card: a.asEventCard!,
+                  onTap: () => context.go('/events/${a.asEventCard!.id}'),
                 ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Icon(Icons.mode_comment_outlined,
-                color: PrismColors.muted),
-            const SizedBox(width: 4),
-            Text('${post.replyCount}',
-                style: const TextStyle(color: PrismColors.muted)),
-            const Spacer(),
-            IconButton(
-              icon: Icon(
-                saved ? Icons.bookmark : Icons.bookmark_outline,
-                color: saved ? PrismColors.primary : PrismColors.muted,
-              ),
-              tooltip: saved ? '저장 취소' : '저장',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              onPressed: () => ref
-                  .read(saveStateProvider(saveKey).notifier)
-                  .toggle(),
-            ),
+              if (a.asReference != null)
+                ReferenceCardWidget(reference: a.asReference!),
+              const SizedBox(height: 8),
+            ],
           ],
-        ),
-      ],
+          const SizedBox(height: PrismSpacing.cardPad),
+          Container(
+            padding: const EdgeInsets.only(top: PrismSpacing.md),
+            decoration: const BoxDecoration(
+              border:
+                  Border(top: BorderSide(color: PrismColors.divider)),
+            ),
+            child: Row(
+              children: [
+                _StatItem(label: '좋아요', value: post.likeCount),
+                const SizedBox(width: PrismSpacing.lg),
+                _StatItem(label: '답글', value: post.replyCount),
+              ],
+            ),
+          ),
+          const SizedBox(height: PrismSpacing.md),
+          Container(
+            padding: const EdgeInsets.only(top: PrismSpacing.md),
+            decoration: const BoxDecoration(
+              border:
+                  Border(top: BorderSide(color: PrismColors.divider)),
+            ),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: onLike,
+                  borderRadius: BorderRadius.circular(PrismRadius.sm),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: PrismSpacing.sm,
+                      vertical: 6,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          post.likedByMe
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          size: 20,
+                          color: post.likedByMe
+                              ? PrismColors.danger
+                              : PrismColors.ink4,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${post.likeCount}',
+                          style: TextStyle(
+                            color: post.likedByMe
+                                ? PrismColors.danger
+                                : PrismColors.ink3,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12.5,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: PrismSpacing.lg),
+                const Icon(
+                  Icons.mode_comment_outlined,
+                  size: 20,
+                  color: PrismColors.ink4,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${post.replyCount}',
+                  style: const TextStyle(
+                    color: PrismColors.ink3,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(
+                    saved ? Icons.bookmark : Icons.bookmark_outline,
+                    color: saved ? PrismColors.pp700 : PrismColors.ink4,
+                    size: 20,
+                  ),
+                  tooltip: saved ? '저장 취소' : '저장',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => ref
+                      .read(saveStateProvider(saveKey).notifier)
+                      .toggle(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   String _fullTime(DateTime t) =>
-      '${t.year}.${t.month.toString().padLeft(2, '0')}.${t.day.toString().padLeft(2, '0')} ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+      '${t.year}.${t.month.toString().padLeft(2, '0')}.${t.day.toString().padLeft(2, '0')} '
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({required this.label, required this.value});
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          '$value',
+          style: const TextStyle(
+            color: PrismColors.ink1,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: PrismColors.ink4,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _ReplyComposer extends StatelessWidget {
@@ -377,11 +521,15 @@ class _ReplyComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: PrismColors.background,
-        border: Border(top: BorderSide(color: PrismColors.border)),
+        color: PrismColors.bg,
+        border: Border(top: BorderSide(color: PrismColors.divider)),
       ),
       padding: EdgeInsets.fromLTRB(
-          12, 8, 12, MediaQuery.of(context).viewInsets.bottom + 8),
+        PrismSpacing.md,
+        PrismSpacing.sm,
+        PrismSpacing.md,
+        MediaQuery.of(context).viewInsets.bottom + PrismSpacing.sm,
+      ),
       child: SafeArea(
         top: false,
         child: Column(
@@ -390,10 +538,13 @@ class _ReplyComposer extends StatelessWidget {
             if (replyTarget != null)
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                  horizontal: PrismSpacing.sm,
+                  vertical: 4,
+                ),
+                margin: const EdgeInsets.only(bottom: 6),
                 decoration: BoxDecoration(
-                  color: PrismColors.soft,
-                  borderRadius: BorderRadius.circular(6),
+                  color: PrismColors.pp50,
+                  borderRadius: BorderRadius.circular(PrismRadius.sm),
                 ),
                 child: Row(
                   children: [
@@ -401,21 +552,26 @@ class _ReplyComposer extends StatelessWidget {
                       child: Text(
                         '${replyTarget!.author.nickname}에게 답글',
                         style: const TextStyle(
-                            fontSize: 12, color: PrismColors.primary),
+                          fontSize: 12,
+                          color: PrismColors.pp700,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     InkWell(
                       onTap: onCancelReply,
                       child: const Padding(
                         padding: EdgeInsets.all(4),
-                        child: Icon(Icons.close,
-                            size: 14, color: PrismColors.primary),
+                        child: Icon(
+                          Icons.close,
+                          size: 14,
+                          color: PrismColors.pp700,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 6),
             Row(
               children: [
                 Expanded(
@@ -426,11 +582,10 @@ class _ReplyComposer extends StatelessWidget {
                     decoration: const InputDecoration(
                       hintText: '댓글 쓰기...',
                       isDense: true,
-                      border: OutlineInputBorder(),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: PrismSpacing.sm),
                 FilledButton(
                   onPressed: sending ? null : onSubmit,
                   child: sending
@@ -438,7 +593,10 @@ class _ReplyComposer extends StatelessWidget {
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : const Text('보내기'),
                 ),
               ],

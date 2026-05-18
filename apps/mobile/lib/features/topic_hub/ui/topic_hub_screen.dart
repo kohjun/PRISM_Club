@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/state_views.dart';
+import '../../../widgets/topic_block.dart';
 import '../../room/data/room_summary_dto.dart';
 import '../../search/data/search_repository.dart';
 import '../data/topic_hub_dto.dart';
@@ -21,21 +22,32 @@ class TopicHubScreen extends ConsumerWidget {
     final bundle = ref.watch(topicHubProvider(categorySlug));
 
     return Scaffold(
+      backgroundColor: PrismColors.bg,
       appBar: AppBar(
-        title: bundle.maybeWhen(
-          data: (b) => Text(b.categoryName),
-          orElse: () => const Text('Topic Hub'),
-        ),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, size: 22),
           onPressed: () => context.go('/spaces/participant/categories'),
         ),
+        title: const Text(
+          'TOPIC HUB',
+          style: TextStyle(
+            color: PrismColors.pp700,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+          ),
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search, size: 22),
             tooltip: '검색',
             onPressed: () => context.go(
-                '/search?categorySlug=${Uri.encodeQueryComponent(categorySlug)}'),
+              '/search?categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
+            ),
           ),
         ],
       ),
@@ -46,78 +58,114 @@ class TopicHubScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(topicHubProvider(categorySlug)),
         ),
         data: (b) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(topicHubProvider(categorySlug)),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _HubHeader(bundle: b),
-              const SizedBox(height: 12),
-              _RelatedSearches(categorySlug: categorySlug),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () => context.go(
-                    '/categories/$categorySlug/contributions/new'),
-                icon: const Icon(Icons.edit_note),
-                label: const Text('정보 개선 제안'),
+          color: PrismColors.pp600,
+          onRefresh: () async =>
+              ref.invalidate(topicHubProvider(categorySlug)),
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(child: _Hero(bundle: b)),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  PrismSpacing.xl,
+                  0,
+                  PrismSpacing.xl,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: _RelatedSearches(categorySlug: categorySlug),
+                ),
               ),
-              const SizedBox(height: 16),
-              _Section(
-                title: '핵심 정보',
-                children: b.blocks
-                    .map((block) => _KnowledgeBlockCard(
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  PrismSpacing.xl,
+                  PrismSpacing.md,
+                  PrismSpacing.xl,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.go(
+                      '/categories/$categorySlug/contributions/new',
+                    ),
+                    icon: const Icon(Icons.edit_note),
+                    label: const Text('정보 개선 제안'),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _Section(
+                  overline: '이 주제의 핵심 정보',
+                  title: '핵심 정보',
+                  children: [
+                    for (final block in b.blocks)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: PrismSpacing.md),
+                        child: _KnowledgeBlockCard(
                           block: block,
                           onPropose: () => context.go(
                             '/categories/$categorySlug/contributions/new?target_block_id=${block.id}',
                           ),
-                        ))
-                    .toList(),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              if (b.signals.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _Section(
-                  title: '데이터 신호',
-                  children: b.signals
-                      .map((s) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _SignalRow(signal: s),
-                          ))
-                      .toList(),
+              if (b.signals.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _Section(
+                    title: '데이터 신호',
+                    children: [
+                      for (final s in b.signals)
+                        Padding(
+                          padding:
+                              const EdgeInsets.only(bottom: PrismSpacing.sm),
+                          child: _SignalRow(signal: s),
+                        ),
+                    ],
+                  ),
                 ),
-              ],
-              if (b.relatedEvents.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _Section(
-                  title: '관련 이벤트',
-                  children: b.relatedEvents
-                      .map((e) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: EventCardWidget(
-                              card: e,
-                              onTap: () => context.go('/events/${e.id}'),
-                            ),
-                          ))
-                      .toList(),
+              if (b.relatedEvents.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _Section(
+                    title: '이 주제의 PRISM EVENT',
+                    children: [
+                      for (final e in b.relatedEvents)
+                        Padding(
+                          padding:
+                              const EdgeInsets.only(bottom: PrismSpacing.sm),
+                          child: EventCardWidget(
+                            card: e,
+                            onTap: () => context.go('/events/${e.id}'),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ],
-              if (b.relatedReferences.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _Section(
-                  title: '인기 레퍼런스',
-                  children: b.relatedReferences
-                      .map((r) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: ReferenceCardWidget(reference: r),
-                          ))
-                      .toList(),
+              if (b.relatedReferences.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _Section(
+                    title: '레퍼런스',
+                    children: [
+                      for (final r in b.relatedReferences)
+                        Padding(
+                          padding:
+                              const EdgeInsets.only(bottom: PrismSpacing.sm),
+                          child: ReferenceCardWidget(reference: r),
+                        ),
+                    ],
+                  ),
                 ),
-              ],
-              const SizedBox(height: 24),
-              _RoomsSection(
-                rooms: b.rooms,
-                onCreateRoom: () => context.go(
-                    '/categories/$categorySlug/rooms/new'),
+              SliverToBoxAdapter(
+                child: _RoomsSection(
+                  rooms: b.rooms,
+                  onCreateRoom: () => context.go(
+                    '/categories/$categorySlug/rooms/new',
+                  ),
+                ),
               ),
-              const SizedBox(height: 32),
+              const SliverPadding(
+                padding: EdgeInsets.only(bottom: PrismSpacing.xl4),
+              ),
             ],
           ),
         ),
@@ -126,43 +174,155 @@ class TopicHubScreen extends ConsumerWidget {
   }
 }
 
-class _HubHeader extends StatelessWidget {
-  const _HubHeader({required this.bundle});
+class _Hero extends StatelessWidget {
+  const _Hero({required this.bundle});
   final TopicHubBundle bundle;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          bundle.hubTitle ?? bundle.categoryName,
-          style: Theme.of(context).textTheme.headlineSmall,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.55, 1.0],
+          colors: [
+            PrismColors.pp50,
+            PrismColors.bgSoft,
+            PrismColors.bg,
+          ],
         ),
-        const SizedBox(height: 6),
-        Text(
-          bundle.hubSummary ?? bundle.categoryDescription ?? '',
-          style: const TextStyle(color: PrismColors.muted),
-        ),
-      ],
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.sm,
+        PrismSpacing.xl,
+        PrismSpacing.xl,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TopicBlock(label: bundle.categoryName, size: 64),
+              const SizedBox(width: PrismSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${bundle.categoryName} ›',
+                      style: const TextStyle(
+                        color: PrismColors.ink4,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      bundle.hubTitle ?? bundle.categoryName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.8,
+                        height: 1.15,
+                        color: PrismColors.ink1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (bundle.hubSummary != null && bundle.hubSummary!.isNotEmpty) ...[
+            const SizedBox(height: PrismSpacing.md),
+            Text(
+              bundle.hubSummary!,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.55,
+                letterSpacing: -0.2,
+                color: PrismColors.ink2,
+              ),
+            ),
+          ] else if (bundle.categoryDescription != null &&
+              bundle.categoryDescription!.isNotEmpty) ...[
+            const SizedBox(height: PrismSpacing.md),
+            Text(
+              bundle.categoryDescription!,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.55,
+                letterSpacing: -0.2,
+                color: PrismColors.ink2,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
+  const _Section({
+    this.overline,
+    required this.title,
+    required this.children,
+  });
+  final String? overline;
   final String title;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        ...children,
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.xl2,
+        PrismSpacing.xl,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (overline != null) ...[
+            Row(
+              children: [
+                const Icon(Icons.menu_book_outlined,
+                    size: 13, color: PrismColors.pp700),
+                const SizedBox(width: 5),
+                Text(
+                  overline!,
+                  style: const TextStyle(
+                    color: PrismColors.pp700,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: PrismSpacing.sm),
+          ],
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              color: PrismColors.ink1,
+            ),
+          ),
+          const SizedBox(height: PrismSpacing.md),
+          ...children,
+        ],
+      ),
     );
   }
 }
@@ -174,50 +334,64 @@ class _KnowledgeBlockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(PrismSpacing.cardPad),
+      decoration: BoxDecoration(
+        color: PrismColors.pp50,
+        borderRadius: BorderRadius.circular(PrismRadius.lg),
+        border: Border.all(color: PrismColors.pp100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: PrismColors.soft,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      _blockLabel(block.blockType),
-                      style: const TextStyle(
-                          fontSize: 11, color: PrismColors.primary),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      block.title,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  ),
-                  if (onPropose != null)
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: '이 블록 개선 제안',
-                      onPressed: onPropose,
-                    ),
-                ],
+              Text(
+                _blockLabel(block.blockType).toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: PrismColors.pp700,
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(block.body),
+              const Spacer(),
+              if (onPropose != null)
+                InkWell(
+                  onTap: onPropose,
+                  borderRadius: BorderRadius.circular(PrismRadius.sm),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: PrismColors.pp700,
+                    ),
+                  ),
+                ),
             ],
           ),
-        ),
+          const SizedBox(height: 6),
+          Text(
+            block.title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
+              color: PrismColors.ink1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            block.body,
+            style: const TextStyle(
+              fontSize: 13.5,
+              height: 1.55,
+              letterSpacing: -0.2,
+              color: PrismColors.ink2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -251,22 +425,40 @@ class _SignalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: PrismSpacing.md,
+        vertical: PrismSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: PrismColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: PrismColors.border),
+        color: PrismColors.bg,
+        borderRadius: BorderRadius.circular(PrismRadius.md),
+        border: Border.all(color: PrismColors.line),
       ),
       child: Row(
         children: [
           const Icon(Icons.insights_outlined,
-              size: 16, color: PrismColors.primary),
-          const SizedBox(width: 8),
-          Expanded(child: Text(signal.title)),
+              size: 16, color: PrismColors.pp700),
+          const SizedBox(width: PrismSpacing.sm),
+          Expanded(
+            child: Text(
+              signal.title,
+              style: const TextStyle(
+                fontSize: 13.5,
+                letterSpacing: -0.3,
+                color: PrismColors.ink1,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           Text(
             signal.displayValue,
             style: const TextStyle(
-                color: PrismColors.primary, fontWeight: FontWeight.w600),
+              color: PrismColors.pp700,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              letterSpacing: -0.3,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
           ),
         ],
       ),
@@ -283,31 +475,53 @@ class _RoomsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final official = rooms.where((r) => !r.isUserCreated).toList();
     final user = rooms.where((r) => r.isUserCreated).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text('방', style: Theme.of(context).textTheme.titleMedium),
-            const Spacer(),
-            FilledButton.icon(
-              onPressed: onCreateRoom,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('방 만들기'),
-            ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.xl2,
+        PrismSpacing.xl,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                '이 주제의 방',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                  color: PrismColors.ink1,
+                ),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: onCreateRoom,
+                style: FilledButton.styleFrom(
+                  backgroundColor: PrismColors.pp600,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.md),
+                ),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('방 만들기'),
+              ),
+            ],
+          ),
+          const SizedBox(height: PrismSpacing.md),
+          if (official.isNotEmpty) ...[
+            const _RoomGroupLabel(label: '기본 방'),
+            for (final r in official) _RoomTile(room: r),
           ],
-        ),
-        const SizedBox(height: 8),
-        if (official.isNotEmpty) ...[
-          const _RoomGroupLabel(label: '기본 방'),
-          for (final r in official) _RoomTile(room: r),
+          if (user.isNotEmpty) ...[
+            const SizedBox(height: PrismSpacing.sm),
+            const _RoomGroupLabel(label: '유저가 만든 방'),
+            for (final r in user) _RoomTile(room: r),
+          ],
         ],
-        if (user.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          const _RoomGroupLabel(label: '유저가 만든 방'),
-          for (final r in user) _RoomTile(room: r),
-        ],
-      ],
+      ),
     );
   }
 }
@@ -322,7 +536,12 @@ class _RoomGroupLabel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Text(
         label,
-        style: const TextStyle(color: PrismColors.muted, fontSize: 12),
+        style: const TextStyle(
+          color: PrismColors.ink4,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
@@ -335,34 +554,72 @@ class _RoomTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Card(
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          leading: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: PrismColors.soft,
-              borderRadius: BorderRadius.circular(8),
+      padding: const EdgeInsets.only(bottom: PrismSpacing.sm),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PrismRadius.md),
+          onTap: () => context.go('/rooms/${room.slug}'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.cardPad,
+              vertical: PrismSpacing.md,
             ),
-            child: Icon(
-              room.isUserCreated
-                  ? Icons.person_outline
-                  : Icons.forum_outlined,
-              color: PrismColors.primary,
-              size: 20,
+            decoration: BoxDecoration(
+              color: PrismColors.bg,
+              borderRadius: BorderRadius.circular(PrismRadius.md),
+              border: Border.all(color: PrismColors.line),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: PrismColors.bgTint,
+                    borderRadius: BorderRadius.circular(PrismRadius.md),
+                  ),
+                  child: const Icon(Icons.tag,
+                      color: PrismColors.ink2, size: 18),
+                ),
+                const SizedBox(width: PrismSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        room.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: PrismColors.ink1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        room.ownerNickname != null
+                            ? '${room.ownerNickname} · ${_roomTypeLabel(room.roomType)}'
+                            : _roomTypeLabel(room.roomType),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: PrismColors.ink4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right,
+                    color: PrismColors.ink4, size: 18),
+              ],
             ),
           ),
-          title: Text(room.name),
-          subtitle: room.ownerNickname != null
-              ? Text('${room.ownerNickname} · ${_roomTypeLabel(room.roomType)}',
-                  style: const TextStyle(fontSize: 12))
-              : Text(_roomTypeLabel(room.roomType),
-                  style: const TextStyle(fontSize: 12)),
-          trailing: const Icon(Icons.chevron_right, color: PrismColors.muted),
-          onTap: () => context.go('/rooms/${room.slug}'),
         ),
       ),
     );
@@ -398,38 +655,64 @@ class _RelatedSearches extends ConsumerWidget {
     return sugs.maybeWhen(
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.search,
-                    size: 14, color: PrismColors.muted),
-                const SizedBox(width: 4),
-                Text('관련 검색',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: PrismColors.muted)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: items
-                  .map(
-                    (s) => ActionChip(
-                      label: Text(s, style: const TextStyle(fontSize: 12)),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => context.go(
-                        '/search?q=${Uri.encodeQueryComponent(s)}&categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
-                      ),
+        return Padding(
+          padding: const EdgeInsets.only(top: PrismSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.search, size: 13, color: PrismColors.ink4),
+                  SizedBox(width: 4),
+                  Text(
+                    '관련 검색',
+                    style: TextStyle(
+                      color: PrismColors.ink4,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
                     ),
-                  )
-                  .toList(),
-            ),
-          ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: PrismSpacing.sm),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: items
+                    .map(
+                      (s) => GestureDetector(
+                        onTap: () => context.go(
+                          '/search?q=${Uri.encodeQueryComponent(s)}&categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
+                        ),
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          height: 28,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 11),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: PrismColors.pp50,
+                            borderRadius:
+                                BorderRadius.circular(PrismRadius.pill),
+                            border: Border.all(color: PrismColors.pp100),
+                          ),
+                          child: Text(
+                            s,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                              color: PrismColors.pp700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
         );
       },
       orElse: () => const SizedBox.shrink(),

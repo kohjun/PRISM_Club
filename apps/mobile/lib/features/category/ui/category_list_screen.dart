@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
+import '../../../widgets/topic_block.dart';
 import '../data/category_dto.dart';
 import '../data/category_repository.dart';
 
@@ -33,12 +34,14 @@ class CategoryListScreen extends ConsumerWidget {
         data: (items) => items.isEmpty
             ? const EmptyView(message: '아직 카테고리가 없어요.')
             : RefreshIndicator(
+                color: PrismColors.pp600,
                 onRefresh: () async =>
                     ref.invalidate(categoryListProvider(spaceSlug)),
                 child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(PrismSpacing.xl),
                   itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: PrismSpacing.md),
                   itemBuilder: (context, i) => _CategoryCard(cat: items[i]),
                 ),
               ),
@@ -55,42 +58,47 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(PrismRadius.lg),
         onTap: () => context.go('/categories/${cat.slug}'),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(PrismSpacing.lg),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: PrismColors.soft,
-                      borderRadius: BorderRadius.circular(10),
+              TopicBlock(label: cat.name, size: 44),
+              const SizedBox(width: PrismSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '# ${cat.name}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                        color: PrismColors.ink1,
+                      ),
                     ),
-                    child: const Icon(Icons.topic_outlined,
-                        color: PrismColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      cat.name,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: PrismColors.muted),
-                ],
-              ),
-              if (cat.description != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  cat.description!,
-                  style: const TextStyle(color: PrismColors.muted),
+                    if (cat.description != null && cat.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        cat.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: PrismColors.ink3,
+                          fontSize: 12.5,
+                          height: 1.5,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
+              const SizedBox(width: PrismSpacing.sm),
+              const Icon(Icons.chevron_right, color: PrismColors.ink4),
             ],
           ),
         ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
 import '../data/notification_dto.dart';
@@ -34,12 +34,17 @@ class NotificationScreen extends ConsumerWidget {
         data: (list) => list.items.isEmpty
             ? const EmptyView(message: '새 알림이 없어요')
             : RefreshIndicator(
+                color: PrismColors.pp600,
                 onRefresh: () async => ref.invalidate(notificationsProvider),
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: PrismSpacing.sm),
                   itemCount: list.items.length,
-                  separatorBuilder: (_, _) =>
-                      const Divider(height: 1, indent: 16, endIndent: 16),
+                  separatorBuilder: (_, _) => const Divider(
+                    height: 1,
+                    color: PrismColors.divider,
+                    indent: PrismSpacing.xl,
+                    endIndent: PrismSpacing.xl,
+                  ),
                   itemBuilder: (context, index) => _NotificationTile(
                     notif: list.items[index],
                     onTap: () => _onTap(context, list.items[index]),
@@ -86,81 +91,123 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUnread = !notif.isRead;
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        color: isUnread ? PrismColors.soft.withAlpha(128) : null,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(
-                _iconFor(notif.type),
-                size: 20,
-                color: PrismColors.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _titleFor(notif),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight:
-                              isUnread ? FontWeight.w600 : FontWeight.normal,
-                        ),
+    final meta = _metaFor(notif.type);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          color: isUnread ? PrismColors.pp50 : null,
+          padding: const EdgeInsets.symmetric(
+            horizontal: PrismSpacing.xl,
+            vertical: PrismSpacing.md,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isUnread)
+                const Padding(
+                  padding: EdgeInsets.only(top: 12, right: PrismSpacing.sm),
+                  child: CircleAvatar(
+                    radius: 4,
+                    backgroundColor: PrismColors.pp700,
                   ),
-                  if (_previewFor(notif).isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                ),
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: meta.bg,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(meta.icon, size: 18, color: meta.fg),
+              ),
+              const SizedBox(width: PrismSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      _previewFor(notif),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      _titleFor(notif),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        height: 1.45,
+                        letterSpacing: -0.2,
+                        color: PrismColors.ink1,
+                        fontWeight:
+                            isUnread ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    if (_previewFor(notif).isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        _previewFor(notif),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: PrismColors.ink3,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _relativeTime(notif.createdAt),
                       style: const TextStyle(
-                          fontSize: 12, color: PrismColors.muted),
+                        fontSize: 11,
+                        color: PrismColors.ink4,
+                      ),
                     ),
                   ],
-                  const SizedBox(height: 4),
-                  Text(
-                    _relativeTime(notif.createdAt),
-                    style: const TextStyle(
-                        fontSize: 11, color: PrismColors.muted),
-                  ),
-                ],
-              ),
-            ),
-            if (isUnread)
-              const Padding(
-                padding: EdgeInsets.only(left: 8, top: 4),
-                child: CircleAvatar(
-                  radius: 4,
-                  backgroundColor: PrismColors.primary,
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  IconData _iconFor(String type) {
+  ({IconData icon, Color bg, Color fg}) _metaFor(String type) {
     switch (type) {
       case 'REPLY_ON_POST':
-        return Icons.mode_comment_outlined;
+        return (
+          icon: Icons.mode_comment_outlined,
+          bg: PrismColors.infoBg,
+          fg: PrismColors.infoFg,
+        );
       case 'NESTED_REPLY':
-        return Icons.reply_outlined;
+        return (
+          icon: Icons.reply_outlined,
+          bg: PrismColors.infoBg,
+          fg: PrismColors.infoFg,
+        );
       case 'NEW_POST_IN_FOLLOWED_ROOM':
-        return Icons.notifications_none_outlined;
+        return (
+          icon: Icons.notifications_none_outlined,
+          bg: PrismColors.pp100,
+          fg: PrismColors.pp700,
+        );
       case 'RECRUITMENT_STATUS_CHANGED':
-        return Icons.campaign_outlined;
+        return (
+          icon: Icons.campaign_outlined,
+          bg: PrismColors.warningBg,
+          fg: PrismColors.warningFg,
+        );
       case 'CONTRIBUTION_RESOLVED':
-        return Icons.fact_check_outlined;
+        return (
+          icon: Icons.fact_check_outlined,
+          bg: PrismColors.successBg,
+          fg: PrismColors.successFg,
+        );
       default:
-        return Icons.circle_notifications_outlined;
+        return (
+          icon: Icons.circle_notifications_outlined,
+          bg: PrismColors.bgTint,
+          fg: PrismColors.ink2,
+        );
     }
   }
 

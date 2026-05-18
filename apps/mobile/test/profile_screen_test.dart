@@ -100,7 +100,7 @@ void main() {
 
     // AppBar + hero block both have 'haneul'; allow >= 1.
     expect(find.text('haneul'), findsAtLeastNWidgets(1));
-    expect(find.text('Verified Planner'), findsOneWidget);
+    expect(find.text('기획자'), findsOneWidget);
     expect(find.text('놀이 기획자'), findsOneWidget);
     expect(find.text('스왑톡'), findsOneWidget);
   });

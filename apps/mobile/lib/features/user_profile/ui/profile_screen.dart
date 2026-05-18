@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/post_card_widget.dart';
+import '../../../widgets/prism_avatar.dart';
 import '../../../widgets/role_badge.dart';
 import '../../../widgets/state_views.dart';
 import '../data/user_follow_repository.dart';
@@ -21,7 +22,11 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bundle = ref.watch(userProfileProvider(userId));
     return Scaffold(
+      backgroundColor: PrismColors.bg,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: bundle.when(
           loading: () => const Text('프로필'),
           error: (_, _) => const Text('프로필'),
@@ -44,13 +49,18 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
+      extendBodyBehindAppBar: true,
       body: bundle.when(
         loading: () => const LoadingView(),
         error: (e, _) => ErrorView(
           message: e is ApiError ? e.message : '프로필을 불러오지 못했어요.',
           onRetry: () => ref.invalidate(userProfileProvider(userId)),
         ),
-        data: (b) => _ProfileBody(bundle: b, userId: userId),
+        data: (b) => RefreshIndicator(
+          color: PrismColors.pp600,
+          onRefresh: () async => ref.invalidate(userProfileProvider(userId)),
+          child: _ProfileBody(bundle: b, userId: userId),
+        ),
       ),
     );
   }
@@ -64,54 +74,163 @@ class _ProfileBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.zero,
       children: [
         _HeroBlock(bundle: bundle, userId: userId),
-        const Divider(height: 1),
         _CountRow(counts: bundle.counts),
-        const Divider(height: 1),
+        Container(height: 6, color: PrismColors.bgSoft),
         if (bundle.recentPosts.isNotEmpty) ...[
           const _SectionHeader(title: '최근 글'),
-          ...bundle.recentPosts.map((p) => Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 4),
-                child: PostCardWidget(
-                  post: p,
-                  onTap: () => context.go('/posts/${p.id}'),
-                ),
-              )),
+          ...bundle.recentPosts.map(
+            (p) => Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: PrismSpacing.xl,
+                vertical: 5,
+              ),
+              child: PostCardWidget(
+                post: p,
+                onTap: () => context.go('/posts/${p.id}'),
+                onAuthorTap: (uid) => context.go('/users/$uid'),
+              ),
+            ),
+          ),
+          const SizedBox(height: PrismSpacing.lg),
         ],
         if (bundle.userRooms.isNotEmpty) ...[
           const _SectionHeader(title: '만든 방'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.xl,
+              vertical: 4,
+            ),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: bundle.userRooms
-                  .map((r) => ActionChip(
-                        label: Text(r.name),
-                        onPressed: () => context.go('/rooms/${r.slug}'),
-                      ))
+                  .map(
+                    (r) => GestureDetector(
+                      onTap: () => context.go('/rooms/${r.slug}'),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: PrismSpacing.md,
+                        ),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: PrismColors.pp50,
+                          borderRadius: BorderRadius.circular(PrismRadius.pill),
+                          border: Border.all(color: PrismColors.pp100),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.tag,
+                              size: 13,
+                              color: PrismColors.pp700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              r.name,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.2,
+                                color: PrismColors.pp700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ),
+          const SizedBox(height: PrismSpacing.lg),
         ],
         if (bundle.approvedContributions.isNotEmpty) ...[
           const _SectionHeader(title: '승인된 기여'),
-          ...bundle.approvedContributions.map((c) => ListTile(
-                leading: const Icon(Icons.check_circle_outline,
-                    color: PrismColors.primary),
-                title: Text(c.topicHubTitle),
-                subtitle: Text('승인됨'),
-                onTap: () => context.go('/categories/${c.categorySlug}'),
-              )),
+          ...bundle.approvedContributions.map(
+            (c) => Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: PrismSpacing.xl,
+                vertical: 4,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(PrismRadius.md),
+                  onTap: () => context.go('/categories/${c.categorySlug}'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: PrismColors.successBg,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_outline,
+                            color: PrismColors.successFg,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: PrismSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                c.topicHubTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.3,
+                                  color: PrismColors.ink1,
+                                ),
+                              ),
+                              const Text(
+                                '승인됨',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: PrismColors.successFg,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: PrismColors.ink4,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: PrismSpacing.lg),
         ],
         if (bundle.recentPosts.isEmpty &&
             bundle.userRooms.isEmpty &&
             bundle.approvedContributions.isEmpty)
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
+            padding: EdgeInsets.symmetric(vertical: PrismSpacing.xl3),
             child: EmptyView(message: '아직 공개된 활동이 없어요.'),
           ),
         const SizedBox(height: 60),
@@ -128,31 +247,55 @@ class _HeroBlock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final nick = bundle.user.nickname ?? '?';
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [PrismColors.pp50, PrismColors.bg],
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.xl3 + kToolbarHeight,
+        PrismSpacing.xl,
+        PrismSpacing.xl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _Avatar(nickname: nick, avatarUrl: bundle.user.avatarUrl, size: 56),
-              const SizedBox(width: 14),
+              PrismAvatar(name: nick, size: 84),
+              const SizedBox(width: PrismSpacing.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(nick,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            )),
-                    if (bundle.user.nickname != null)
-                      Text(
-                        bundle.profile.region != null
-                            ? '${bundle.profile.region}'
-                            : '',
-                        style: const TextStyle(
-                            color: PrismColors.muted, fontSize: 13),
+                    Text(
+                      nick,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.7,
+                        color: PrismColors.ink1,
                       ),
+                    ),
+                    if (bundle.profile.region != null &&
+                        bundle.profile.region!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        bundle.profile.region!,
+                        style: const TextStyle(
+                          color: PrismColors.ink3,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -160,67 +303,56 @@ class _HeroBlock extends ConsumerWidget {
                 _FollowButton(userId: userId, initial: bundle.isFollowing),
             ],
           ),
-          const SizedBox(height: 10),
-          if (bundle.roles.isNotEmpty)
+          if (bundle.roles.isNotEmpty) ...[
+            const SizedBox(height: PrismSpacing.md),
             RoleBadgeRow(roles: bundle.roles),
-          if (bundle.profile.bio != null && bundle.profile.bio!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(bundle.profile.bio!,
-                maxLines: 3, overflow: TextOverflow.ellipsis),
+          ],
+          if (bundle.profile.bio != null &&
+              bundle.profile.bio!.isNotEmpty) ...[
+            const SizedBox(height: PrismSpacing.md),
+            Text(
+              bundle.profile.bio!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                letterSpacing: -0.2,
+                color: PrismColors.ink2,
+              ),
+            ),
           ],
           if (bundle.profile.interests.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: PrismSpacing.md),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: bundle.profile.interests
-                  .map((it) => Chip(
-                        label: Text(it, style: const TextStyle(fontSize: 12)),
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: PrismColors.soft,
-                      ))
+                  .map(
+                    (it) => Container(
+                      height: 28,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: PrismSpacing.md),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: PrismColors.bgTint,
+                        borderRadius: BorderRadius.circular(PrismRadius.pill),
+                      ),
+                      child: Text(
+                        it,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                          color: PrismColors.ink2,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.nickname, required this.avatarUrl, this.size = 40});
-  final String nickname;
-  final String? avatarUrl;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
-      return CircleAvatar(
-        radius: size / 2,
-        backgroundImage: NetworkImage(avatarUrl!),
-      );
-    }
-    final initial = nickname.isNotEmpty ? nickname.characters.first : '?';
-    final colors = [
-      const Color(0xFF7C3AED),
-      const Color(0xFF0EA5A4),
-      const Color(0xFFDC2626),
-      const Color(0xFFD97706),
-      const Color(0xFF2563EB),
-    ];
-    final colorIdx = initial.codeUnitAt(0) % colors.length;
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: colors[colorIdx].withValues(alpha: 0.18),
-      child: Text(
-        initial,
-        style: TextStyle(
-          color: colors[colorIdx],
-          fontWeight: FontWeight.w700,
-          fontSize: size * 0.4,
-        ),
       ),
     );
   }
@@ -235,15 +367,36 @@ class _FollowButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(userFollowProvider(userId));
     final followed = state.valueOrNull?.followed ?? initial;
-    return FilledButton.tonal(
-      onPressed: state.isLoading
-          ? null
-          : () async {
-              await ref.read(userFollowProvider(userId).notifier).toggle();
-              // Invalidate profile so counts refresh
-              ref.invalidate(userProfileProvider(userId));
-            },
-      child: Text(followed ? '팔로잉' : '팔로우'),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(PrismRadius.pill),
+        onTap: state.isLoading
+            ? null
+            : () async {
+                await ref.read(userFollowProvider(userId).notifier).toggle();
+                ref.invalidate(userProfileProvider(userId));
+              },
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: followed ? PrismColors.bgTint : PrismColors.pp600,
+            borderRadius: BorderRadius.circular(PrismRadius.pill),
+            border: followed ? Border.all(color: PrismColors.line2) : null,
+          ),
+          child: Text(
+            followed ? '팔로잉' : '팔로우',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+              color: followed ? PrismColors.ink2 : Colors.white,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -252,29 +405,47 @@ class _CountRow extends StatelessWidget {
   const _CountRow({required this.counts});
   final ProfileCountsDto counts;
 
+  Widget _cell(String label, int value) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            '$value',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              letterSpacing: -0.4,
+              color: PrismColors.ink1,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: PrismColors.ink3,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget cell(String label, int value) => Expanded(
-          child: Column(
-            children: [
-              Text('$value',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 18)),
-              const SizedBox(height: 2),
-              Text(label,
-                  style: const TextStyle(
-                      color: PrismColors.muted, fontSize: 12)),
-            ],
-          ),
-        );
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(
+        horizontal: PrismSpacing.xl,
+        vertical: PrismSpacing.cardPad,
+      ),
       child: Row(
         children: [
-          cell('글', counts.postCount),
-          cell('방', counts.roomCount),
-          cell('팔로워', counts.followerCount),
-          cell('팔로잉', counts.followingCount),
+          _cell('글', counts.postCount),
+          _cell('방', counts.roomCount),
+          _cell('팔로워', counts.followerCount),
+          _cell('팔로잉', counts.followingCount),
         ],
       ),
     );
@@ -287,12 +458,20 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+        padding: const EdgeInsets.fromLTRB(
+          PrismSpacing.xl,
+          PrismSpacing.cardPad,
+          PrismSpacing.xl,
+          PrismSpacing.sm,
+        ),
         child: Text(
           title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+            color: PrismColors.ink1,
+          ),
         ),
       );
 }

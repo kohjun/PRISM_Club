@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/post_card_widget.dart';
@@ -32,23 +33,31 @@ class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
             selected: _selectedType,
             onSelect: (type) => setState(() => _selectedType = type),
           ),
+          const Divider(height: 1, color: PrismColors.divider),
           Expanded(
             child: saves.when(
               loading: () => const LoadingView(),
               error: (e, _) => ErrorView(
                 message: e is ApiError ? e.message : '저장 목록을 불러오지 못했어요.',
-                onRetry: () => ref.invalidate(savedItemsProvider(_selectedType)),
+                onRetry: () =>
+                    ref.invalidate(savedItemsProvider(_selectedType)),
               ),
               data: (list) => list.items.isEmpty
                   ? const EmptyView(message: '저장한 항목이 없어요')
                   : RefreshIndicator(
-                      onRefresh: () async =>
-                          ref.invalidate(savedItemsProvider(_selectedType)),
+                      color: PrismColors.pp600,
+                      onRefresh: () async => ref
+                          .invalidate(savedItemsProvider(_selectedType)),
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(
+                          PrismSpacing.xl,
+                          PrismSpacing.md,
+                          PrismSpacing.xl,
+                          PrismSpacing.xl4,
+                        ),
                         itemCount: list.items.length,
                         separatorBuilder: (_, _) =>
-                            const SizedBox(height: 10),
+                            const SizedBox(height: PrismSpacing.md),
                         itemBuilder: (context, index) => _SavedItemTile(
                           item: list.items[index],
                           onUnsave: () => _unsave(list.items[index]),
@@ -98,17 +107,58 @@ class _TypeChipRow extends StatelessWidget {
       height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: PrismSpacing.xl,
+          vertical: PrismSpacing.sm,
+        ),
         children: [
-          for (final (type, label) in _types) ...[
-            ChoiceChip(
-              label: Text(label),
-              selected: selected == type,
-              onSelected: (_) => onSelect(type),
+          for (var i = 0; i < _types.length; i++) ...[
+            _Chip(
+              label: _types[i].$2,
+              selected: selected == _types[i].$1,
+              onTap: () => onSelect(_types[i].$1),
             ),
             const SizedBox(width: 8),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.md),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? PrismColors.ink1 : PrismColors.bgTint,
+          borderRadius: BorderRadius.circular(PrismRadius.pill),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : PrismColors.ink2,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
+        ),
       ),
     );
   }
@@ -126,9 +176,11 @@ class _SavedItemTile extends StatelessWidget {
     final eventCard = item.eventCardTarget;
 
     final trailing = IconButton(
-      icon: const Icon(Icons.bookmark, size: 20),
+      icon: const Icon(Icons.bookmark, size: 20, color: PrismColors.pp700),
       tooltip: '저장 취소',
       onPressed: onUnsave,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
     );
 
     if (post != null) {
@@ -139,6 +191,7 @@ class _SavedItemTile extends StatelessWidget {
             child: PostCardWidget(
               post: post,
               onTap: () => context.go('/posts/${post.id}'),
+              onAuthorTap: (uid) => context.go('/users/$uid'),
             ),
           ),
           trailing,

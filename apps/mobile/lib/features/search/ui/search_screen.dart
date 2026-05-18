@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
 import '../data/search_dto.dart';
@@ -97,20 +97,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: PrismColors.bg,
       appBar: AppBar(
-        title: TextField(
-          controller: _controller,
-          autofocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
-          textInputAction: TextInputAction.search,
-          onChanged: _onChanged,
-          onSubmitted: (_) => _scheduleSearch(immediate: true),
-          decoration: const InputDecoration(
-            hintText: '소개팅 미션, 환승연애 ...',
-            border: InputBorder.none,
-          ),
-        ),
+        backgroundColor: PrismColors.bg,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 8,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, size: 22),
+          color: PrismColors.ink2,
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -119,24 +114,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             }
           },
         ),
-        actions: [
-          if (_query.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: '지우기',
-              onPressed: () {
-                _controller.clear();
-                _onChanged('');
-              },
-            ),
-        ],
+        title: _SearchField(
+          controller: _controller,
+          autofocus:
+              widget.initialQuery == null || widget.initialQuery!.isEmpty,
+          onChanged: _onChanged,
+          onSubmitted: () => _scheduleSearch(immediate: true),
+          onClear: _query.isEmpty
+              ? null
+              : () {
+                  _controller.clear();
+                  _onChanged('');
+                },
+        ),
+        actions: const [SizedBox(width: PrismSpacing.sm)],
       ),
       body: Column(
         children: [
-          _TypeFilter(
-            selected: _types,
-            onChanged: _setTypes,
-          ),
+          _TypeFilter(selected: _types, onChanged: _setTypes),
+          const Divider(height: 1, color: PrismColors.divider),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -176,21 +172,97 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           );
         }
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(
+            PrismSpacing.xl,
+            PrismSpacing.md,
+            PrismSpacing.xl,
+            PrismSpacing.xl4,
+          ),
           children: [
             for (final g in res.groups)
               if (g.items.isNotEmpty) ...[
                 _GroupHeader(type: g.type, count: g.items.length),
-                const SizedBox(height: 8),
+                const SizedBox(height: PrismSpacing.sm),
                 for (final hit in g.items) ...[
                   SearchResultTile(hit: hit),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: PrismSpacing.sm),
                 ],
-                const SizedBox(height: 12),
+                const SizedBox(height: PrismSpacing.md),
               ],
           ],
         );
       },
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.autofocus,
+    required this.onChanged,
+    required this.onSubmitted,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final bool autofocus;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onSubmitted;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: PrismColors.bgTint,
+        borderRadius: BorderRadius.circular(PrismRadius.md),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.cardPad),
+      child: Row(
+        children: [
+          const Icon(Icons.search, size: 18, color: PrismColors.ink3),
+          const SizedBox(width: PrismSpacing.sm),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              autofocus: autofocus,
+              textInputAction: TextInputAction.search,
+              onChanged: onChanged,
+              onSubmitted: (_) => onSubmitted(),
+              style: const TextStyle(
+                fontSize: 14,
+                letterSpacing: -0.2,
+                color: PrismColors.ink1,
+              ),
+              decoration: const InputDecoration(
+                hintText: 'Topic Hub · 방 · 사람 · 이벤트',
+                hintStyle: TextStyle(
+                  color: PrismColors.ink4,
+                  fontSize: 14,
+                  letterSpacing: -0.2,
+                ),
+                isCollapsed: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+              ),
+            ),
+          ),
+          if (onClear != null)
+            GestureDetector(
+              onTap: onClear,
+              behavior: HitTestBehavior.opaque,
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.close, size: 16, color: PrismColors.ink3),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -203,33 +275,76 @@ class _TypeFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.cardPad,
+        PrismSpacing.sm,
+        PrismSpacing.cardPad,
+        PrismSpacing.sm,
+      ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            ChoiceChip(
-              label: const Text('전체'),
+            _Chip(
+              label: '전체',
               selected: selected.isEmpty,
-              onSelected: (_) => onChanged(const <String>{}),
+              onTap: () => onChanged(const <String>{}),
             ),
             for (final t in SearchEntityType.all) ...[
               const SizedBox(width: 6),
-              ChoiceChip(
-                label: Text(SearchEntityType.label(t)),
+              _Chip(
+                label: SearchEntityType.label(t),
                 selected: selected.contains(t),
-                onSelected: (yes) {
+                onTap: () {
                   final next = Set<String>.from(selected);
-                  if (yes) {
-                    next.add(t);
-                  } else {
+                  if (next.contains(t)) {
                     next.remove(t);
+                  } else {
+                    next.add(t);
                   }
                   onChanged(next);
                 },
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.md),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? PrismColors.ink1 : PrismColors.bgTint,
+          borderRadius: BorderRadius.circular(PrismRadius.pill),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : PrismColors.ink2,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
         ),
       ),
     );
@@ -245,48 +360,102 @@ class _GroupHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(SearchEntityType.label(type),
-            style: Theme.of(context).textTheme.titleSmall),
+        Text(
+          SearchEntityType.label(type),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+            color: PrismColors.ink1,
+          ),
+        ),
         const SizedBox(width: 6),
-        Text('($count)',
-            style: const TextStyle(color: PrismColors.muted, fontSize: 12)),
+        Text(
+          '($count)',
+          style: const TextStyle(
+            color: PrismColors.ink4,
+            fontSize: 12,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
       ],
     );
   }
 }
 
 class _EmptyStateSuggestions extends ConsumerWidget {
-  const _EmptyStateSuggestions({required this.categorySlug, required this.onTap});
+  const _EmptyStateSuggestions({
+    required this.categorySlug,
+    required this.onTap,
+  });
   final String? categorySlug;
   final ValueChanged<String> onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sugs = ref.watch(searchSuggestionsProvider(categorySlug));
-    return Padding(
-      padding: const EdgeInsets.all(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.lg,
+        PrismSpacing.xl,
+        PrismSpacing.xl4,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('인기 토픽', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
+          const Text(
+            '인기 토픽',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              color: PrismColors.ink1,
+            ),
+          ),
+          const SizedBox(height: PrismSpacing.md),
           sugs.when(
             loading: () => const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: LinearProgressIndicator(),
+              child: LinearProgressIndicator(
+                minHeight: 2,
+                color: PrismColors.pp600,
+                backgroundColor: PrismColors.pp50,
+              ),
             ),
             error: (e, _) => Text(
               e is ApiError ? e.message : '추천어를 불러오지 못했어요.',
-              style: const TextStyle(color: Colors.redAccent),
+              style: const TextStyle(color: PrismColors.danger),
             ),
             data: (items) => Wrap(
               spacing: 8,
               runSpacing: 8,
               children: items
                   .map(
-                    (s) => ActionChip(
-                      label: Text(s),
-                      onPressed: () => onTap(s),
+                    (s) => GestureDetector(
+                      onTap: () => onTap(s),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: PrismSpacing.md + 1,
+                        ),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: PrismColors.pp50,
+                          borderRadius: BorderRadius.circular(PrismRadius.pill),
+                          border: Border.all(color: PrismColors.pp100),
+                        ),
+                        child: Text(
+                          s,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                            color: PrismColors.pp700,
+                          ),
+                        ),
+                      ),
                     ),
                   )
                   .toList(),
@@ -311,16 +480,29 @@ class _NoResults extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.lg,
+        PrismSpacing.xl,
+        PrismSpacing.xl4,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("'$query'에 대한 결과가 없어요.",
-              style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 16),
-          _EmptyStateSuggestions(
-            categorySlug: categorySlug,
-            onTap: onSuggestion,
+          Text(
+            "'$query'에 대한 결과가 없어요.",
+            style: const TextStyle(
+              fontSize: 14,
+              color: PrismColors.ink2,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: PrismSpacing.lg),
+          Expanded(
+            child: _EmptyStateSuggestions(
+              categorySlug: categorySlug,
+              onTap: onSuggestion,
+            ),
           ),
         ],
       ),

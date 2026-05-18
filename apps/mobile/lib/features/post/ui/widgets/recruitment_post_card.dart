@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme.dart';
+import '../../../../app/design_tokens.dart';
+import '../../../../widgets/status_pill.dart';
 import '../../data/recruitment_fields_dto.dart';
 
-/// Renders a RECRUITMENT post's structured fields with a status chip header.
-/// When [isAuthor] is true, an action row exposes status toggles
-/// (OPEN → CLOSED / FILLED). Callers wire [onSetStatus] to call
-/// `PostRepository.setRecruitmentStatus`.
+/// Recruitment post card. Status pill in the header + structured field
+/// rows + author-only status toggle action row.
+///
+/// Status labels (preserved from existing copy):
+///   • OPEN   → "모집 중"
+///   • CLOSED → "모집 마감"
+///   • FILLED → "충원 완료"
 class RecruitmentPostCard extends StatelessWidget {
   const RecruitmentPostCard({
     super.key,
@@ -19,27 +23,44 @@ class RecruitmentPostCard extends StatelessWidget {
   final bool isAuthor;
   final Future<void> Function(String status)? onSetStatus;
 
+  StatusPill _statusPill() {
+    switch (fields.status) {
+      case 'CLOSED':
+        return StatusPill.neutral('모집 마감');
+      case 'FILLED':
+        return StatusPill.purple('충원 완료');
+      default:
+        return StatusPill.success('모집 중');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(PrismSpacing.cardPad),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.campaign, color: PrismColors.primary, size: 18),
-                const SizedBox(width: 8),
-                Text(
+                const Icon(Icons.campaign,
+                    color: PrismColors.pp700, size: 18),
+                const SizedBox(width: PrismSpacing.sm),
+                const Text(
                   '스태프 모집',
-                  style: Theme.of(context).textTheme.titleSmall,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: PrismColors.ink1,
+                  ),
                 ),
                 const Spacer(),
-                _StatusChip(status: fields.status),
+                _statusPill(),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: PrismSpacing.md),
             _Row(label: '역할', value: fields.role),
             _Row(label: '일정', value: fields.schedule),
             _Row(label: '장소', value: fields.location),
@@ -47,7 +68,7 @@ class RecruitmentPostCard extends StatelessWidget {
             _Row(label: '인원', value: '${fields.capacity}명'),
             _Row(label: '지원 방법', value: fields.applicationMethod),
             if (isAuthor && onSetStatus != null) ...[
-              const Divider(height: 24),
+              const Divider(height: 24, color: PrismColors.divider),
               Row(
                 children: [
                   Expanded(
@@ -59,7 +80,7 @@ class RecruitmentPostCard extends StatelessWidget {
                       label: const Text('모집 마감'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: PrismSpacing.sm),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: fields.status == 'FILLED'
@@ -69,7 +90,7 @@ class RecruitmentPostCard extends StatelessWidget {
                       label: const Text('충원 완료'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: PrismSpacing.sm),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: fields.status == 'OPEN'
@@ -97,7 +118,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -105,36 +126,26 @@ class _Row extends StatelessWidget {
             width: 76,
             child: Text(
               label,
-              style: const TextStyle(color: PrismColors.muted, fontSize: 12),
+              style: const TextStyle(
+                color: PrismColors.ink3,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2,
+              ),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13.5,
+                letterSpacing: -0.3,
+                color: PrismColors.ink1,
+                height: 1.45,
+              ),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, fg, bg) = switch (status) {
-      'CLOSED' => ('모집 마감', PrismColors.muted, PrismColors.border),
-      'FILLED' => ('충원 완료', PrismColors.primary, PrismColors.soft),
-      _ => ('모집 중', Colors.white, PrismColors.primary),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
