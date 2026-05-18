@@ -42,7 +42,10 @@ class CategoryListScreen extends ConsumerWidget {
                   itemCount: items.length,
                   separatorBuilder: (_, _) =>
                       const SizedBox(height: PrismSpacing.md),
-                  itemBuilder: (context, i) => _CategoryCard(cat: items[i]),
+                  itemBuilder: (context, i) => _CategoryCard(
+                    cat: items[i],
+                    spaceSlug: spaceSlug,
+                  ),
                 ),
               ),
       ),
@@ -51,15 +54,18 @@ class CategoryListScreen extends ConsumerWidget {
 }
 
 class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.cat});
+  const _CategoryCard({required this.cat, required this.spaceSlug});
   final CategoryDto cat;
+  final String spaceSlug;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(PrismRadius.lg),
-        onTap: () => context.go('/categories/${cat.slug}'),
+        onTap: () => context.go(
+          '/categories/${cat.slug}?spaceSlug=${Uri.encodeQueryComponent(spaceSlug)}',
+        ),
         child: Padding(
           padding: const EdgeInsets.all(PrismSpacing.lg),
           child: Row(

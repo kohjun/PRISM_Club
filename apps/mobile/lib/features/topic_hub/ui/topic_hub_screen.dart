@@ -14,8 +14,32 @@ import '../data/topic_hub_dto.dart';
 import '../data/topic_hub_repository.dart';
 
 class TopicHubScreen extends ConsumerWidget {
-  const TopicHubScreen({super.key, required this.categorySlug});
+  const TopicHubScreen({
+    super.key,
+    required this.categorySlug,
+    this.spaceSlug,
+  });
+
   final String categorySlug;
+
+  /// Optional originating space slug, passed via `?spaceSlug=` when the
+  /// user arrived from a CategoryListScreen. When present, the back
+  /// button returns to that space's category list; otherwise it falls
+  /// back to a generic /spaces destination (or pops if the navigation
+  /// stack has somewhere to go).
+  final String? spaceSlug;
+
+  void _onBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    if (spaceSlug != null && spaceSlug!.isNotEmpty) {
+      context.go('/spaces/$spaceSlug/categories');
+      return;
+    }
+    context.go('/spaces');
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +53,8 @@ class TopicHubScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, size: 22),
-          onPressed: () => context.go('/spaces/participant/categories'),
+          tooltip: '뒤로',
+          onPressed: () => _onBack(context),
         ),
         title: const Text(
           'TOPIC HUB',
