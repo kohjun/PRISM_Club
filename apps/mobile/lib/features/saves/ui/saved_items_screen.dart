@@ -188,12 +188,15 @@ class _SavedItemTile extends StatelessWidget {
     final reference = item.referenceTarget;
     final eventCard = item.eventCardTarget;
 
-    final trailing = IconButton(
-      icon: const Icon(Icons.bookmark, size: 22, color: PrismColors.pp700),
-      tooltip: '저장 취소',
-      onPressed: onUnsave,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+    final trailing = Padding(
+      padding: const EdgeInsets.only(top: PrismSpacing.sm),
+      child: IconButton(
+        icon: const Icon(Icons.bookmark, size: 22, color: PrismColors.pp700),
+        tooltip: '저장 취소',
+        onPressed: onUnsave,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+      ),
     );
 
     if (post != null) {
@@ -213,7 +216,7 @@ class _SavedItemTile extends StatelessWidget {
     }
     if (reference != null) {
       return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(child: ReferenceCardWidget(reference: reference)),
           trailing,
@@ -222,7 +225,7 @@ class _SavedItemTile extends StatelessWidget {
     }
     if (eventCard != null) {
       return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: EventCardWidget(

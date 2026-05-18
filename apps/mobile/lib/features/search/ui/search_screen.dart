@@ -517,12 +517,25 @@ class _NoResults extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "'$query'에 대한 결과가 없어요.",
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: "'$query'",
+                  style: const TextStyle(
+                    color: PrismColors.ink1,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const TextSpan(text: '에 대한 결과가 없어요.'),
+              ],
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 14,
+              height: 1.55,
               color: PrismColors.ink2,
-              letterSpacing: -0.3,
             ),
           ),
           const SizedBox(height: PrismSpacing.lg),

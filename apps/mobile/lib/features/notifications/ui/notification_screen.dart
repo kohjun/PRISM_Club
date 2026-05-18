@@ -36,19 +36,9 @@ class NotificationScreen extends ConsumerWidget {
             : RefreshIndicator(
                 color: PrismColors.pp600,
                 onRefresh: () async => ref.invalidate(notificationsProvider),
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: PrismSpacing.sm),
-                  itemCount: list.items.length,
-                  separatorBuilder: (_, _) => const Divider(
-                    height: 1,
-                    color: PrismColors.divider,
-                    indent: PrismSpacing.xl,
-                    endIndent: PrismSpacing.xl,
-                  ),
-                  itemBuilder: (context, index) => _NotificationTile(
-                    notif: list.items[index],
-                    onTap: () => _onTap(context, list.items[index]),
-                  ),
+                child: _GroupedNotificationList(
+                  items: list.items,
+                  onTap: (n) => _onTap(context, n),
                 ),
               ),
       ),
@@ -80,6 +70,95 @@ class NotificationScreen extends ConsumerWidget {
     } else if (type == 'CONTRIBUTION_RESOLVED') {
       context.go('/me/contributions');
     }
+  }
+}
+
+/// Date-bucketed notification list. Groups items into 오늘 / 이번 주 /
+/// 이전 by `createdAt`. This is a pure visual restructure — no new
+/// filtering, no backend call, no item reordering beyond bucketing.
+class _GroupedNotificationList extends StatelessWidget {
+  const _GroupedNotificationList({
+    required this.items,
+    required this.onTap,
+  });
+
+  final List<NotificationDto> items;
+  final ValueChanged<NotificationDto> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final startOfWeek = startOfToday.subtract(Duration(days: now.weekday - 1));
+
+    final today = <NotificationDto>[];
+    final thisWeek = <NotificationDto>[];
+    final earlier = <NotificationDto>[];
+
+    for (final n in items) {
+      if (!n.createdAt.isBefore(startOfToday)) {
+        today.add(n);
+      } else if (!n.createdAt.isBefore(startOfWeek)) {
+        thisWeek.add(n);
+      } else {
+        earlier.add(n);
+      }
+    }
+
+    final children = <Widget>[const SizedBox(height: PrismSpacing.sm)];
+
+    void addGroup(String label, List<NotificationDto> rows) {
+      if (rows.isEmpty) return;
+      children.add(_GroupHeader(label: label));
+      for (var i = 0; i < rows.length; i++) {
+        children.add(_NotificationTile(notif: rows[i], onTap: () => onTap(rows[i])));
+        if (i < rows.length - 1) {
+          children.add(const Divider(
+            height: 1,
+            color: PrismColors.divider,
+            indent: PrismSpacing.xl,
+            endIndent: PrismSpacing.xl,
+          ));
+        }
+      }
+      children.add(const SizedBox(height: PrismSpacing.sm));
+    }
+
+    addGroup('오늘', today);
+    addGroup('이번 주', thisWeek);
+    addGroup('이전', earlier);
+    children.add(const SizedBox(height: PrismSpacing.xl4));
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: children,
+    );
+  }
+}
+
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        PrismSpacing.xl,
+        PrismSpacing.md,
+        PrismSpacing.xl,
+        6,
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+          color: PrismColors.ink4,
+        ),
+      ),
+    );
   }
 }
 
