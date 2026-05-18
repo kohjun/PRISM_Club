@@ -62,6 +62,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/PretendardVariable.ttf
 
 # Launcher icon — Android adaptive icon (foreground + background +
 # Android 13+ monochrome). iOS is gated on the iOS scaffold landing

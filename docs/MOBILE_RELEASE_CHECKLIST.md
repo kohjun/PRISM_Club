@@ -114,6 +114,21 @@ the Flutter placeholder (with sha1s + dimensions) is in
 5. Commit the regenerated `android/app/src/main/res/` files alongside
    the new source.
 
+### Typography
+
+**Current state:** Pretendard is bundled as a variable font at
+`apps/mobile/assets/fonts/PretendardVariable.ttf` and registered as the
+app-wide Flutter `fontFamily`. The upstream license is preserved next to
+the binary at `apps/mobile/assets/fonts/Pretendard-LICENSE.txt`.
+
+- [x] `pubspec.yaml` registers `family: Pretendard`.
+- [x] `buildPrismTheme()` applies Pretendard as the app-wide font.
+- [x] Body / caption / label tracking remains near zero for Korean
+      readability; tighter negative tracking is limited to larger
+      display / title styles.
+- [ ] Physical-device QA confirms Korean text renders without tofu /
+      missing-font squares across the persona walkthrough.
+
 ---
 
 ## 4. Signing

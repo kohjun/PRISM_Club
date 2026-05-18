@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 /// Pure constants only — no widgets, no theme builders here. Widgets / theme
 /// reach into these to stay consistent.
 ///
-/// Pretendard binary bundling is deferred — typography here uses negative
-/// letter-spacing + tuned weights to land the hierarchy on the system font.
+/// Pretendard is bundled under `assets/fonts/` and applied from `theme.dart`.
+/// Body/caption/label tracking stays near zero for Korean readability, while
+/// display/title sizes keep the tighter handoff feel.
 class PrismSpacing {
   PrismSpacing._();
 
@@ -168,12 +169,19 @@ class PrismElevation {
   ];
 }
 
-/// Typography scale tuned to the handoff. Pretendard binary is deferred; we
-/// land the hierarchy via weight + size + letter-spacing on the system font.
+class PrismFonts {
+  PrismFonts._();
+
+  static const body = 'Pretendard';
+}
+
+/// Typography scale tuned to the handoff. Pretendard is bundled under
+/// assets/fonts and applied app-wide from theme.dart.
 class PrismType {
   PrismType._();
 
   static const TextStyle displayLg = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 30,
     height: 1.1,
     fontWeight: FontWeight.w800,
@@ -182,6 +190,7 @@ class PrismType {
   );
 
   static const TextStyle titleXl = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 24,
     height: 1.2,
     fontWeight: FontWeight.w700,
@@ -190,6 +199,7 @@ class PrismType {
   );
 
   static const TextStyle titleMd = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 18,
     height: 1.3,
     fontWeight: FontWeight.w700,
@@ -198,6 +208,7 @@ class PrismType {
   );
 
   static const TextStyle titleSm = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 15,
     height: 1.35,
     fontWeight: FontWeight.w700,
@@ -209,6 +220,7 @@ class PrismType {
   // rendering reads worse than Latin under negative tracking. Negative
   // letter-spacing is reserved for display / title sizes.
   static const TextStyle bodyLg = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 16,
     height: 1.55,
     fontWeight: FontWeight.w500,
@@ -217,6 +229,7 @@ class PrismType {
   );
 
   static const TextStyle body = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 14,
     height: 1.5,
     fontWeight: FontWeight.w500,
@@ -225,6 +238,7 @@ class PrismType {
   );
 
   static const TextStyle label = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 13,
     height: 1.4,
     fontWeight: FontWeight.w600,
@@ -233,6 +247,7 @@ class PrismType {
   );
 
   static const TextStyle caption = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 12,
     height: 1.5,
     fontWeight: FontWeight.w500,
@@ -241,6 +256,7 @@ class PrismType {
   );
 
   static const TextStyle overline = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 11,
     height: 1,
     fontWeight: FontWeight.w700,
@@ -249,6 +265,7 @@ class PrismType {
   );
 
   static const TextStyle numeric = TextStyle(
+    fontFamily: PrismFonts.body,
     fontSize: 16,
     fontWeight: FontWeight.w800,
     letterSpacing: -0.5,

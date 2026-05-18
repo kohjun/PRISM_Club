@@ -5,7 +5,15 @@ import 'design_tokens.dart';
 // Re-export so existing `import 'app/theme.dart'` keeps working — old code
 // reaches `PrismColors.primary / muted / soft / border` and new code reaches
 // the full ramp (`PrismColors.pp600 / ink1 / line2`).
-export 'design_tokens.dart' show PrismColors, PrismSpacing, PrismRadius, PrismElevation, PrismType, PrismAvatarPalette;
+export 'design_tokens.dart'
+    show
+        PrismColors,
+        PrismSpacing,
+        PrismRadius,
+        PrismElevation,
+        PrismFonts,
+        PrismType,
+        PrismAvatarPalette;
 
 /// Builds the app-wide Material 3 theme from design tokens.
 ///
@@ -14,7 +22,11 @@ export 'design_tokens.dart' show PrismColors, PrismSpacing, PrismRadius, PrismEl
 /// title sizes for the Korean "tight" feel; numerals use tabular figures
 /// where readability matters.
 ThemeData buildPrismTheme() {
-  final base = ThemeData.light(useMaterial3: true);
+  final base = ThemeData(
+    brightness: Brightness.light,
+    fontFamily: PrismFonts.body,
+    useMaterial3: true,
+  );
 
   final colorScheme = const ColorScheme.light(
     primary: PrismColors.pp600,
@@ -39,7 +51,10 @@ ThemeData buildPrismTheme() {
 
   final textTheme = base.textTheme.copyWith(
     displayLarge: PrismType.displayLg,
-    displayMedium: PrismType.displayLg.copyWith(fontSize: 26, letterSpacing: -0.8),
+    displayMedium: PrismType.displayLg.copyWith(
+      fontSize: 26,
+      letterSpacing: -0.8,
+    ),
     displaySmall: PrismType.titleXl,
     headlineMedium: PrismType.titleXl,
     headlineSmall: PrismType.titleMd,
@@ -71,6 +86,7 @@ ThemeData buildPrismTheme() {
       surfaceTintColor: Colors.transparent,
       centerTitle: false,
       titleTextStyle: TextStyle(
+        fontFamily: PrismFonts.body,
         color: PrismColors.ink1,
         fontSize: 18,
         fontWeight: FontWeight.w700,
@@ -100,6 +116,7 @@ ThemeData buildPrismTheme() {
           borderRadius: BorderRadius.circular(PrismRadius.md),
         ),
         textStyle: const TextStyle(
+          fontFamily: PrismFonts.body,
           fontSize: 14,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.3,
@@ -127,6 +144,7 @@ ThemeData buildPrismTheme() {
           borderRadius: BorderRadius.circular(PrismRadius.md),
         ),
         textStyle: const TextStyle(
+          fontFamily: PrismFonts.body,
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
@@ -137,6 +155,7 @@ ThemeData buildPrismTheme() {
       style: TextButton.styleFrom(
         foregroundColor: PrismColors.pp700,
         textStyle: const TextStyle(
+          fontFamily: PrismFonts.body,
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.2,
@@ -144,20 +163,20 @@ ThemeData buildPrismTheme() {
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
-      style: IconButton.styleFrom(
-        foregroundColor: PrismColors.ink2,
-      ),
+      style: IconButton.styleFrom(foregroundColor: PrismColors.ink2),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: PrismColors.bgTint,
       selectedColor: PrismColors.pp600,
       labelStyle: const TextStyle(
+        fontFamily: PrismFonts.body,
         color: PrismColors.ink2,
         fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.2,
       ),
       secondaryLabelStyle: const TextStyle(
+        fontFamily: PrismFonts.body,
         color: Colors.white,
         fontSize: 12,
         fontWeight: FontWeight.w600,
@@ -166,7 +185,10 @@ ThemeData buildPrismTheme() {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(PrismRadius.pill),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.md, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: PrismSpacing.md,
+        vertical: 6,
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -176,6 +198,7 @@ ThemeData buildPrismTheme() {
         vertical: PrismSpacing.md,
       ),
       hintStyle: const TextStyle(
+        fontFamily: PrismFonts.body,
         color: PrismColors.ink4,
         fontSize: 14,
         letterSpacing: -0.2,
@@ -214,6 +237,7 @@ ThemeData buildPrismTheme() {
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return TextStyle(
+          fontFamily: PrismFonts.body,
           fontSize: 12,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           letterSpacing: -0.2,
@@ -228,7 +252,9 @@ ThemeData buildPrismTheme() {
       surfaceTintColor: Colors.transparent,
       modalBackgroundColor: PrismColors.bg,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(PrismRadius.xxl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(PrismRadius.xxl),
+        ),
       ),
       showDragHandle: true,
     ),
@@ -239,7 +265,11 @@ ThemeData buildPrismTheme() {
     ),
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: PrismColors.ink1,
-      contentTextStyle: TextStyle(color: Colors.white, fontSize: 13),
+      contentTextStyle: TextStyle(
+        fontFamily: PrismFonts.body,
+        color: Colors.white,
+        fontSize: 13,
+      ),
       behavior: SnackBarBehavior.floating,
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
