@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
 import '../data/moderation_repository.dart';
@@ -76,30 +77,68 @@ class _ModerationDetailScreenState
                 maxLines: 2,
                 decoration: const InputDecoration(
                   labelText: '처리 메모 (선택)',
-                  border: OutlineInputBorder(),
                 ),
               ),
               if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!,
-                    style:
-                        const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                const SizedBox(height: PrismSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: PrismSpacing.md,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: PrismColors.dangerBg,
+                    borderRadius: BorderRadius.circular(PrismRadius.sm),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 14, color: PrismColors.dangerFg),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(
+                            color: PrismColors.dangerFg,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: PrismSpacing.md),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
-                  FilledButton.tonal(
+                  OutlinedButton(
                     onPressed: _busy ? null : () => _resolve('DISMISS'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 44),
+                      foregroundColor: PrismColors.ink2,
+                    ),
                     child: const Text('기각'),
                   ),
                   FilledButton(
                     onPressed: _busy ? null : () => _resolve('HIDE'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 44),
+                      backgroundColor: PrismColors.dangerFg,
+                      foregroundColor: Colors.white,
+                    ),
                     child: const Text('숨김 처리'),
                   ),
                   if (r.target.status == 'HIDDEN')
                     OutlinedButton(
                       onPressed: _busy ? null : () => _resolve('RESTORE'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        foregroundColor: PrismColors.successFg,
+                        side: const BorderSide(color: PrismColors.successFg),
+                      ),
                       child: const Text('복원'),
                     ),
                 ],
@@ -125,14 +164,30 @@ class _ModerationDetailScreenState
   }
 
   Widget _row(String k, String v) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-                width: 80,
-                child: Text(k, style: const TextStyle(color: Colors.grey))),
-            Expanded(child: Text(v)),
+              width: 80,
+              child: Text(
+                k,
+                style: const TextStyle(
+                  color: PrismColors.ink4,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                v,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  color: PrismColors.ink1,
+                ),
+              ),
+            ),
           ],
         ),
       );

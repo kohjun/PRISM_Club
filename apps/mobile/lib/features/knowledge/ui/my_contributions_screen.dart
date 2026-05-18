@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/contribution_card_widget.dart';
 import '../../../widgets/state_views.dart';
@@ -35,11 +36,13 @@ class MyContributionsScreen extends ConsumerWidget {
             );
           }
           return RefreshIndicator(
+            color: PrismColors.pp600,
             onRefresh: () async => ref.invalidate(myContributionsProvider),
             child: ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(PrismSpacing.xl),
               itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) =>
+                  const SizedBox(height: PrismSpacing.sm),
               itemBuilder: (context, i) {
                 final c = items[i];
                 return ContributionCardWidget(

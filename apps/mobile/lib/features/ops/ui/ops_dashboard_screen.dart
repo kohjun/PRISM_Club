@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
 import '../data/ops_dto.dart';
@@ -42,9 +42,14 @@ class OpsDashboardScreen extends ConsumerWidget {
         actions: [
           TextButton.icon(
             onPressed: () => _refreshSignals(context, ref),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, size: 18),
             label: const Text('시그널 새로고침'),
+            style: TextButton.styleFrom(
+              foregroundColor: PrismColors.pp700,
+              minimumSize: const Size(0, 44),
+            ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: summary.when(
@@ -54,55 +59,43 @@ class OpsDashboardScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(opsSummaryProvider),
         ),
         data: (s) => RefreshIndicator(
+          color: PrismColors.pp600,
           onRefresh: () async => ref.invalidate(opsSummaryProvider),
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(PrismSpacing.xl),
             children: [
               _CardRow(s: s),
-              const SizedBox(height: 24),
-              _Section(title: '최근 가입 (30일)'),
+              const SizedBox(height: PrismSpacing.xl2),
+              const _Section(title: '최근 가입 (30일)'),
+              if (s.recentUsers.isEmpty) const _EmptyLine(),
               for (final u in s.recentUsers)
-                ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: Text(u.nickname ?? u.id.substring(0, 8)),
-                  subtitle: Text(u.createdAt.toIso8601String().substring(0, 10)),
+                _OpsTile(
+                  icon: Icons.person_outline,
+                  title: u.nickname ?? u.id.substring(0, 8),
+                  subtitle: u.createdAt.toIso8601String().substring(0, 10),
                   onTap: () => context.go('/users/${u.id}'),
                 ),
-              if (s.recentUsers.isEmpty)
-                const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text('- 없음 -',
-                        style: TextStyle(color: PrismColors.muted))),
-              const SizedBox(height: 8),
-              _Section(title: '최근 방 (30일)'),
+              const SizedBox(height: PrismSpacing.md),
+              const _Section(title: '최근 방 (30일)'),
+              if (s.recentRooms.isEmpty) const _EmptyLine(),
               for (final r in s.recentRooms)
-                ListTile(
-                  leading: const Icon(Icons.meeting_room_outlined),
-                  title: Text(r.name),
-                  subtitle: Text(r.slug),
+                _OpsTile(
+                  icon: Icons.meeting_room_outlined,
+                  title: r.name,
+                  subtitle: r.slug,
                   onTap: () => context.go('/rooms/${r.slug}'),
                 ),
-              if (s.recentRooms.isEmpty)
-                const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text('- 없음 -',
-                        style: TextStyle(color: PrismColors.muted))),
-              const SizedBox(height: 8),
-              _Section(title: '최근 글 (30일)'),
+              const SizedBox(height: PrismSpacing.md),
+              const _Section(title: '최근 글 (30일)'),
+              if (s.recentPosts.isEmpty) const _EmptyLine(),
               for (final p in s.recentPosts)
-                ListTile(
-                  leading: const Icon(Icons.article_outlined),
-                  title: Text(p.bodyPreview,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(p.roomSlug),
+                _OpsTile(
+                  icon: Icons.article_outlined,
+                  title: p.bodyPreview,
+                  subtitle: p.roomSlug,
                   onTap: () => context.go('/posts/${p.id}'),
                 ),
-              if (s.recentPosts.isEmpty)
-                const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text('- 없음 -',
-                        style: TextStyle(color: PrismColors.muted))),
-              const SizedBox(height: 40),
+              const SizedBox(height: PrismSpacing.xl3),
             ],
           ),
         ),
@@ -118,31 +111,39 @@ class _CardRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+      spacing: 10,
+      runSpacing: 10,
       children: [
         _OpsCard(
           icon: Icons.fact_check_outlined,
           title: '대기 중인 기여',
           value: '${s.pendingContributions}',
           onTap: () => context.go('/curate'),
+          tint: PrismColors.pp50,
+          fg: PrismColors.pp700,
         ),
         _OpsCard(
           icon: Icons.report_outlined,
           title: '열린 신고',
           value: '${s.openReports}',
           onTap: () => context.go('/admin/reports'),
+          tint: PrismColors.dangerBg,
+          fg: PrismColors.dangerFg,
         ),
         _OpsCard(
           icon: Icons.work_outline,
           title: '모집 (열림/전체)',
           value: '${s.recruitmentOpen}/${s.recruitmentTotal}',
           onTap: () => context.go('/spaces'),
+          tint: PrismColors.warningBg,
+          fg: PrismColors.warningFg,
         ),
         _OpsCard(
           icon: Icons.person_add_outlined,
           title: '신규 가입자 (30일)',
           value: '${s.recentUserCount}',
+          tint: PrismColors.successBg,
+          fg: PrismColors.successFg,
         ),
       ],
     );
@@ -154,35 +155,66 @@ class _OpsCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.value,
+    required this.tint,
+    required this.fg,
     this.onTap,
   });
   final IconData icon;
   final String title;
   final String value;
+  final Color tint;
+  final Color fg;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 170,
-      child: Card(
+      width: 168,
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          borderRadius: BorderRadius.circular(PrismRadius.lg),
+          child: Container(
+            padding: const EdgeInsets.all(PrismSpacing.cardPad),
+            decoration: BoxDecoration(
+              color: PrismColors.bg,
+              borderRadius: BorderRadius.circular(PrismRadius.lg),
+              border: Border.all(color: PrismColors.line),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: PrismColors.primary),
-                const SizedBox(height: 8),
-                Text(title,
-                    style: const TextStyle(
-                        color: PrismColors.muted, fontSize: 12)),
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: tint,
+                    borderRadius: BorderRadius.circular(PrismRadius.sm + 2),
+                  ),
+                  child: Icon(icon, color: fg, size: 18),
+                ),
+                const SizedBox(height: PrismSpacing.sm),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: PrismColors.ink3,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(value,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 20)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                    letterSpacing: -0.6,
+                    color: PrismColors.ink1,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
               ],
             ),
           ),
@@ -195,15 +227,108 @@ class _OpsCard extends StatelessWidget {
 class _Section extends StatelessWidget {
   const _Section({required this.title});
   final String title;
+
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 4),
+        padding: const EdgeInsets.fromLTRB(0, PrismSpacing.sm, 0, 6),
         child: Text(
           title,
           style: const TextStyle(
+            fontSize: 13,
             fontWeight: FontWeight.w700,
-            fontSize: 14,
+            letterSpacing: -0.2,
+            color: PrismColors.ink2,
           ),
+        ),
+      );
+}
+
+class _OpsTile extends StatelessWidget {
+  const _OpsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(PrismRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 10,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: PrismColors.bgTint,
+                  borderRadius: BorderRadius.circular(PrismRadius.sm + 2),
+                ),
+                child: Icon(icon, color: PrismColors.ink2, size: 16),
+              ),
+              const SizedBox(width: PrismSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.3,
+                        color: PrismColors.ink1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: PrismColors.ink4,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right,
+                  color: PrismColors.ink4, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyLine extends StatelessWidget {
+  const _EmptyLine();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Text(
+          '- 없음 -',
+          style: TextStyle(color: PrismColors.ink4, fontSize: 12),
         ),
       );
 }

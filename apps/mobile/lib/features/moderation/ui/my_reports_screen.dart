@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
+import '../../../widgets/status_pill.dart';
 import '../data/moderation_repository.dart';
 
 class MyReportsScreen extends ConsumerWidget {
@@ -21,27 +23,72 @@ class MyReportsScreen extends ConsumerWidget {
         ),
         data: (list) => list.items.isEmpty
             ? const EmptyView(message: '아직 신고한 내역이 없어요.')
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: list.items.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (_, i) {
-                  final r = list.items[i];
-                  return Card(
-                    child: ListTile(
-                      title: Text('${r.targetType} · ${r.reason}'),
-                      subtitle: Text(
-                        r.status == 'OPEN'
-                            ? '처리 대기 중'
-                            : '처리됨: ${r.resolution ?? '-'}',
+            : RefreshIndicator(
+                color: PrismColors.pp600,
+                onRefresh: () async => ref.invalidate(myReportsProvider),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(PrismSpacing.xl),
+                  itemCount: list.items.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: PrismSpacing.sm),
+                  itemBuilder: (_, i) {
+                    final r = list.items[i];
+                    final isOpen = r.status == 'OPEN';
+                    return Container(
+                      padding: const EdgeInsets.all(PrismSpacing.cardPad),
+                      decoration: BoxDecoration(
+                        color: PrismColors.bg,
+                        borderRadius: BorderRadius.circular(PrismRadius.md),
+                        border: Border.all(color: PrismColors.line),
                       ),
-                      trailing: Text(
-                        r.createdAt.toIso8601String().substring(0, 10),
-                        style: const TextStyle(fontSize: 11),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              if (isOpen)
+                                StatusPill.purple('대기')
+                              else
+                                StatusPill.success('처리됨'),
+                              const SizedBox(width: PrismSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  '${r.targetType} · ${r.reason}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.3,
+                                    color: PrismColors.ink1,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                r.createdAt.toIso8601String().substring(0, 10),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: PrismColors.ink4,
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: PrismSpacing.sm),
+                          Text(
+                            isOpen
+                                ? '처리 대기 중'
+                                : '결과: ${r.resolution ?? '-'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: PrismColors.ink3,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/design_tokens.dart';
 import '../../../../core/api_error.dart';
 import '../../data/moderation_repository.dart';
 
@@ -22,6 +23,12 @@ class ReportSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: PrismColors.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(PrismRadius.xxl),
+        ),
+      ),
       builder: (_) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -72,66 +79,129 @@ class _ReportSheetState extends ConsumerState<ReportSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('신고하기',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  )),
-          const SizedBox(height: 4),
-          Text(
-            '${widget.targetType.toLowerCase()} 신고',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          ..._reasons.map((r) => RadioListTile<String>(
-                title: Text(r),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          PrismSpacing.xl,
+          PrismSpacing.lg,
+          PrismSpacing.xl,
+          PrismSpacing.xl,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '신고하기',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+                color: PrismColors.ink1,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${widget.targetType.toLowerCase()} 신고',
+              style: const TextStyle(
+                fontSize: 12,
+                color: PrismColors.ink3,
+              ),
+            ),
+            const SizedBox(height: PrismSpacing.lg),
+            ..._reasons.map(
+              (r) => RadioListTile<String>(
+                title: Text(
+                  r,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: PrismColors.ink1,
+                  ),
+                ),
                 value: r,
+                // ignore: deprecated_member_use
                 groupValue: _reason,
+                // ignore: deprecated_member_use
                 onChanged: (v) => setState(() => _reason = v ?? _reason),
+                activeColor: PrismColors.pp600,
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-              )),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _detailsCtrl,
-            maxLength: 1000,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: '추가 설명 (선택)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _submitting
-                      ? null
-                      : () => Navigator.of(context).pop(false),
-                  child: const Text('취소'),
+                visualDensity: const VisualDensity(
+                  horizontal: -2,
+                  vertical: -1,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _submitting ? null : _submit,
-                  child: Text(_submitting ? '신고 중...' : '신고'),
+            ),
+            const SizedBox(height: PrismSpacing.sm),
+            TextField(
+              controller: _detailsCtrl,
+              maxLength: 1000,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: '추가 설명 (선택)',
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: PrismSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: PrismSpacing.md,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: PrismColors.dangerBg,
+                  borderRadius: BorderRadius.circular(PrismRadius.sm),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 14, color: PrismColors.dangerFg),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: PrismColors.dangerFg,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-        ],
+            const SizedBox(height: PrismSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _submitting
+                        ? null
+                        : () => Navigator.of(context).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                    child: const Text('취소'),
+                  ),
+                ),
+                const SizedBox(width: PrismSpacing.md),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _submitting ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      backgroundColor: PrismColors.dangerFg,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(_submitting ? '신고 중...' : '신고'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

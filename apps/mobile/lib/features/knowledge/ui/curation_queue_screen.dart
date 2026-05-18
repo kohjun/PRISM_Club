@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/contribution_card_widget.dart';
 import '../../../widgets/state_views.dart';
@@ -38,17 +39,32 @@ class _CurationQueueScreenState extends ConsumerState<CurationQueueScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Wrap(
-              spacing: 8,
-              children: _statuses
-                  .map((s) => ChoiceChip(
-                        label: Text(_label(s)),
-                        selected: _status == s,
-                        onSelected: (_) => setState(() => _status = s),
-                      ))
-                  .toList(),
+          Container(
+            padding: const EdgeInsets.fromLTRB(
+              PrismSpacing.xl,
+              PrismSpacing.sm,
+              PrismSpacing.xl,
+              PrismSpacing.sm,
+            ),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: PrismColors.divider),
+              ),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (var i = 0; i < _statuses.length; i++) ...[
+                    _StatusFilterChip(
+                      label: _label(_statuses[i]),
+                      selected: _status == _statuses[i],
+                      onTap: () => setState(() => _status = _statuses[i]),
+                    ),
+                    if (i < _statuses.length - 1) const SizedBox(width: 8),
+                  ],
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -62,19 +78,21 @@ class _CurationQueueScreenState extends ConsumerState<CurationQueueScreen> {
               data: (items) => items.isEmpty
                   ? EmptyView(message: '${_label(_status)} 항목이 없어요.')
                   : RefreshIndicator(
+                      color: PrismColors.pp600,
                       onRefresh: () async => ref
                           .invalidate(adminContributionsProvider(_status)),
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(PrismSpacing.xl),
                         itemCount: items.length,
                         separatorBuilder: (_, _) =>
-                            const SizedBox(height: 8),
+                            const SizedBox(height: PrismSpacing.sm),
                         itemBuilder: (context, i) {
                           final c = items[i];
                           return ContributionCardWidget(
                             contribution: c,
                             onTap: () => context.go('/curate/${c.id}'),
-                            onAuthorTap: (uid) => context.go('/users/$uid'),
+                            onAuthorTap: (uid) =>
+                                context.go('/users/$uid'),
                           );
                         },
                       ),
@@ -86,6 +104,57 @@ class _CurationQueueScreenState extends ConsumerState<CurationQueueScreen> {
     );
   }
 
+}
+
+class _StatusFilterChip extends StatelessWidget {
+  const _StatusFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label 필터',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(PrismRadius.pill),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.cardPad,
+              vertical: 8,
+            ),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? PrismColors.ink1 : PrismColors.bgTint,
+              borderRadius: BorderRadius.circular(PrismRadius.pill),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : PrismColors.ink2,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+extension _CurationQueueLabels on _CurationQueueScreenState {
   String _label(String s) {
     switch (s) {
       case ContributionStatus.pending:

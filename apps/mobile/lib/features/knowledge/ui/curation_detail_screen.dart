@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../app/theme.dart';
+import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/state_views.dart';
+import '../../../widgets/status_pill.dart';
 import '../../topic_hub/data/topic_hub_repository.dart';
 import '../data/contribution_dto.dart';
 import '../data/contribution_repository.dart';
@@ -253,34 +254,63 @@ class _Body extends ConsumerWidget {
           ),
         ),
         if (isPending)
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _resolve(context, ref, 'REQUEST_CHANGES'),
-                      child: const Text('보완 요청'),
+          Container(
+            decoration: const BoxDecoration(
+              color: PrismColors.bg,
+              border: Border(
+                top: BorderSide(color: PrismColors.line),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  PrismSpacing.cardPad,
+                  PrismSpacing.md,
+                  PrismSpacing.cardPad,
+                  PrismSpacing.md,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            _resolve(context, ref, 'REQUEST_CHANGES'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          foregroundColor: PrismColors.warningFg,
+                          side: const BorderSide(color: PrismColors.warningFg),
+                        ),
+                        child: const Text('보완 요청'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _resolve(context, ref, 'REJECT'),
-                      child: const Text('거절'),
+                    const SizedBox(width: PrismSpacing.sm),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _resolve(context, ref, 'REJECT'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          foregroundColor: PrismColors.dangerFg,
+                          side: const BorderSide(color: PrismColors.dangerFg),
+                        ),
+                        child: const Text('거절'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton(
-                      onPressed: () => _resolve(context, ref, 'APPROVE'),
-                      child: const Text('승인'),
+                    const SizedBox(width: PrismSpacing.sm),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        onPressed: () => _resolve(context, ref, 'APPROVE'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          backgroundColor: PrismColors.successFg,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('승인'),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -304,36 +334,20 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String label;
-    Color fg;
-    Color bg;
     switch (status) {
       case ContributionStatus.pending:
-        label = '대기'; fg = PrismColors.primary; bg = PrismColors.soft;
-        break;
+        return StatusPill.purple('대기');
       case ContributionStatus.approved:
-        label = '승인됨'; fg = Colors.white; bg = Colors.green;
-        break;
+        return StatusPill.success('승인됨');
       case ContributionStatus.rejected:
-        label = '거절됨'; fg = Colors.white; bg = Colors.redAccent;
-        break;
+        return StatusPill.danger('거절됨');
       case ContributionStatus.needsChanges:
-        label = '보완 요청'; fg = Colors.white; bg = Colors.orange;
-        break;
+        return StatusPill.warning('보완 요청');
       case ContributionStatus.withdrawn:
-        label = '철회됨'; fg = PrismColors.muted; bg = PrismColors.border;
-        break;
+        return StatusPill.neutral('철회됨');
       default:
-        label = status; fg = PrismColors.muted; bg = PrismColors.border;
+        return StatusPill.neutral(status);
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(label, style: TextStyle(fontSize: 11, color: fg)),
-    );
   }
 }
 
