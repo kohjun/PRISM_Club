@@ -87,6 +87,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _scheduleSearch(immediate: true);
   }
 
+  /// Builds the `?returnTo=` value Topic-Hub-bound search hits should
+  /// echo back when the user presses the back button. Returns `/search`
+  /// with the current `q` + `categorySlug` so the user lands back on
+  /// the same query they tapped from.
+  String _searchReturnTo() {
+    final params = <String, String>{};
+    if (_query.isNotEmpty) params['q'] = _query;
+    if (widget.categorySlug != null && widget.categorySlug!.isNotEmpty) {
+      params['categorySlug'] = widget.categorySlug!;
+    }
+    if (params.isEmpty) return '/search';
+    return Uri(path: '/search', queryParameters: params).toString();
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -184,7 +198,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 _GroupHeader(type: g.type, count: g.items.length),
                 const SizedBox(height: PrismSpacing.sm),
                 for (final hit in g.items) ...[
-                  SearchResultTile(hit: hit),
+                  SearchResultTile(hit: hit, returnTo: _searchReturnTo()),
                   const SizedBox(height: PrismSpacing.sm),
                 ],
                 const SizedBox(height: PrismSpacing.md),

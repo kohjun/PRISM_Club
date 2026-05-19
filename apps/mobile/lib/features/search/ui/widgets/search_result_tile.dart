@@ -6,8 +6,15 @@ import '../../../../app/theme.dart';
 import '../../data/search_dto.dart';
 
 class SearchResultTile extends StatelessWidget {
-  const SearchResultTile({super.key, required this.hit});
+  const SearchResultTile({super.key, required this.hit, this.returnTo});
   final SearchHitDto hit;
+
+  /// Optional internal route to pass through as `?returnTo=...` when
+  /// the user taps into a Topic Hub. Lets the Hub's back button bring
+  /// them back to the same Search state (query + filter) instead of
+  /// dropping them on /spaces. Caller is responsible for shaping a
+  /// safe internal route; the receiving screen validates again.
+  final String? returnTo;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +82,15 @@ class SearchResultTile extends StatelessWidget {
       case SearchEntityType.topicHub:
       case SearchEntityType.knowledgeBlock: {
         final slug = hit.ctxString('category_slug');
-        if (slug != null && slug.isNotEmpty) context.go('/categories/$slug');
+        if (slug != null && slug.isNotEmpty) {
+          final dest = StringBuffer('/categories/$slug');
+          if (returnTo != null && returnTo!.isNotEmpty) {
+            dest
+              ..write('?returnTo=')
+              ..write(Uri.encodeQueryComponent(returnTo!));
+          }
+          context.go(dest.toString());
+        }
         break;
       }
       case SearchEntityType.room: {

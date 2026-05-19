@@ -212,7 +212,10 @@ class _HomeBody extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(PrismRadius.md),
-                  onTap: () => context.go('/categories/${h.categorySlug}'),
+                  onTap: () => context.go(
+                    '/categories/${h.categorySlug}'
+                    '?returnTo=${Uri.encodeQueryComponent('/home')}',
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(PrismSpacing.md),
                     child: Row(
@@ -423,7 +426,10 @@ class _TopicHubStrip extends StatelessWidget {
           return SizedBox(
             width: 64,
             child: GestureDetector(
-              onTap: () => context.go('/categories/${hub.categorySlug}'),
+              onTap: () => context.go(
+                '/categories/${hub.categorySlug}'
+                '?returnTo=${Uri.encodeQueryComponent('/home')}',
+              ),
               behavior: HitTestBehavior.opaque,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,

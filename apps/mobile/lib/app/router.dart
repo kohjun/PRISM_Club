@@ -59,6 +59,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, st) => TopicHubScreen(
           categorySlug: st.pathParameters['categorySlug']!,
           spaceSlug: st.uri.queryParameters['spaceSlug'],
+          returnTo: st.uri.queryParameters['returnTo'],
         ),
       ),
       GoRoute(

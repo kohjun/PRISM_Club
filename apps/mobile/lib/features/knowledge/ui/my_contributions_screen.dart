@@ -48,7 +48,9 @@ class MyContributionsScreen extends ConsumerWidget {
                 return ContributionCardWidget(
                   contribution: c,
                   onTap: () => context.go(
-                      '/categories/${c.categorySlug}'),
+                    '/categories/${c.categorySlug}'
+                    '?returnTo=${Uri.encodeQueryComponent('/me/contributions')}',
+                  ),
                   onAuthorTap: (uid) => context.go('/users/$uid'),
                 );
               },

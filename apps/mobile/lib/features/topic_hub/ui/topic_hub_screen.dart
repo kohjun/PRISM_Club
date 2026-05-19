@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/design_tokens.dart';
+import '../../../app/safe_route.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
@@ -18,27 +19,49 @@ class TopicHubScreen extends ConsumerWidget {
     super.key,
     required this.categorySlug,
     this.spaceSlug,
+    this.returnTo,
   });
 
   final String categorySlug;
 
   /// Optional originating space slug, passed via `?spaceSlug=` when the
-  /// user arrived from a CategoryListScreen. When present, the back
-  /// button returns to that space's category list; otherwise it falls
-  /// back to a generic /spaces destination (or pops if the navigation
-  /// stack has somewhere to go).
+  /// user arrived from a CategoryListScreen. When present (and no
+  /// safer signal exists) the back button returns to that space's
+  /// category list.
   final String? spaceSlug;
 
+  /// Optional originating internal route, passed via `?returnTo=` when
+  /// the user arrived via `context.go` from a non-CategoryList surface
+  /// (Home, Search, Profile, MyContributions). `context.go` clears the
+  /// nav stack, so `canPop()` returns false and the screen otherwise
+  /// has no way to know where the user came from. Only internal routes
+  /// matching [isSafeInternalRoute] are honored.
+  final String? returnTo;
+
   void _onBack(BuildContext context) {
+    // 1. If the nav stack has something to pop (push-based nav), pop it.
     if (context.canPop()) {
       context.pop();
       return;
     }
+    // 2. Honor an explicit returnTo from the origin screen, but only if
+    //    it looks like a safe internal route. Drops external / malformed
+    //    values silently so an attacker-controlled deep link can't
+    //    redirect off-app.
+    if (isSafeInternalRoute(returnTo)) {
+      context.go(returnTo!);
+      return;
+    }
+    // 3. Otherwise, if we have a space context (CategoryList-origin),
+    //    return to that space's category list.
     if (spaceSlug != null && spaceSlug!.isNotEmpty) {
       context.go('/spaces/$spaceSlug/categories');
       return;
     }
-    context.go('/spaces');
+    // 4. Last-resort fallback — `/home` is the user's default
+    //    bottom-nav surface, friendlier than dropping them on
+    //    `/spaces` with no context.
+    context.go('/home');
   }
 
   @override

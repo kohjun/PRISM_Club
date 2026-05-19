@@ -174,7 +174,10 @@ class _ProfileBody extends ConsumerWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(PrismRadius.md),
-                  onTap: () => context.go('/categories/${c.categorySlug}'),
+                  onTap: () => context.go(
+                    '/categories/${c.categorySlug}'
+                    '?returnTo=${Uri.encodeQueryComponent('/users/$userId')}',
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 4,
