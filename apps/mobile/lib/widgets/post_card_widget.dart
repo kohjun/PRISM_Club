@@ -22,12 +22,21 @@ class PostCardWidget extends StatelessWidget {
     this.onTap,
     this.onLikePressed,
     this.onAuthorTap,
+    this.compact = false,
   });
 
   final PostDto post;
   final VoidCallback? onTap;
   final VoidCallback? onLikePressed;
   final ValueChanged<String>? onAuthorTap;
+
+  /// When true, the card omits the attachments block (event / reference
+  /// preview cards + image previews). Used by fixed-height contexts
+  /// like the Home horizontal "팔로우한 방 업데이트" strip where an
+  /// inline `MediaImage(height: 180)` or attached event card would
+  /// otherwise push the card past its 224dp container. Matches the
+  /// convention on `EventCardWidget.compact` + `ReferenceCardWidget.compact`.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +64,7 @@ class PostCardWidget extends StatelessWidget {
                   color: PrismColors.ink1,
                 ),
               ),
-              if (post.attachments.isNotEmpty) ...[
+              if (!compact && post.attachments.isNotEmpty) ...[
                 const SizedBox(height: PrismSpacing.md),
                 for (final a in post.attachments) ...[
                   if (a.asEventCard != null)

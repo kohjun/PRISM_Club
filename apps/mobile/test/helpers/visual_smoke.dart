@@ -42,6 +42,63 @@ Future<void> expectNoOverflow(
   WidgetTester tester,
   Future<void> Function() body,
 ) async {
+  final captured = await _runWithOverflowGuard(() async {
+    await body();
+    // One final pump catches deferred layout errors that the body
+    // itself didn't pump through (e.g. font fallback re-layout).
+    await tester.pump();
+  });
+  _failIfAny(captured);
+}
+
+/// Same overflow contract as [expectNoOverflow], but additionally
+/// scrolls the screen end-to-end after [body] has mounted it. Catches
+/// overflow errors in lazy regions of the tree — `CustomScrollView`
+/// slivers, off-screen `ListView` items — that the simpler helper
+/// never builds because they're outside the initial 800dp viewport.
+///
+/// Strategy: find the primary `Scrollable`, drag downward [passes]
+/// times by [delta] logical pixels (pumping each frame so layout
+/// errors surface), then drag back up by the same amount. Each drag
+/// triggers a sliver build for the new visible region; pumps surface
+/// any layout exceptions through `FlutterError.onError`.
+///
+/// Defaults ([passes] = 8, [delta] = 600) cover ~4800dp of scrollable
+/// content twice — enough for every screen in the app today. Bump
+/// `passes` for taller pages if needed.
+Future<void> expectNoOverflowWhileScrolling(
+  WidgetTester tester,
+  Future<void> Function() body, {
+  int passes = 8,
+  double delta = 600.0,
+}) async {
+  final captured = await _runWithOverflowGuard(() async {
+    await body();
+    await tester.pump();
+
+    final scrollable = find.byType(Scrollable);
+    // Some test trees mount no Scrollable (error / loading states with
+    // a centered ErrorView). Treat that as "nothing to scroll" — the
+    // outer expectNoOverflow already pumped twice; we're done.
+    if (scrollable.evaluate().isEmpty) return;
+    final target = scrollable.first;
+
+    for (var i = 0; i < passes; i++) {
+      await tester.drag(target, Offset(0, -delta));
+      await tester.pump();
+    }
+    for (var i = 0; i < passes; i++) {
+      await tester.drag(target, Offset(0, delta));
+      await tester.pump();
+    }
+    await tester.pump();
+  });
+  _failIfAny(captured);
+}
+
+Future<List<FlutterErrorDetails>> _runWithOverflowGuard(
+  Future<void> Function() body,
+) async {
   final captured = <FlutterErrorDetails>[];
   final FlutterExceptionHandler? original = FlutterError.onError;
   FlutterError.onError = (details) {
@@ -53,25 +110,25 @@ Future<void> expectNoOverflow(
   };
   try {
     await body();
-    // One final pump catches deferred layout errors that the body
-    // itself didn't pump through (e.g. font fallback re-layout).
-    await tester.pump();
   } finally {
     FlutterError.onError = original;
   }
-  if (captured.isNotEmpty) {
-    final report = StringBuffer();
-    report.writeln('Detected ${captured.length} overflow error(s):');
-    for (var i = 0; i < captured.length; i++) {
-      final d = captured[i];
-      report.writeln('--- [$i] ${d.exceptionAsString()}');
-      // d.context is a DiagnosticsNode that names the failing tree spot
-      // — useful for tracking down which Column/Row in which screen.
-      if (d.context != null) report.writeln('    context: ${d.context}');
-      if (d.library != null) report.writeln('    library: ${d.library}');
-    }
-    fail(report.toString());
+  return captured;
+}
+
+void _failIfAny(List<FlutterErrorDetails> captured) {
+  if (captured.isEmpty) return;
+  final report = StringBuffer();
+  report.writeln('Detected ${captured.length} overflow error(s):');
+  for (var i = 0; i < captured.length; i++) {
+    final d = captured[i];
+    report.writeln('--- [$i] ${d.exceptionAsString()}');
+    // d.context is a DiagnosticsNode that names the failing tree spot
+    // — useful for tracking down which Column/Row in which screen.
+    if (d.context != null) report.writeln('    context: ${d.context}');
+    if (d.library != null) report.writeln('    library: ${d.library}');
   }
+  fail(report.toString());
 }
 
 bool _isOverflowError(FlutterErrorDetails details) {

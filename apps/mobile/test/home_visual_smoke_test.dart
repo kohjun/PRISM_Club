@@ -10,7 +10,12 @@ import 'package:mobile/features/room/data/room_summary_dto.dart';
 
 import 'helpers/visual_smoke.dart';
 
-PostDto _post(String id, String body) => PostDto(
+PostDto _post(
+  String id,
+  String body, {
+  List<PostAttachmentDto> attachments = const [],
+}) =>
+    PostDto(
       id: id,
       roomId: 'room-1',
       roomSlug: 'dating-event-reviews',
@@ -23,10 +28,17 @@ PostDto _post(String id, String body) => PostDto(
       recruitmentFields: null,
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
-      attachments: const [],
+      attachments: attachments,
       replyCount: 12,
       likeCount: 87,
       likedByMe: false,
+    );
+
+PostAttachmentDto _eventAttachment(String id) => PostAttachmentDto(
+      id: 'att-$id',
+      attachmentType: 'EVENT_CARD',
+      target: _event(id, 'PRISM EVENT — 첨부된 이벤트 카드 제목이 매우 길어도 안전해야 함'),
+      sortOrder: 0,
     );
 
 RoomSummaryDto _room(String slug, String name) => RoomSummaryDto(
@@ -53,9 +65,17 @@ EventCardDto _event(String id, String title) => EventCardDto(
 HomeBundleDto _populatedBundle() => HomeBundleDto(
       unreadNotificationCount: 3,
       followedRoomUpdates: [
-        _post('p-1',
-            '팔로우한 방의 첫 글입니다. 본문이 매우 길어서 좁은 360dp 폭에서 잘려야 하지 '
-            '카드가 깨지면 안 됩니다. 한국어는 줄바꿈이 까다로워서 더 주의가 필요해요.'),
+        // First post: attached event card. The horizontal post strip
+        // renders PostCardWidget(compact: true), which suppresses the
+        // attachments block — if a regression flips that off, this
+        // fixture pushes the card past its 224dp container and the
+        // smoke test catches the overflow.
+        _post(
+          'p-1',
+          '팔로우한 방의 첫 글입니다. 본문이 매우 길어서 좁은 360dp 폭에서 잘려야 하지 '
+          '카드가 깨지면 안 됩니다. 한국어는 줄바꿈이 까다로워서 더 주의가 필요해요.',
+          attachments: [_eventAttachment('attached-evt')],
+        ),
         _post('p-2', '두 번째 글.'),
       ],
       recommendedRooms: [

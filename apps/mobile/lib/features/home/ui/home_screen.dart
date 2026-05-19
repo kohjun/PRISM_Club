@@ -486,6 +486,10 @@ class _HorizontalPostRow extends StatelessWidget {
             width: 280,
             child: PostCardWidget(
               post: posts[i],
+              // compact: true hides the attachments block (event /
+              // reference preview + MediaImage(height: 180)) so a
+              // post with attachments doesn't exceed the 224dp strip.
+              compact: true,
               onTap: () => context.go('/posts/${posts[i].id}'),
               onAuthorTap: (uid) => context.go('/users/$uid'),
             ),

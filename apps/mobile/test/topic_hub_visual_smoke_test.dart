@@ -101,7 +101,11 @@ void main() {
         'topic hub visual smoke does not overflow at ${size.width.toInt()}dp',
         (tester) async {
       setSmokeViewport(tester, size);
-      await expectNoOverflow(tester, () async {
+      // expectNoOverflowWhileScrolling drags the CustomScrollView past
+      // every sliver — hero, knowledge blocks, signals, related events,
+      // references, rooms — so overflow in lower sections is exercised,
+      // not just the initial viewport.
+      await expectNoOverflowWhileScrolling(tester, () async {
         await tester.pumpWidget(_wrap(_populatedBundle()));
         await tester.pump();
         await tester.pump();

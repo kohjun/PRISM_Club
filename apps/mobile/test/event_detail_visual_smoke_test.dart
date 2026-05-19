@@ -61,7 +61,10 @@ void main() {
         'event detail visual smoke does not overflow at ${size.width.toInt()}dp',
         (tester) async {
       setSmokeViewport(tester, size);
-      await expectNoOverflow(tester, () async {
+      // expectNoOverflowWhileScrolling drags through hero → date card →
+      // related rooms → related posts sliver, so overflow below the
+      // fold is exercised, not just the initial viewport.
+      await expectNoOverflowWhileScrolling(tester, () async {
         await tester.pumpWidget(_wrap(_populatedBundle()));
         await tester.pump();
         await tester.pump();
