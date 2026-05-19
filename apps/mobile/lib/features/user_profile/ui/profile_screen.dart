@@ -381,32 +381,37 @@ class _FollowButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(userFollowProvider(userId));
     final followed = state.valueOrNull?.followed ?? initial;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(PrismRadius.pill),
-        onTap: state.isLoading
-            ? null
-            : () async {
-                await ref.read(userFollowProvider(userId).notifier).toggle();
-                ref.invalidate(userProfileProvider(userId));
-              },
-        child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: followed ? PrismColors.bgTint : PrismColors.pp600,
-            borderRadius: BorderRadius.circular(PrismRadius.pill),
-            border: followed ? Border.all(color: PrismColors.line2) : null,
-          ),
-          child: Text(
-            followed ? '팔로잉' : '팔로우',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.2,
-              color: followed ? PrismColors.ink2 : Colors.white,
+    return SizedBox(
+      height: 44,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PrismRadius.pill),
+          onTap: state.isLoading
+              ? null
+              : () async {
+                  await ref.read(userFollowProvider(userId).notifier).toggle();
+                  ref.invalidate(userProfileProvider(userId));
+                },
+          child: Center(
+            child: Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: followed ? PrismColors.bgTint : PrismColors.pp600,
+                borderRadius: BorderRadius.circular(PrismRadius.pill),
+                border: followed ? Border.all(color: PrismColors.line2) : null,
+              ),
+              child: Text(
+                followed ? '팔로잉' : '팔로우',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                  color: followed ? PrismColors.ink2 : Colors.white,
+                ),
+              ),
             ),
           ),
         ),

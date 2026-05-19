@@ -340,18 +340,25 @@ class _RemoveAttachmentButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: '첨부 제거',
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(PrismRadius.pill),
-        child: Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: Color(0xCC0B0B0F),
-            shape: BoxShape.circle,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: Color(0xCC0B0B0F),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, size: 16, color: Colors.white),
+            ),
           ),
-          child: const Icon(Icons.close, size: 16, color: Colors.white),
         ),
       ),
     );
