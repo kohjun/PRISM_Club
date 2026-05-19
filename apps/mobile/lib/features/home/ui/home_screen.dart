@@ -409,8 +409,12 @@ class _TopicHubStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 110dp accommodates the 56dp TopicBlock + 6dp gap + 2-line title at
+    // fontSize 11 × height 1.2 + the 14dp bottom padding. Earlier height
+    // (92) overflowed by up to 14dp when Korean titles wrapped to two
+    // lines (caught by home_visual_smoke_test).
     return SizedBox(
-      height: 92,
+      height: 110,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(
@@ -464,8 +468,15 @@ class _HorizontalPostRow extends StatelessWidget {
   final List<PostDto> posts;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 192,
+  Widget build(BuildContext context) =>
+      // 224dp fits PostCardWidget at its 4-line body cap (post.body
+      // maxLines: 4) at 280dp width — the 192dp earlier value
+      // overflowed by ~32dp when long Korean bodies wrapped to four
+      // lines (caught by home_visual_smoke_test). PostCardWidget does
+      // its own internal `maxLines + TextOverflow.ellipsis` cap, so the
+      // strip height only has to bound the worst case.
+      SizedBox(
+        height: 224,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: PrismSpacing.xl),
