@@ -317,6 +317,7 @@ across all the planning and operational docs.
 - **[Android device runbook](docs/ANDROID_DEVICE_RUNBOOK.md)** — tester-friendly setup guide for emulator + physical device with the local API or staging
 - **[Mobile device QA log template](docs/MOBILE_DEVICE_QA_LOG.md)** — fill-in-the-blanks template for capturing a single physical-device QA pass (device facts, smoke checklist, visual QA, log capture, issues table, sign-off block)
 - **[Mobile release checklist](docs/MOBILE_RELEASE_CHECKLIST.md)** — discrete go/no-go list for the first App Store / Play Store upload
+- **[Mobile beta gap audit](docs/MOBILE_BETA_GAP_AUDIT.md)** — consolidated inventory of what's done / blocked on operator action / still needs engineering, with risk ranking + recommended next PR sequence + go/no-go for Play Internal testing
 - **[Android release dry-run](docs/ANDROID_RELEASE_DRY_RUN.md)** — what builds today vs. what's missing for a Play-uploadable AAB
 - **[App asset pipeline](docs/APP_ASSET_PIPELINE.md)** — required source files, launcher icon sizes + adaptive icon, splash, generation pipeline (`flutter_launcher_icons` + `flutter_native_splash`), QA checklist
 - **[Play internal testing](docs/PLAY_INTERNAL_TESTING.md)** — Play Console prerequisites, signing assets, applicationId / versionCode policy, AAB upload, tester groups, Data Safety + privacy, QA flow, rollback / unpublish

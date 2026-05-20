@@ -1,7 +1,10 @@
 # PRISM Club — Mobile Release Checklist
 
 The discrete go / no-go list for the first **App Store** / **Play
-Store** upload of PRISM Club. Pairs with
+Store** upload of PRISM Club. Consolidated state across all gates
+(done / blocked on operator / still engineering) lives in
+[MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md); this file is
+the per-row gate. Pairs with
 [FLUTTER_APP_RELEASE_AUDIT.md](FLUTTER_APP_RELEASE_AUDIT.md) (the
 inventory) and [FLUTTER_NATIVE_SETUP.md](FLUTTER_NATIVE_SETUP.md)
 (the day-to-day commands).
