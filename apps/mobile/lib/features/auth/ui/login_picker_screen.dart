@@ -92,28 +92,38 @@ class _BrandHero extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: PrismSpacing.md),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'PRISM Club',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.7,
-                      color: PrismColors.ink1,
+              // Expanded so the subtitle '예능 콘텐츠 · 오프라인 모임 지식형
+              // 커뮤니티' wraps or ellipsizes instead of overflowing the
+              // brand-hero Row on narrow phones (~53px overflow at 360dp
+              // before this wrap — caught by login_picker_visual_smoke_test).
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'PRISM Club',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.7,
+                        color: PrismColors.ink1,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    '예능 콘텐츠 · 오프라인 모임 지식형 커뮤니티',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: PrismColors.ink3,
+                    SizedBox(height: 2),
+                    Text(
+                      '예능 콘텐츠 · 오프라인 모임 지식형 커뮤니티',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: PrismColors.ink3,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
