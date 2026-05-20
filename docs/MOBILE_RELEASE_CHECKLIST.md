@@ -322,6 +322,10 @@ implement `PushDelivery` on the API.
 
 ## 11. QA
 
+Capture each physical-device pass in
+[MOBILE_DEVICE_QA_LOG.md](MOBILE_DEVICE_QA_LOG.md) — one filled log per
+device × build combination is what the §11 box below signs off on.
+
 Use [ANDROID_DEVICE_RUNBOOK.md](ANDROID_DEVICE_RUNBOOK.md) to get
 emulator / physical device up and pointed at the right API, then run
 [MOBILE_QA_SCRIPT.md](MOBILE_QA_SCRIPT.md) for fast iteration against
