@@ -107,7 +107,7 @@ on. Each row notes the blocker so it doesn't quietly sit.
 | Crash reporting / structured analytics | Decision deferred | Sentry vs. Firebase Crashlytics vs. self-hosted vs. defer. App currently has no crash reporter wired. The Data Safety form's "Crash / diagnostic" answer is currently **No** — flipping it to Yes requires a wired SDK. | Decision before Production. Internal beta has logcat + the QA log template's crash-pull commands as a fallback. |
 | Production `MEDIA_STORAGE_MODE` strategy | Decision deferred | Server-side picks between local disk (dev), S3, or another mode. Production target needs an explicit choice + a CDN / public-URL strategy. | Before Production. Affects `flutter build appbundle --release --dart-define=API_BASE_URL=…` smoke through the upload + thumbnail render path. |
 | Production API base URL pinned | Pending | `MOBILE_RELEASE_CHECKLIST.md` §5 lists the target (`https://api.club.prism.app/v1`) but the DNS record + TLS termination need to be live before the first Production AAB ships. Internal / Closed track uses staging, no blocker. | Before Production. |
-| `compileSdk` / `minSdk` / `targetSdk` explicitly pinned | Inherited from `flutter.*` | Pinning to `targetSdk = 34` (current Play floor) before first upload — see [ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md) §3.4. Single line change in `apps/mobile/android/app/build.gradle.kts`; deliberate release-binding work. | Before first upload (Internal track). |
+| `compileSdk` / `minSdk` / `targetSdk` explicitly pinned | ✅ Done | compileSdk = 36 (plugin set requires API 36); targetSdk = 35 (Play floor, one below compileSdk); minSdk left as `flutter.minSdkVersion` (resolves to 24, satisfies all plugin floors — Flutter Gradle tooling auto-reverts literal pins so we honor the SDK reference). See [ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md) §3.4 for the original gap and `apps/mobile/android/app/build.gradle.kts` for the pinned values. |
 | Login picker swap (dev personas → real `/v1/auth/login` form) | Pending | Internal testing can keep the dev picker if testers know what to expect. Production needs the real form. ([NEXT_BACKLOG.md](NEXT_BACKLOG.md) §1) | Before Production. |
 | Pretendard variable font binary | Bundled in repo, assumed present | `apps/mobile/assets/fonts/PretendardVariable.ttf`. Confirm the binary is actually present and tracked — `pubspec.yaml` references it; release builds will fail loudly if absent. | Pre-upload sanity check (cheap). |
 
@@ -124,7 +124,7 @@ remaining operator + engineering sequence.
 - Play Console app created + Play App Signing enrolled (§3)
 - Privacy policy URL public (§3)
 - Data Safety form filled (§3)
-- Explicit `targetSdk` pinned in `build.gradle.kts` (§4)
+- ~~Explicit `targetSdk` pinned in `build.gradle.kts`~~ — done in `chore(mobile): pin android sdk versions for release` (compileSdk 36 + targetSdk 35)
 - Pretendard binary present in tree (§4 — verification, likely already OK)
 
 ### 5.2 High — needed before Production promotion
@@ -158,10 +158,10 @@ remaining operator + engineering sequence.
 
 Engineering-side, in order. Each is small and independent.
 
-1. **`chore(mobile): pin android sdk versions for release`** — replace
-   `compileSdk / minSdk / targetSdk = flutter.*` with explicit
-   integers in `apps/mobile/android/app/build.gradle.kts`. Touches
-   one file; gates the §5.1 Blocker row.
+1. ~~`chore(mobile): pin android sdk versions for release`~~ — done.
+   compileSdk = 36, targetSdk = 35; minSdk left as
+   `flutter.minSdkVersion` (= 24) because Flutter's Gradle tooling
+   auto-reverts literal pins.
 2. **`docs(mobile): confirm pretendard binary presence`** — cheap
    verification that `apps/mobile/assets/fonts/PretendardVariable.ttf`
    is tracked + matches the released hash. Likely a no-op fix; closes
@@ -194,7 +194,8 @@ Internal.
 
 - [ ] Engineering gates green (`flutter analyze` / `flutter test` /
       `mobile:check-assets` / `mobile:check-signing`).
-- [ ] `targetSdk` explicitly pinned to the current Play floor.
+- [x] `targetSdk` explicitly pinned (35 / Android 15) — done in the
+      sdk-pin commit referenced in §6.1.
 - [ ] `key.properties` populated on the release host; release AAB
       built with **no** `[prism-club] android/key.properties not found`
       warning.

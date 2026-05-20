@@ -34,7 +34,40 @@ val hasReleaseKeystore = keystorePropertiesFile.exists().also { exists ->
 
 android {
     namespace = "club.prism.mobile"
-    compileSdk = flutter.compileSdkVersion
+    // SDK versions are pinned EXPLICITLY rather than inherited from
+    // `flutter.compileSdkVersion / .minSdkVersion / .targetSdkVersion`
+    // so release-build behavior is reproducible regardless of which
+    // Flutter SDK version compiled the AAB. Without explicit pins,
+    // a later Flutter upgrade silently shifts targetSdk and Play
+    // Console may reject (or accept differently) the same source
+    // tree across release machines.
+    //
+    //   compileSdk = 36  Android 16. Required by current plugin set
+    //                    (flutter_plugin_android_lifecycle,
+    //                    shared_preferences_android, url_launcher_android
+    //                    all compile against API 36); building against
+    //                    35 fails checkDebugAarMetadata.
+    //   targetSdk  = 35  Android 15. Play Console floor for new app
+    //                    submissions and updates since 2025-08-31
+    //                    (https://support.google.com/googleplay/
+    //                    android-developer/answer/11926878). Pinned
+    //                    one below compileSdk so we don't opt into
+    //                    Android 16 runtime behavior we haven't tested.
+    //   minSdk     = flutter.minSdkVersion (resolves to 24 on Flutter
+    //                    3.41.x — see FlutterExtension.kt in the
+    //                    Flutter SDK). Above flutter_secure_storage's
+    //                    floor (23) and above file_picker's floor
+    //                    (19), so safe today. Left as the Flutter
+    //                    reference because the Flutter Gradle tooling
+    //                    silently reverts manual minSdk literals
+    //                    during `flutter build` ("Upgrading
+    //                    build.gradle.kts"); pinning it via literal
+    //                    causes drift on every build. Track the
+    //                    Flutter SDK upgrade for the next floor bump.
+    //
+    // Bump targetSdk when Play raises the floor. Bump compileSdk in
+    // lockstep with the plugin set's requirement.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -48,10 +81,12 @@ android {
 
     defaultConfig {
         applicationId = "club.prism.mobile"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // compileSdk + targetSdk are pinned above in the android{}
+        // block. minSdk tracks Flutter's reference per the comment
+        // there — do not change to a literal; the Flutter Gradle
+        // tooling auto-reverts.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

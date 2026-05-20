@@ -155,6 +155,15 @@ color — see [APP_ASSET_PIPELINE.md](APP_ASSET_PIPELINE.md) §4.
 
 ### 3.4 `compileSdk` / `minSdk` / `targetSdk` not explicitly pinned
 
+> **Resolved** in `chore(mobile): pin android sdk versions for release`.
+> Current pinned values: `compileSdk = 36`, `targetSdk = 35`,
+> `minSdk = flutter.minSdkVersion` (= 24 on Flutter 3.41.x — the
+> Flutter Gradle tooling auto-reverts literal minSdk pins, so the
+> reference is the stable contract). See
+> [MOBILE_RELEASE_CHECKLIST.md](MOBILE_RELEASE_CHECKLIST.md) §1.
+
+
+
 ```
 compileSdk = flutter.compileSdkVersion
 minSdk     = flutter.minSdkVersion

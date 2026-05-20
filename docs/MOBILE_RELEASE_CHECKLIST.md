@@ -36,12 +36,22 @@ Snapshot re-verified in
       Bumped per release: `0.1.0+1` → `0.1.0+2` → `0.1.1+3` etc. —
       bump rules, RC tagging, and rollback warnings live in
       [MOBILE_VERSIONING.md](MOBILE_VERSIONING.md).
-- [ ] `compileSdk` + `targetSdk` pinned explicitly to the current Play
-      target (34 today). Do NOT rely on `flutter.targetSdkVersion`
-      for the release build.
-- [ ] `minSdk` set to the value the team has agreed to support.
-      Currently `flutter.minSdkVersion` (21). Lock or bump
-      deliberately.
+- [x] `compileSdk` (36, Android 16) + `targetSdk` (35, Android 15 —
+      Play Console floor) pinned explicitly in
+      `apps/mobile/android/app/build.gradle.kts`. compileSdk 36 is
+      required by the current plugin set
+      (`flutter_plugin_android_lifecycle`, `shared_preferences_android`,
+      `url_launcher_android`); targetSdk 35 holds the Play
+      compliance line one below compileSdk so we don't opt into
+      Android 16 runtime behavior we haven't tested.
+- [x] `minSdk` tracks `flutter.minSdkVersion` (resolves to 24 on
+      Flutter 3.41.x). Above `flutter_secure_storage` 9.x's API 23
+      requirement and above every other plugin floor. The Flutter
+      Gradle tooling silently auto-reverts manual `minSdk` literals
+      back to `flutter.minSdkVersion` during `flutter build`
+      ("Upgrading build.gradle.kts"), so the reference is the
+      stable contract — track the Flutter SDK upgrade for the next
+      floor bump rather than pinning by literal.
 - [ ] Java + Kotlin target = 17 (already pinned).
 
 Files:
