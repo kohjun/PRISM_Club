@@ -329,3 +329,29 @@ broken check and a tail summary like:
 
 Run it as part of the asset refresh flow (§4) and again before
 shipping any release AAB.
+
+---
+
+## 10. Font asset verification (Pretendard)
+
+The brand asset pipeline above handles icon + splash. The Pretendard
+variable font travels alongside via a separate asset path. Verify
+once per release that the binary still ships intact.
+
+State at last verification (`docs(mobile): confirm pretendard binary presence`):
+
+| Check | Command | Expected |
+|---|---|---|
+| Binary tracked | `git ls-files apps/mobile/assets/fonts` | Lists `PretendardVariable.ttf` + `Pretendard-LICENSE.txt`. |
+| Binary size | `wc -c < apps/mobile/assets/fonts/PretendardVariable.ttf` | `6739336` (current production hash; bump only when intentionally upgrading the font). |
+| Pubspec registration | `grep -A3 'family: Pretendard' apps/mobile/pubspec.yaml` | `asset: assets/fonts/PretendardVariable.ttf`. |
+| Theme wiring | `grep -nE "PrismFonts.body|fontFamily: PrismFonts" apps/mobile/lib/app/theme.dart` | `ThemeData.fontFamily = PrismFonts.body` at the root; every TextTheme entry resolves through `PrismType`. |
+| `PrismFonts.body` value | `grep "static const body" apps/mobile/lib/app/design_tokens.dart` | `static const body = 'Pretendard';` |
+| Release AAB packaging | `unzip -l build/app/outputs/bundle/release/app-release.aab \| grep -i pretendard` | One entry at `base/assets/flutter_assets/assets/fonts/PretendardVariable.ttf` matching the source byte count. The variable font is NOT tree-shaken (unlike `MaterialIcons-Regular.otf` which Flutter shrinks). |
+
+If any row drifts, treat it as the same severity as a brand-icon
+drift (operator-blocking before Play upload). The check is
+verification-only — there is no script wrapper today because the
+checks are run once per release cycle, not on every commit. If that
+changes, fold these into `scripts/check-mobile-assets.sh` alongside
+the existing icon / splash assertions.

@@ -134,8 +134,21 @@ the Flutter placeholder (with sha1s + dimensions) is in
 app-wide Flutter `fontFamily`. The upstream license is preserved next to
 the binary at `apps/mobile/assets/fonts/Pretendard-LICENSE.txt`.
 
-- [x] `pubspec.yaml` registers `family: Pretendard`.
-- [x] `buildPrismTheme()` applies Pretendard as the app-wide font.
+- [x] `pubspec.yaml` registers `family: Pretendard` →
+      `assets/fonts/PretendardVariable.ttf`.
+- [x] Font binary (`PretendardVariable.ttf`, 6,739,336 bytes) and
+      license (`Pretendard-LICENSE.txt`) both tracked in git
+      (`git ls-files apps/mobile/assets/fonts`).
+- [x] `buildPrismTheme()` applies `PrismFonts.body = 'Pretendard'`
+      as the app-wide `ThemeData.fontFamily`. All `PrismType` styles
+      set the same family explicitly, so widgets with inline
+      `TextStyle` overrides still resolve to Pretendard via theme
+      inheritance.
+- [x] Release AAB includes the binary at
+      `base/assets/flutter_assets/assets/fonts/PretendardVariable.ttf`
+      (verified via `unzip -l app-release.aab` — the variable font
+      is bundled in full, unlike the Material icon font which
+      Flutter tree-shakes).
 - [x] Body / caption / label tracking remains near zero for Korean
       readability; tighter negative tracking is limited to larger
       display / title styles.

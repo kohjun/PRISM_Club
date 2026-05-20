@@ -109,7 +109,7 @@ on. Each row notes the blocker so it doesn't quietly sit.
 | Production API base URL pinned | Pending | `MOBILE_RELEASE_CHECKLIST.md` §5 lists the target (`https://api.club.prism.app/v1`) but the DNS record + TLS termination need to be live before the first Production AAB ships. Internal / Closed track uses staging, no blocker. | Before Production. |
 | `compileSdk` / `minSdk` / `targetSdk` explicitly pinned | ✅ Done | compileSdk = 36 (plugin set requires API 36); targetSdk = 35 (Play floor, one below compileSdk); minSdk left as `flutter.minSdkVersion` (resolves to 24, satisfies all plugin floors — Flutter Gradle tooling auto-reverts literal pins so we honor the SDK reference). See [ANDROID_RELEASE_IDENTITY_AUDIT.md](ANDROID_RELEASE_IDENTITY_AUDIT.md) §3.4 for the original gap and `apps/mobile/android/app/build.gradle.kts` for the pinned values. |
 | Login picker swap (dev personas → real `/v1/auth/login` form) | Pending | Internal testing can keep the dev picker if testers know what to expect. Production needs the real form. ([NEXT_BACKLOG.md](NEXT_BACKLOG.md) §1) | Before Production. |
-| Pretendard variable font binary | Bundled in repo, assumed present | `apps/mobile/assets/fonts/PretendardVariable.ttf`. Confirm the binary is actually present and tracked — `pubspec.yaml` references it; release builds will fail loudly if absent. | Pre-upload sanity check (cheap). |
+| Pretendard variable font binary | ✅ Verified | `apps/mobile/assets/fonts/PretendardVariable.ttf` (6,739,336 bytes) + `Pretendard-LICENSE.txt` both tracked in git. `pubspec.yaml` registers `family: Pretendard`. `buildPrismTheme()` sets `ThemeData.fontFamily = PrismFonts.body = 'Pretendard'` so inline `TextStyle` overrides inherit. Release AAB includes the binary at `base/assets/flutter_assets/assets/fonts/PretendardVariable.ttf` (verified via `unzip -l app-release.aab` in `docs(mobile): confirm pretendard binary presence`). |
 
 ---
 
@@ -125,7 +125,9 @@ remaining operator + engineering sequence.
 - Privacy policy URL public (§3)
 - Data Safety form filled (§3)
 - ~~Explicit `targetSdk` pinned in `build.gradle.kts`~~ — done in `chore(mobile): pin android sdk versions for release` (compileSdk 36 + targetSdk 35)
-- Pretendard binary present in tree (§4 — verification, likely already OK)
+- ~~Pretendard binary present in tree~~ — verified in
+  `docs(mobile): confirm pretendard binary presence` (binary +
+  license both tracked, registered in pubspec, bundled in AAB).
 
 ### 5.2 High — needed before Production promotion
 
@@ -162,10 +164,11 @@ Engineering-side, in order. Each is small and independent.
    compileSdk = 36, targetSdk = 35; minSdk left as
    `flutter.minSdkVersion` (= 24) because Flutter's Gradle tooling
    auto-reverts literal pins.
-2. **`docs(mobile): confirm pretendard binary presence`** — cheap
-   verification that `apps/mobile/assets/fonts/PretendardVariable.ttf`
-   is tracked + matches the released hash. Likely a no-op fix; closes
-   a §5.1 risk before the operator hits it.
+2. ~~`docs(mobile): confirm pretendard binary presence`~~ — done.
+   Binary (6,739,336 bytes) + license tracked in git; pubspec
+   registers `family: Pretendard`; theme + design tokens point at
+   it; release AAB includes the font at
+   `base/assets/flutter_assets/assets/fonts/PretendardVariable.ttf`.
 3. **`test(mobile): extend scrolled smoke to home / room / post / profile`** —
    apply `expectNoOverflowWhileScrolling` to the four ListView-based
    screens that today only use the simpler helper. §5.4 defensive
