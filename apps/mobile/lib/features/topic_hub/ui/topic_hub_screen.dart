@@ -64,6 +64,32 @@ class TopicHubScreen extends ConsumerWidget {
     context.go('/home');
   }
 
+  /// Builds a route under this Topic Hub (composer / room creator /
+  /// etc.) that preserves the Hub's own `spaceSlug` + `returnTo`
+  /// context as query params. The receiving screen forwards those
+  /// values when it navigates back to the Hub, so a round-trip
+  /// (Home → Hub → Composer → cancel/submit → Hub → back) lands the
+  /// user on `/home` again instead of falling through to the
+  /// `/spaces` last-resort fallback.
+  ///
+  /// `extra` is merged in first so per-callsite params (e.g.
+  /// `target_block_id`) survive alongside the preserved context.
+  /// `returnTo` is validated against [isSafeInternalRoute]; bad values
+  /// are dropped silently rather than propagated.
+  String _composerRoute(String subpath, {Map<String, String>? extra}) {
+    final params = <String, String>{};
+    if (extra != null) params.addAll(extra);
+    if (spaceSlug != null && spaceSlug!.isNotEmpty) {
+      params['spaceSlug'] = spaceSlug!;
+    }
+    if (isSafeInternalRoute(returnTo)) {
+      params['returnTo'] = returnTo!;
+    }
+    final path = '/categories/$categorySlug/$subpath';
+    if (params.isEmpty) return path;
+    return Uri(path: path, queryParameters: params).toString();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bundle = ref.watch(topicHubProvider(categorySlug));
@@ -132,9 +158,8 @@ class TopicHubScreen extends ConsumerWidget {
                 ),
                 sliver: SliverToBoxAdapter(
                   child: OutlinedButton.icon(
-                    onPressed: () => context.go(
-                      '/categories/$categorySlug/contributions/new',
-                    ),
+                    onPressed: () =>
+                        context.go(_composerRoute('contributions/new')),
                     icon: const Icon(Icons.edit_note),
                     label: const Text('정보 개선 제안'),
                   ),
@@ -150,9 +175,10 @@ class TopicHubScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(bottom: PrismSpacing.md),
                         child: _KnowledgeBlockCard(
                           block: block,
-                          onPropose: () => context.go(
-                            '/categories/$categorySlug/contributions/new?target_block_id=${block.id}',
-                          ),
+                          onPropose: () => context.go(_composerRoute(
+                            'contributions/new',
+                            extra: {'target_block_id': block.id},
+                          )),
                         ),
                       ),
                   ],
@@ -206,9 +232,8 @@ class TopicHubScreen extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: _RoomsSection(
                   rooms: b.rooms,
-                  onCreateRoom: () => context.go(
-                    '/categories/$categorySlug/rooms/new',
-                  ),
+                  onCreateRoom: () =>
+                      context.go(_composerRoute('rooms/new')),
                 ),
               ),
               const SliverPadding(

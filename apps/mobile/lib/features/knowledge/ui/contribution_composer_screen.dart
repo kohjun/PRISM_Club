@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/design_tokens.dart';
+import '../../../app/safe_route.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
@@ -35,10 +36,18 @@ class ContributionComposerScreen extends ConsumerStatefulWidget {
     super.key,
     required this.categorySlug,
     this.initialTargetBlockId,
+    this.spaceSlug,
+    this.returnTo,
   });
 
   final String categorySlug;
   final String? initialTargetBlockId;
+
+  /// Forwarded from TopicHubScreen so cancel/submit lands back on the
+  /// hub with the same back-fallback context. See
+  /// `topic_hub_screen.dart:_composerRoute`.
+  final String? spaceSlug;
+  final String? returnTo;
 
   @override
   ConsumerState<ContributionComposerScreen> createState() =>
@@ -56,6 +65,23 @@ class _ContributionComposerScreenState
   ReferenceDto? _evidenceReference;
   bool _submitting = false;
   bool _prefilledFromInitial = false;
+
+  /// Builds the back-to-Topic-Hub URL preserving the spaceSlug +
+  /// returnTo the hub passed us. Drops invalid returnTo values via
+  /// [isSafeInternalRoute] so a malformed deep-link query can't slip
+  /// through the round-trip.
+  String _hubUrl() {
+    final params = <String, String>{};
+    if (widget.spaceSlug != null && widget.spaceSlug!.isNotEmpty) {
+      params['spaceSlug'] = widget.spaceSlug!;
+    }
+    if (isSafeInternalRoute(widget.returnTo)) {
+      params['returnTo'] = widget.returnTo!;
+    }
+    final path = '/categories/${widget.categorySlug}';
+    if (params.isEmpty) return path;
+    return Uri(path: path, queryParameters: params).toString();
+  }
 
   @override
   void initState() {
@@ -140,7 +166,7 @@ class _ContributionComposerScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('검수 요청이 등록되었습니다.')),
         );
-        context.go('/categories/${widget.categorySlug}');
+        context.go(_hubUrl());
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -189,7 +215,7 @@ class _ContributionComposerScreenState
         leading: IconButton(
           icon: const Icon(Icons.close),
           tooltip: '닫기',
-          onPressed: () => context.go('/categories/${widget.categorySlug}'),
+          onPressed: () => context.go(_hubUrl()),
         ),
         actions: [
           Padding(

@@ -66,6 +66,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/categories/:categorySlug/rooms/new',
         builder: (_, st) => RoomCreatorScreen(
           categorySlug: st.pathParameters['categorySlug']!,
+          spaceSlug: st.uri.queryParameters['spaceSlug'],
+          returnTo: st.uri.queryParameters['returnTo'],
         ),
       ),
       GoRoute(
@@ -100,6 +102,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, st) => ContributionComposerScreen(
           categorySlug: st.pathParameters['categorySlug']!,
           initialTargetBlockId: st.uri.queryParameters['target_block_id'],
+          spaceSlug: st.uri.queryParameters['spaceSlug'],
+          returnTo: st.uri.queryParameters['returnTo'],
         ),
       ),
       GoRoute(path: '/me/contributions', builder: (_, _) => const MyContributionsScreen()),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/safe_route.dart';
 import '../../../app/theme.dart';
 import '../../../core/api_error.dart';
 import '../../../features/category/data/category_repository.dart';
@@ -21,8 +22,20 @@ const _kRoomTypes = <String, String>{
 };
 
 class RoomCreatorScreen extends ConsumerStatefulWidget {
-  const RoomCreatorScreen({super.key, required this.categorySlug});
+  const RoomCreatorScreen({
+    super.key,
+    required this.categorySlug,
+    this.spaceSlug,
+    this.returnTo,
+  });
   final String categorySlug;
+
+  /// Forwarded from TopicHubScreen so back-to-hub on cancel preserves
+  /// the originating spaceSlug + returnTo. Submit success navigates
+  /// forward to `/rooms/<slug>` so the round-trip context isn't needed
+  /// there; only the back arrow uses it.
+  final String? spaceSlug;
+  final String? returnTo;
 
   @override
   ConsumerState<RoomCreatorScreen> createState() => _RoomCreatorScreenState();
@@ -36,6 +49,23 @@ class _RoomCreatorScreenState extends ConsumerState<RoomCreatorScreen> {
   EventCardDto? _pinnedEvent;
   ReferenceDto? _pinnedReference;
   bool _submitting = false;
+
+  /// Back-to-Topic-Hub URL preserving the forwarded spaceSlug +
+  /// returnTo. Mirrors the contribution composer's `_hubUrl()` so the
+  /// round-trip lands in the same place a TopicHubScreen-only path
+  /// would.
+  String _hubUrl() {
+    final params = <String, String>{};
+    if (widget.spaceSlug != null && widget.spaceSlug!.isNotEmpty) {
+      params['spaceSlug'] = widget.spaceSlug!;
+    }
+    if (isSafeInternalRoute(widget.returnTo)) {
+      params['returnTo'] = widget.returnTo!;
+    }
+    final path = '/categories/${widget.categorySlug}';
+    if (params.isEmpty) return path;
+    return Uri(path: path, queryParameters: params).toString();
+  }
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
@@ -80,7 +110,7 @@ class _RoomCreatorScreenState extends ConsumerState<RoomCreatorScreen> {
         title: const Text('방 만들기'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/categories/${widget.categorySlug}'),
+          onPressed: () => context.go(_hubUrl()),
         ),
         actions: [
           TextButton(
