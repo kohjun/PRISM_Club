@@ -39,6 +39,8 @@ export interface CreatePostInput {
   post_type?: PostType;
   recruitment_fields?: RecruitmentFieldsInput;
   attachments?: AttachmentInput[];
+  /** P4.2: optional quoted post; access-checked at create time. */
+  quoted_post_id?: string | null;
 }
 
 export interface TimelinePage {
@@ -87,6 +89,36 @@ export class PostService {
       );
     }
 
+    // P4.2: validate the quoted post (if any) before opening the tx.
+    let quotedPostId: string | null = null;
+    if (input.quoted_post_id) {
+      const quoted = await this.prisma.post.findUnique({
+        where: { id: input.quoted_post_id },
+        include: {
+          room: { include: { category: { include: { space: true } } } },
+        },
+      });
+      if (
+        !quoted ||
+        quoted.status === 'DELETED' ||
+        quoted.status === 'HIDDEN'
+      ) {
+        throw new NotFoundException(
+          `Quoted post not found: ${input.quoted_post_id}`,
+        );
+      }
+      if (
+        !this.access
+          .accessPoliciesAllowedFor(viewer)
+          .includes(quoted.room.category.space.accessPolicy)
+      ) {
+        throw new NotFoundException(
+          `Quoted post not found: ${input.quoted_post_id}`,
+        );
+      }
+      quotedPostId = quoted.id;
+    }
+
     const post = await this.prisma.$transaction(async (tx) => {
       const created = await tx.post.create({
         data: {
@@ -125,6 +157,16 @@ export class PostService {
             // shape today — the structured row keeps it nullable so a
             // future composer that surfaces a deadline picker can fill
             // it in without a schema migration.
+          },
+        });
+      }
+      // P4.2: persist the quote relationship. The unique constraint on
+      // quoting_post_id means a post can quote at most one other.
+      if (quotedPostId !== null) {
+        await tx.postQuote.create({
+          data: {
+            quotingPostId: created.id,
+            quotedPostId,
           },
         });
       }
