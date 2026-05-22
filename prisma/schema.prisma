@@ -56,6 +56,7 @@ model User {
   referenceSourceRules    ReferenceSourceRule[]
   eventRsvps              EventRsvp[]
   recruitmentApplications RecruitmentApplication[]
+  eventReminderSends      EventReminderSend[]
 
   @@map("users")
 }
@@ -605,8 +606,27 @@ model EventCard {
 
   topicHubLinks TopicHubEventLink[]
   rsvps         EventRsvp[]
+  reminderSends EventReminderSend[]
 
   @@map("event_cards")
+}
+
+// Per-event-per-user-per-kind reminder dedup table (P3.2). UNIQUE on
+// (event_card_id, user_id, reminder_kind) guarantees we never send the
+// same kind twice even under concurrent cron ticks across instances.
+model EventReminderSend {
+  id           String   @id @default(uuid()) @db.Uuid
+  eventCardId  String   @map("event_card_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  reminderKind String   @map("reminder_kind") // D1 | H1 | EVENT_DAY | REVIEW_PROMPT
+  sentAt       DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+
+  eventCard EventCard @relation(fields: [eventCardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventCardId, userId, reminderKind])
+  @@index([eventCardId, reminderKind])
+  @@map("event_reminder_sends")
 }
 
 // Per-user RSVP per event card (P3.1). Status state machine:

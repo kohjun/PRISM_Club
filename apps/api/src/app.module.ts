@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { PrismaModule } from './shared/prisma.module';
 import { AccessControlModule } from './shared/access-control.module';
@@ -34,6 +35,11 @@ import { ShareModule } from './modules/share/share.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // P3.2: in-process cron host. Production deployments must either
+    // pin scheduling to a single API instance OR rely on the
+    // advisory-lock guard inside each @Cron handler to prevent
+    // duplicate fan-out across replicas.
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     AccessControlModule,
