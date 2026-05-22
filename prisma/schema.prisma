@@ -15,30 +15,78 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
-  status    String   @default("ACTIVE")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              String    @id @default(uuid()) @db.Uuid
+  status          String    @default("ACTIVE")
+  // Identity & credentials (M-P1.1). Existing seed personas are backfilled to
+  // oauth_provider='DEV'; passwordless dev login keeps working when
+  // ALLOW_DEV_LOGIN=1. Email uses citext (case-insensitive). Composite uniqueness
+  // on (oauth_provider, oauth_id) is enforced via a partial index in the migration
+  // — Prisma's @@unique cannot express WHERE clauses.
+  email           String?   @unique @db.Citext
+  phone           String?
+  passwordHash    String?   @map("password_hash")
+  oauthProvider   String?   @map("oauth_provider") // KAKAO | EMAIL | DEV
+  oauthId         String?   @map("oauth_id")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  profile  Profile?
-  roles    UserRole[]
-  rooms    Room[]
-  posts    Post[]
-  replies  Reply[]
-  reactions Reaction[]
-  references Reference[]
-  contributions          KnowledgeContribution[] @relation("Contributor")
-  resolvedContributions  KnowledgeContribution[] @relation("Resolver")
-  follows                RoomFollow[]
-  savedItems             SavedItem[]
-  notifications          Notification[]
-  following              UserFollow[] @relation("UserFollowing")
-  followers              UserFollow[] @relation("UserFollowers")
-  reports                Report[]      @relation("ReportReporter")
-  resolvedReports        Report[]      @relation("ReportResolver")
-  moderationActions      ModerationAction[]
-  mediaAssets            MediaAsset[]
+  profile               Profile?
+  roles                 UserRole[]
+  rooms                 Room[]
+  posts                 Post[]
+  replies               Reply[]
+  reactions             Reaction[]
+  references            Reference[]
+  contributions         KnowledgeContribution[] @relation("Contributor")
+  resolvedContributions KnowledgeContribution[] @relation("Resolver")
+  follows               RoomFollow[]
+  savedItems            SavedItem[]
+  notifications         Notification[]
+  following             UserFollow[]            @relation("UserFollowing")
+  followers             UserFollow[]            @relation("UserFollowers")
+  reports               Report[]                @relation("ReportReporter")
+  resolvedReports       Report[]                @relation("ReportResolver")
+  moderationActions     ModerationAction[]
+  mediaAssets           MediaAsset[]
+  refreshTokens         RefreshToken[]
 
   @@map("users")
+}
+
+// Opaque refresh tokens. Rotation lineage is tracked via family_id so a reused
+// (revoked) child token can invalidate the entire family (replay defense).
+// token_hash is SHA-256(rawToken); the raw token is never persisted.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  familyId  String    @map("family_id") @db.Uuid
+  userAgent String?   @map("user_agent")
+  ip        String?
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+// Short-lived OAuth state for Kakao authorization flow. Holds the CSRF state,
+// PKCE code_verifier, and nonce. Rows expire 10 minutes after creation; the
+// service filters by expires_at and a periodic cleanup is optional.
+model OAuthState {
+  state        String   @id
+  codeVerifier String   @map("code_verifier")
+  nonce        String
+  redirectTo   String?  @map("redirect_to")
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([expiresAt])
+  @@map("oauth_states")
 }
 
 model Report {
@@ -106,13 +154,13 @@ model UserFollow {
 }
 
 model Profile {
-  userId     String   @id @map("user_id") @db.Uuid
-  nickname   String   @unique
-  avatarUrl  String?  @map("avatar_url")
-  bio        String?
-  region     String?
-  interests  Json     @default("[]")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  userId    String   @id @map("user_id") @db.Uuid
+  nickname  String   @unique
+  avatarUrl String?  @map("avatar_url")
+  bio       String?
+  region    String?
+  interests Json     @default("[]")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -139,12 +187,12 @@ model UserRole {
 // ---------------------------------------------------------------------------
 
 model Space {
-  id           String   @id @default(uuid()) @db.Uuid
-  slug         String   @unique
+  id           String @id @default(uuid()) @db.Uuid
+  slug         String @unique
   name         String
-  audience     String   @default("PARTICIPANT") // PARTICIPANT | PLANNER
-  accessPolicy String   @default("PUBLIC") @map("access_policy") // PUBLIC | PLANNER_ONLY (not enforced yet)
-  status       String   @default("ACTIVE")
+  audience     String @default("PARTICIPANT") // PARTICIPANT | PLANNER
+  accessPolicy String @default("PUBLIC") @map("access_policy") // PUBLIC | PLANNER_ONLY (not enforced yet)
+  status       String @default("ACTIVE")
 
   categories Category[]
 
@@ -152,13 +200,13 @@ model Space {
 }
 
 model Category {
-  id          String   @id @default(uuid()) @db.Uuid
-  spaceId     String   @map("space_id") @db.Uuid
-  slug        String   @unique
+  id          String  @id @default(uuid()) @db.Uuid
+  spaceId     String  @map("space_id") @db.Uuid
+  slug        String  @unique
   name        String
   description String?
-  sortOrder   Int      @default(0) @map("sort_order")
-  status      String   @default("ACTIVE")
+  sortOrder   Int     @default(0) @map("sort_order")
+  status      String  @default("ACTIVE")
 
   space    Space     @relation(fields: [spaceId], references: [id])
   topicHub TopicHub?
@@ -179,7 +227,7 @@ model TopicHub {
   status     String   @default("PUBLISHED")
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  category      Category                  @relation(fields: [categoryId], references: [id])
+  category      Category                @relation(fields: [categoryId], references: [id])
   blocks        KnowledgeBlock[]
   signals       TopicSignal[]
   eventLinks    TopicHubEventLink[]
@@ -210,12 +258,12 @@ model KnowledgeBlock {
 // Static in milestone 1 — populated by seed, not recomputed.
 // Signal types: POPULAR_REFERENCE_COUNT | HOT_DEBATE_TITLE | VERIFIED_REVIEW_COUNT
 model TopicSignal {
-  id            String   @id @default(uuid()) @db.Uuid
-  topicHubId    String   @map("topic_hub_id") @db.Uuid
-  signalType    String   @map("signal_type")
-  title         String
-  payload       Json
-  calculatedAt  DateTime @default(now()) @map("calculated_at") @db.Timestamptz(6)
+  id           String   @id @default(uuid()) @db.Uuid
+  topicHubId   String   @map("topic_hub_id") @db.Uuid
+  signalType   String   @map("signal_type")
+  title        String
+  payload      Json
+  calculatedAt DateTime @default(now()) @map("calculated_at") @db.Timestamptz(6)
 
   hub TopicHub @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
 
@@ -260,15 +308,15 @@ model Room {
   name         String
   description  String?
   rules        String?
-  origin       String   // OFFICIAL | USER
+  origin       String // OFFICIAL | USER
   roomType     String   @map("room_type") // DISCUSSION | EVENT_REACTION | REFERENCE | IDEA | RECRUITMENT | SOCIAL
   accessPolicy String   @default("PUBLIC") @map("access_policy")
   tags         Json     @default("[]")
   status       String   @default("ACTIVE")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  category  Category    @relation(fields: [categoryId], references: [id])
-  owner     User?       @relation(fields: [ownerId], references: [id])
+  category  Category     @relation(fields: [categoryId], references: [id])
+  owner     User?        @relation(fields: [ownerId], references: [id])
   pins      RoomPin[]
   posts     Post[]
   followers RoomFollow[]
@@ -297,20 +345,20 @@ model RoomPin {
 // ---------------------------------------------------------------------------
 
 model Post {
-  id                 String   @id @default(uuid()) @db.Uuid
-  roomId             String   @map("room_id") @db.Uuid
-  authorId           String   @map("author_id") @db.Uuid
-  postType           String   @default("GENERAL") @map("post_type")
-  body               String
-  visibility         String   @default("PUBLIC")
-  status             String   @default("VISIBLE") // VISIBLE | HIDDEN | DELETED
-  spoiler            Boolean  @default(false)
-  replyCount         Int      @default(0) @map("reply_count")
-  likeCount          Int      @default(0) @map("like_count")
-  bookmarkCount      Int      @default(0) @map("bookmark_count")
-  recruitmentFields  Json?    @map("recruitment_fields")
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String   @id @default(uuid()) @db.Uuid
+  roomId            String   @map("room_id") @db.Uuid
+  authorId          String   @map("author_id") @db.Uuid
+  postType          String   @default("GENERAL") @map("post_type")
+  body              String
+  visibility        String   @default("PUBLIC")
+  status            String   @default("VISIBLE") // VISIBLE | HIDDEN | DELETED
+  spoiler           Boolean  @default(false)
+  replyCount        Int      @default(0) @map("reply_count")
+  likeCount         Int      @default(0) @map("like_count")
+  bookmarkCount     Int      @default(0) @map("bookmark_count")
+  recruitmentFields Json?    @map("recruitment_fields")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   room        Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
   author      User             @relation(fields: [authorId], references: [id])
@@ -337,11 +385,11 @@ model PostAttachment {
 model MediaAsset {
   id        String   @id @default(uuid()) @db.Uuid
   ownerId   String   @map("owner_id") @db.Uuid
-  kind      String   // IMAGE (only supported kind in M10)
+  kind      String // IMAGE (only supported kind in M10)
   filename  String
   mimeType  String   @map("mime_type")
   sizeBytes Int      @map("size_bytes")
-  path      String   // relative URL like /uploads/<uuid>.<ext>
+  path      String // relative URL like /uploads/<uuid>.<ext>
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -392,15 +440,15 @@ model Reaction {
 // ---------------------------------------------------------------------------
 
 model EventCard {
-  id                String   @id @default(uuid()) @db.Uuid
-  externalEventId   String   @unique @map("external_event_id")
-  title             String
-  venueName         String   @map("venue_name")
-  region            String
-  startsAt          DateTime @map("starts_at") @db.Timestamptz(6)
-  eventStatus       String   @map("event_status") // UPCOMING | COMPLETED
-  thumbnailUrl      String?  @map("thumbnail_url")
-  syncedAt          DateTime @default(now()) @map("synced_at") @db.Timestamptz(6)
+  id              String   @id @default(uuid()) @db.Uuid
+  externalEventId String   @unique @map("external_event_id")
+  title           String
+  venueName       String   @map("venue_name")
+  region          String
+  startsAt        DateTime @map("starts_at") @db.Timestamptz(6)
+  eventStatus     String   @map("event_status") // UPCOMING | COMPLETED
+  thumbnailUrl    String?  @map("thumbnail_url")
+  syncedAt        DateTime @default(now()) @map("synced_at") @db.Timestamptz(6)
 
   topicHubLinks TopicHubEventLink[]
 
@@ -410,16 +458,16 @@ model EventCard {
 // Prisma model name is `Reference` but table is `reference_items` —
 // `references` is a Postgres reserved word (used in FK declarations).
 model Reference {
-  id            String   @id @default(uuid()) @db.Uuid
-  createdBy     String   @map("created_by") @db.Uuid
-  type          String   // TV_SHOW | YOUTUBE | GAME_RULE | ARTICLE | IDEA | OTHER
-  url           String
-  title         String
-  sourceName    String?  @map("source_name")
-  thumbnailUrl  String?  @map("thumbnail_url")
-  summary       String?
-  status        String   @default("VISIBLE")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           String   @id @default(uuid()) @db.Uuid
+  createdBy    String   @map("created_by") @db.Uuid
+  type         String // TV_SHOW | YOUTUBE | GAME_RULE | ARTICLE | IDEA | OTHER
+  url          String
+  title        String
+  sourceName   String?  @map("source_name")
+  thumbnailUrl String?  @map("thumbnail_url")
+  summary      String?
+  status       String   @default("VISIBLE")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   creator       User                    @relation(fields: [createdBy], references: [id])
   topicHubLinks TopicHubReferenceLink[]
@@ -441,25 +489,25 @@ model Reference {
 // evidence_target_id has no FK (polymorphic on evidence_type), matching the
 // same pattern as room_pins and post_attachments.
 model KnowledgeContribution {
-  id                String    @id @default(uuid()) @db.Uuid
-  topicHubId        String    @map("topic_hub_id") @db.Uuid
-  contributorId    String    @map("contributor_id") @db.Uuid
-  targetBlockId    String?   @map("target_block_id") @db.Uuid
+  id            String  @id @default(uuid()) @db.Uuid
+  topicHubId    String  @map("topic_hub_id") @db.Uuid
+  contributorId String  @map("contributor_id") @db.Uuid
+  targetBlockId String? @map("target_block_id") @db.Uuid
 
   // Proposed (applied on APPROVE)
-  proposedBlockType String   @map("proposed_block_type")
-  proposedTitle     String   @map("proposed_title")
-  proposedBody      String   @map("proposed_body")
+  proposedBlockType String @map("proposed_block_type")
+  proposedTitle     String @map("proposed_title")
+  proposedBody      String @map("proposed_body")
 
   // Optional single evidence attachment — EVENT_CARD | REFERENCE
-  evidenceType     String?  @map("evidence_type")
-  evidenceTargetId String?  @map("evidence_target_id") @db.Uuid
+  evidenceType     String? @map("evidence_type")
+  evidenceTargetId String? @map("evidence_target_id") @db.Uuid
 
   // Curation state
-  status       String    @default("PENDING")
-  curatorNote  String?   @map("curator_note")
-  resolvedBy   String?   @map("resolved_by") @db.Uuid
-  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz(6)
+  status      String    @default("PENDING")
+  curatorNote String?   @map("curator_note")
+  resolvedBy  String?   @map("resolved_by") @db.Uuid
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz(6)
 
   // Audit snapshot of overwritten content (captured on APPROVE for edits)
   snapshotBlockType String? @map("snapshot_block_type")
@@ -467,7 +515,7 @@ model KnowledgeContribution {
   snapshotBody      String? @map("snapshot_body")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt       @map("updated_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   hub         TopicHub        @relation(fields: [topicHubId], references: [id], onDelete: Cascade)
   contributor User            @relation("Contributor", fields: [contributorId], references: [id])
