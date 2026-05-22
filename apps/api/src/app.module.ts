@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { PrismaModule } from './shared/prisma.module';
 import { AccessControlModule } from './shared/access-control.module';
+import { MetricsModule } from './shared/metrics.service';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
@@ -41,6 +42,8 @@ import { ShareModule } from './modules/share/share.module';
     // duplicate fan-out across replicas.
     ScheduleModule.forRoot(),
     PrismaModule,
+    // P5.6: global in-memory metrics ring consumed by /admin/system-health.
+    MetricsModule,
     AuthModule,
     AccessControlModule,
     HealthModule,
