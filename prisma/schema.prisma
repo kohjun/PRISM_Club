@@ -30,25 +30,27 @@ model User {
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  profile               Profile?
-  roles                 UserRole[]
-  rooms                 Room[]
-  posts                 Post[]
-  replies               Reply[]
-  reactions             Reaction[]
-  references            Reference[]
-  contributions         KnowledgeContribution[] @relation("Contributor")
-  resolvedContributions KnowledgeContribution[] @relation("Resolver")
-  follows               RoomFollow[]
-  savedItems            SavedItem[]
-  notifications         Notification[]
-  following             UserFollow[]            @relation("UserFollowing")
-  followers             UserFollow[]            @relation("UserFollowers")
-  reports               Report[]                @relation("ReportReporter")
-  resolvedReports       Report[]                @relation("ReportResolver")
-  moderationActions     ModerationAction[]
-  mediaAssets           MediaAsset[]
-  refreshTokens         RefreshToken[]
+  profile                Profile?
+  roles                  UserRole[]
+  rooms                  Room[]
+  posts                  Post[]
+  replies                Reply[]
+  reactions              Reaction[]
+  references             Reference[]
+  contributions          KnowledgeContribution[] @relation("Contributor")
+  resolvedContributions  KnowledgeContribution[] @relation("Resolver")
+  follows                RoomFollow[]
+  savedItems             SavedItem[]
+  notifications          Notification[]
+  following              UserFollow[]            @relation("UserFollowing")
+  followers              UserFollow[]            @relation("UserFollowers")
+  reports                Report[]                @relation("ReportReporter")
+  resolvedReports        Report[]                @relation("ReportResolver")
+  moderationActions      ModerationAction[]
+  mediaAssets            MediaAsset[]
+  refreshTokens          RefreshToken[]
+  deviceTokens           DeviceToken[]
+  notificationPreference NotificationPreference?
 
   @@map("users")
 }
@@ -561,6 +563,8 @@ model SavedItem {
 
 // type: REPLY_ON_POST | NESTED_REPLY | NEW_POST_IN_FOLLOWED_ROOM |
 //       RECRUITMENT_STATUS_CHANGED | CONTRIBUTION_RESOLVED
+//       (future: EVENT_REMINDER | EVENT_UPDATED | REVIEW_PROMPT |
+//        WEEKLY_DIGEST | POST_QUOTED)
 // payload contains type-specific context + spaceAccessPolicy for access filtering.
 model Notification {
   id        String   @id @default(uuid()) @db.Uuid
@@ -574,4 +578,49 @@ model Notification {
 
   @@index([userId, isRead, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+// Device-bound push tokens (P1.2). Unique on (provider, token) so a fresh
+// registration from the same device replaces the row; if the token was bound
+// to a different user before, the previous binding is revoked (handled at the
+// service layer). Index on (user_id, revoked_at) for active-fanout queries.
+model DeviceToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  provider    String    @default("FCM") // FCM | APNS | WEB
+  token       String
+  platform    String // ANDROID | IOS | WEB
+  appVersion  String?   @map("app_version")
+  deviceModel String?   @map("device_model")
+  locale      String?
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, token])
+  @@index([userId, revokedAt])
+  @@map("device_tokens")
+}
+
+// Per-user notification preferences (P1.2). Row is lazy-created the first time
+// the controller reads it — absent row means "all defaults true". The master
+// `pref_push_enabled` short-circuits PushDelivery; per-type bools gate
+// individual notification rows.
+model NotificationPreference {
+  userId                       String   @id @map("user_id") @db.Uuid
+  prefReplyOnPost              Boolean  @default(true) @map("pref_reply_on_post")
+  prefNestedReply              Boolean  @default(true) @map("pref_nested_reply")
+  prefNewPostInFollowedRoom    Boolean  @default(true) @map("pref_new_post_in_followed_room")
+  prefRecruitmentStatusChanged Boolean  @default(true) @map("pref_recruitment_status_changed")
+  prefContributionResolved     Boolean  @default(true) @map("pref_contribution_resolved")
+  prefPushEnabled              Boolean  @default(true) @map("pref_push_enabled")
+  prefEmailEnabled             Boolean  @default(true) @map("pref_email_enabled")
+  updatedAt                    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt                    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
