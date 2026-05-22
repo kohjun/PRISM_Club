@@ -8,6 +8,7 @@ class ReferenceDto {
     required this.thumbnailUrl,
     required this.summary,
     required this.status,
+    required this.sourceTier,
   });
 
   final String id;
@@ -19,6 +20,9 @@ class ReferenceDto {
   final String? summary;
   final String status;
 
+  /// P2.3 trust tier: OFFICIAL | TRUSTED | COMMUNITY | UNKNOWN.
+  final String sourceTier;
+
   factory ReferenceDto.fromJson(Map<String, dynamic> json) => ReferenceDto(
         id: json['id'] as String,
         type: json['type'] as String,
@@ -28,5 +32,6 @@ class ReferenceDto {
         thumbnailUrl: json['thumbnail_url'] as String?,
         summary: json['summary'] as String?,
         status: json['status'] as String? ?? 'VISIBLE',
+        sourceTier: json['source_tier'] as String? ?? 'UNKNOWN',
       );
 }

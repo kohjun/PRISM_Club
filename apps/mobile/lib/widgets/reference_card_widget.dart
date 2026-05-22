@@ -62,17 +62,28 @@ class ReferenceCardWidget extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  reference.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.3,
-                    height: 1.35,
-                    color: PrismColors.ink1,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        reference.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.3,
+                          height: 1.35,
+                          color: PrismColors.ink1,
+                        ),
+                      ),
+                    ),
+                    if (_TierBadge.isVisible(reference.sourceTier)) ...[
+                      const SizedBox(width: 6),
+                      _TierBadge(tier: reference.sourceTier),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -148,4 +159,76 @@ class _RefMeta {
   final IconData icon;
   final Color bg;
   final Color fg;
+}
+
+/// P2.3 source-tier badge — small pill rendered next to the reference
+/// title. UNKNOWN is hidden so we don't clutter the card with a "?"
+/// chip for every uncategorised link.
+class _TierBadge extends StatelessWidget {
+  const _TierBadge({required this.tier});
+  final String tier;
+
+  static bool isVisible(String tier) => tier != 'UNKNOWN';
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, fg, bg) = _styleFor(tier);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: fg),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  (String, IconData, Color, Color) _styleFor(String tier) {
+    switch (tier) {
+      case 'OFFICIAL':
+        return (
+          '공식',
+          Icons.verified_outlined,
+          PrismColors.infoFg,
+          PrismColors.infoBg,
+        );
+      case 'TRUSTED':
+        return (
+          '신뢰',
+          Icons.shield_outlined,
+          PrismColors.warningFg,
+          PrismColors.warningBg,
+        );
+      case 'COMMUNITY':
+        return (
+          '커뮤니티',
+          Icons.people_outline,
+          PrismColors.muted,
+          PrismColors.bgTint,
+        );
+      default:
+        return (
+          '?',
+          Icons.help_outline,
+          PrismColors.muted,
+          PrismColors.bgTint,
+        );
+    }
+  }
 }
