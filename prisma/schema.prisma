@@ -53,6 +53,7 @@ model User {
   notificationPreference NotificationPreference?
   knowledgeRevisions     KnowledgeBlockRevision[]
   contributionReputation ContributionReputation?
+  referenceSourceRules   ReferenceSourceRule[]
 
   @@map("users")
 }
@@ -543,12 +544,38 @@ model Reference {
   thumbnailUrl String?  @map("thumbnail_url")
   summary      String?
   status       String   @default("VISIBLE")
+  // P2.3: trust tier inferred from the URL host. OFFICIAL is reserved
+  // for canonical sources (broadcaster, publisher); TRUSTED for known
+  // creator platforms (YouTube, major news sites); COMMUNITY for forums
+  // / blogs / KakaoStory; UNKNOWN when the host doesn't match any rule.
+  // Mutable via admin retier endpoint; auto-set on create().
+  sourceTier   String   @default("UNKNOWN") @map("source_tier")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   creator       User                    @relation(fields: [createdBy], references: [id])
   topicHubLinks TopicHubReferenceLink[]
 
   @@map("reference_items")
+}
+
+// Domain-to-tier mapping for P2.3 reference source quality.
+// `domain_pattern` may be an exact host ("tving.com") or a wildcard
+// like "*.youtube.com" (matches subdomains only). Evaluated in service
+// code, not via SQL pattern operators, so we can normalise both sides
+// the same way.
+model ReferenceSourceRule {
+  id            String   @id @default(uuid()) @db.Uuid
+  domainPattern String   @unique @map("domain_pattern")
+  tier          String // OFFICIAL | TRUSTED | COMMUNITY | UNKNOWN
+  note          String?
+  // Nullable so the migration's seed rules (no admin user attached) can
+  // land cleanly; admin-created rules always carry the actor's id.
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  creator User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@map("reference_source_rules")
 }
 
 // ---------------------------------------------------------------------------

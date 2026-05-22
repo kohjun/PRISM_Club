@@ -25,6 +25,8 @@ export interface ReferenceDTO {
   thumbnail_url: string | null;
   summary: string | null;
   status: string;
+  /** P2.3 trust tier: OFFICIAL | TRUSTED | COMMUNITY | UNKNOWN. */
+  source_tier: string;
 }
 
 export interface PinDTO {

@@ -290,6 +290,7 @@ export class RoomService {
     thumbnailUrl: string | null;
     summary: string | null;
     status: string;
+    sourceTier?: string;
   }): ReferenceDTO {
     return {
       id: r.id,
@@ -300,6 +301,7 @@ export class RoomService {
       thumbnail_url: r.thumbnailUrl,
       summary: r.summary,
       status: r.status,
+      source_tier: r.sourceTier ?? 'UNKNOWN',
     };
   }
 }

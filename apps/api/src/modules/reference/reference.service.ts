@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { RoomService } from '../community/room.service';
+import { SourceRulesService } from './source-rules.service';
 
 export interface CreateReferenceInput {
   url: string;
@@ -25,10 +26,14 @@ export class ReferenceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rooms: RoomService,
+    private readonly sourceRules: SourceRulesService,
   ) {}
 
   async create(input: CreateReferenceInput, userId: string) {
     const type = ALLOWED_TYPES.has(input.type) ? input.type : 'OTHER';
+    // P2.3: auto-classify the trust tier from the URL host. Falls back
+    // to UNKNOWN if no rule matches (admins can retier later).
+    const sourceTier = await this.sourceRules.classifyUrl(input.url);
     const created = await this.prisma.reference.create({
       data: {
         createdBy: userId,
@@ -38,6 +43,7 @@ export class ReferenceService {
         sourceName: input.source_name ?? null,
         thumbnailUrl: input.thumbnail_url ?? null,
         summary: input.summary ?? null,
+        sourceTier,
       },
     });
     return this.rooms.toReferenceDTO(created);
