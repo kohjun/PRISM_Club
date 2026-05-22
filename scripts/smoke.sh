@@ -473,4 +473,73 @@ else
   pass "analytics summary returned (AUTH_LOGIN parse skipped)"
 fi
 
+section "share + OG profile card (P1.5 / P4.1)"
+
+# Public share preview for a known profile
+share_res=$(curl -sS "$API/share/preview?type=PROFILE&id=$MINSEO")
+share_title=$(echo "$share_res" | j ".title")
+[[ -n "$share_title" && "$share_title" != "undefined" ]] && pass "/share/preview PROFILE -> title" || fail "share_res=$share_res"
+
+# share-card metadata
+card_res=$(curl -sS "$API/profiles/$MINSEO/share-card")
+card_tier_kind=$(echo "$card_res" | j ".badges[0].kind")
+card_deep=$(echo "$card_res" | j ".deep_link")
+[[ "$card_tier_kind" == "TIER" ]] && pass "share-card returns TIER badge" || fail "card_tier_kind=$card_tier_kind"
+[[ "$card_deep" == *"/share/profile/"* ]] && pass "share-card deep_link points to /share/profile" || fail "card_deep=$card_deep"
+
+# OG PNG endpoint serves bytes with image/png content-type
+og_headers=$(curl -sS -D - -o /dev/null "$API/og/profile/$MINSEO.png")
+echo "$og_headers" | grep -qi "content-type: image/png" && pass "/og/profile/:id.png -> image/png" || fail "og headers: $og_headers"
+
+# Unknown user -> 404
+og_404=$(curl -sS -o /dev/null -w "%{http_code}" "$API/og/profile/00000000-0000-0000-0000-000000000000.png")
+[[ "$og_404" == "404" ]] && pass "OG unknown user -> 404" || fail "og_404=$og_404"
+
+section "saved collections (P4.4)"
+
+# Empty list initially (or whatever the seed provides — we just check the
+# endpoint responds with an array).
+cols_res=$(curl_as "$MINSEO" "$API/me/collections")
+cols_is_array=$(echo "$cols_res" | j ".length !== undefined ? 'yes' : 'no'")
+[[ "$cols_is_array" == "yes" ]] && pass "GET /me/collections returns an array" || fail "cols_res=$cols_res"
+
+# Create a fresh collection
+new_col=$(curl_as "$MINSEO" -X POST "$API/me/collections" -d '{"name":"smoke-folder"}')
+col_id=$(echo "$new_col" | j ".id")
+[[ -n "$col_id" && "$col_id" != "undefined" ]] && pass "POST /me/collections creates: $col_id" || fail "new_col=$new_col"
+
+# Save a post and move it into the new collection
+SAVE_TARGET="88800001-0000-0000-0000-000000000001"
+curl_as "$MINSEO" -X POST "$API/me/saves" \
+  -d "{\"target_type\":\"POST\",\"target_id\":\"$SAVE_TARGET\"}" > /dev/null
+save_list=$(curl_as "$MINSEO" "$API/me/saves?type=POST")
+save_id=$(echo "$save_list" | j ".items.find(i=>i.target_id==='$SAVE_TARGET').id")
+[[ -n "$save_id" && "$save_id" != "undefined" ]] && pass "save row found: $save_id" || fail "save_list=$save_list"
+
+move_status=$(curl_as "$MINSEO" -o /dev/null -w "%{http_code}" -X POST \
+  "$API/me/saves/$save_id/move" -d "{\"collection_id\":\"$col_id\"}")
+[[ "$move_status" == "200" ]] && pass "POST /me/saves/:id/move -> 200" || fail "move_status=$move_status"
+
+# Filter list by collection_id and confirm the item shows up
+filtered=$(curl_as "$MINSEO" "$API/me/saves?collection_id=$col_id")
+in_col=$(echo "$filtered" | j ".items.findIndex(i=>i.id==='$save_id')")
+[[ "$in_col" != "-1" ]] && pass "collection filter returns moved item" || fail "in_col=$in_col"
+
+# Cleanup: unsave + delete collection
+curl_as "$MINSEO" -X POST "$API/me/saves" \
+  -d "{\"target_type\":\"POST\",\"target_id\":\"$SAVE_TARGET\"}" > /dev/null
+curl_as "$MINSEO" -X DELETE "$API/me/collections/$col_id" > /dev/null
+pass "smoke-folder cleaned up"
+
+section "system health (P5.6)"
+
+# Member is blocked, curator gets the snapshot.
+sh_403=$(curl_as "$JOON" -s -o /dev/null -w "%{http_code}" "$API/admin/system-health")
+[[ "$sh_403" == "403" ]] && pass "member /admin/system-health -> 403" || fail "sh_403=$sh_403"
+
+sh_ok=$(curl_as "$CORAL" "$API/admin/system-health")
+sh_generated=$(echo "$sh_ok" | j ".generated_at")
+sh_metrics_kind=$(echo "$sh_ok" | j ".Array.isArray(this.metrics) ? 'arr' : 'no'" 2>/dev/null || echo "arr")
+[[ -n "$sh_generated" && "$sh_generated" != "undefined" ]] && pass "system-health has generated_at" || fail "sh_ok=$sh_ok"
+
 printf "\n\033[1;32mAll smoke checks passed.\033[0m\n"

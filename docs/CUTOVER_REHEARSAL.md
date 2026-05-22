@@ -142,8 +142,12 @@ staging. Concretely:
    Record the response in the rehearsal log — this is your version of
    "yes, the right image is running."
 6. **Verify the diagnostics.** `events-client/status`,
-   `analytics/summary`, `ops/summary`, admin web reload — same checks
-   you'll run during production.
+   `analytics/summary`, `ops/summary`, `system-health`, admin web
+   reload — same checks you'll run during production. The new
+   `GET /v1/admin/system-health` snapshot should return a non-empty
+   `metrics` array within ~60s of the first traffic; if it stays
+   empty, MetricsService is not being reached and the dashboard is
+   blind. Stop and investigate before continuing.
 7. **Roll the remaining pods.** Confirm each one passes readiness
    before the next.
 
@@ -188,6 +192,96 @@ don't just trust the staging timing.
 
 ---
 
+## 6.5. F-series follow-up artifacts
+
+The original Beta plan covers core flows. The F1–F10 follow-ups added
+artifacts the rehearsal should exercise once each cut-over, in the
+order below. Each is independent — skip the ones that don't apply yet
+(e.g. R2 if you're still on local storage).
+
+### 6.5.1 — R2 + CDN media backfill (only when MEDIA_STORAGE_MODE=s3)
+
+Skip when staging still runs `MEDIA_STORAGE_MODE=local`. Once
+`S3_BUCKET` / `S3_ENDPOINT` / `MEDIA_PUBLIC_BASE_URL` are wired:
+
+```bash
+# dry-run first, always
+DATABASE_URL="<staging-database-url>" \
+  S3_BUCKET=<staging-bucket> \
+  S3_ENDPOINT=<r2-endpoint> \
+  MEDIA_PUBLIC_BASE_URL=<cdn-host> \
+  npx tsx scripts/migrate-uploads-to-r2.ts --dry-run
+
+# then real run with the same env
+DATABASE_URL=... npx tsx scripts/migrate-uploads-to-r2.ts
+```
+
+Expected:
+
+- `--dry-run` prints the count of MediaAsset rows whose `cdn_url` is
+  null and would be uploaded. Zero is fine on a re-run.
+- Real run is idempotent — repeating it must not duplicate uploads or
+  rewrite already-CDN-fronted rows.
+- After completion, the admin SystemHealthCard shows
+  `media.upload.success` increasing as new uploads come in.
+- Keep `apps/api/uploads/` for 14 days as belt-and-braces; only
+  remove after a clean staging soak.
+
+If the dry-run reports unexpectedly many rows, stop. Either the
+backfill ran already (idempotency bug) or someone uploaded to local
+storage after the cut-over (env regression). Investigate before
+re-running.
+
+### 6.5.2 — Crashlytics symbol upload (Android release builds only)
+
+Crashlytics needs symbol files to symbolicate obfuscated stack traces.
+The release pipeline must run **after** the AAB is built:
+
+```bash
+cd apps/mobile/android
+./gradlew :app:uploadCrashlyticsSymbolFileRelease
+```
+
+Verify in the Firebase console:
+
+- The build's `app_version` shows up under Crashlytics → Settings →
+  Crashlytics → dSYMs (Android tab).
+- Trigger the hidden ops "Throw test exception" button from a release
+  build on a real device. Within ~5 minutes the crash appears in the
+  Crashlytics console **with line numbers and file paths**. If the
+  stack is `<unknown>` lines only, the symbol upload didn't take —
+  re-run.
+
+Skip on staging if release-signing config isn't wired yet.
+
+### 6.5.3 — System Health snapshot baseline
+
+After §5 finishes rolling pods, capture the first SystemHealth
+snapshot as the "right after deploy" baseline. The first 5 minutes
+of traffic populate the curated keys; if a key is still missing after
+5 minutes of real traffic, the MetricsService recorder for it isn't
+firing.
+
+```bash
+curl -sS "$API/admin/system-health" \
+  -H "Authorization: Bearer <curator-token>" | jq .
+```
+
+Expected first-hour shape (some keys may legitimately stay at 0 if no
+traffic of that kind has happened yet — but **all keys should be
+present**):
+
+- `search.latency_ms` — any search query bumps `count_1h`.
+- `media.upload.success` — any media upload bumps it.
+- `notification.push.sent` — empty until a notification fans out.
+- `events_client.fetch_ms` — populates as the M5 ingest cron runs.
+
+If a key is missing from the snapshot entirely, the recorder isn't
+running. That's the wrong time to discover it — file a ticket
+immediately.
+
+---
+
 ## 7. Smoke + QA run
 
 ### Smoke
@@ -198,9 +292,19 @@ API=https://api.staging.<your-domain>/v1 bash scripts/smoke.sh
 SMOKE_AUTH_MODE=jwt API=https://api.staging.<your-domain>/v1 bash scripts/smoke.sh
 ```
 
-Both should print "All smoke checks passed." within ~20 seconds. If
+Both should print "All smoke checks passed." within ~25 seconds. If
 the second (jwt) run fails, you've found a real bug in either the auth
 flow or the script's token caching — file a ticket.
+
+Sections covered by `scripts/smoke.sh` (count grows over time —
+verify the bottom-of-script section list matches what you expect):
+
+- core M1–M19 flows (topic hub, room, posts, replies, reactions,
+  search, planner, event detail, media, ops, signals, auth,
+  analytics)
+- **F-series additions**: share preview + `/v1/profiles/:id/share-card`
+  + `/v1/og/profile/:id.png` (P1.5 / P4.1), saved collections move
+  + filter (P4.4), system health snapshot (P5.6).
 
 ### Persona QA
 
