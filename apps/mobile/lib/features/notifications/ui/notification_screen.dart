@@ -69,7 +69,9 @@ class NotificationScreen extends ConsumerWidget {
     if (type == 'REPLY_ON_POST' ||
         type == 'NESTED_REPLY' ||
         type == 'NEW_POST_IN_FOLLOWED_ROOM' ||
-        type == 'RECRUITMENT_STATUS_CHANGED') {
+        type == 'RECRUITMENT_STATUS_CHANGED' ||
+        type == 'MENTIONED_IN_POST' ||
+        type == 'MENTIONED_IN_REPLY') {
       final postId = notif.payload['postId'] as String?;
       if (postId != null) context.push('/posts/$postId');
     } else if (type == 'CONTRIBUTION_RESOLVED') {
@@ -287,6 +289,13 @@ class _NotificationTile extends StatelessWidget {
           bg: PrismColors.successBg,
           fg: PrismColors.successFg,
         );
+      case 'MENTIONED_IN_POST':
+      case 'MENTIONED_IN_REPLY':
+        return (
+          icon: Icons.alternate_email,
+          bg: PrismColors.pp100,
+          fg: PrismColors.pp700,
+        );
       default:
         return (
           icon: Icons.circle_notifications_outlined,
@@ -313,6 +322,10 @@ class _NotificationTile extends StatelessWidget {
         final hub = notif.payload['topicHubTitle'] as String? ?? '';
         final decision = notif.payload['decision'] as String? ?? '';
         return '[$hub] 내 제안이 $decision 처리됐어요.';
+      case 'MENTIONED_IN_POST':
+        return '$author님이 글에서 회원님을 언급했어요.';
+      case 'MENTIONED_IN_REPLY':
+        return '$author님이 댓글에서 회원님을 언급했어요.';
       default:
         return '새 알림이 있어요.';
     }

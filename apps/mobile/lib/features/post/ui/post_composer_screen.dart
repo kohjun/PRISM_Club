@@ -7,6 +7,7 @@ import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/media_image.dart';
+import '../../../widgets/mention_autocomplete.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../event_card/ui/event_picker_modal.dart';
@@ -221,12 +222,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             ),
             const SizedBox(height: PrismSpacing.md),
           ],
-          TextField(
+          MentionAutocomplete(
             controller: _body,
-            maxLines: 8,
-            minLines: 5,
-            decoration: const InputDecoration(
-              hintText: '무슨 이야기를 나눌까요?',
+            child: TextField(
+              controller: _body,
+              maxLines: 8,
+              minLines: 5,
+              decoration: const InputDecoration(
+                hintText: '무슨 이야기를 나눌까요?  (@닉네임 으로 누군가를 언급할 수 있어요)',
+              ),
             ),
           ),
           const SizedBox(height: PrismSpacing.lg),

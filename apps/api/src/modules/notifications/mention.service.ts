@@ -80,10 +80,19 @@ export class MentionService {
       // Lookup users by nickname. We join Profile because that's where
       // nickname lives — uniqueness on Profile.nickname is enforced at
       // the schema layer so a lookup returns at most one row per nick.
-      const profiles = await this.prisma.profile.findMany({
-        where: { nickname: { in: nicks } },
-        select: { userId: true, nickname: true },
-      });
+      // We also fetch the author's nickname for the notification copy
+      // ("민서님이 글에서 회원님을 언급했어요").
+      const [profiles, authorProfile] = await Promise.all([
+        this.prisma.profile.findMany({
+          where: { nickname: { in: nicks } },
+          select: { userId: true, nickname: true },
+        }),
+        this.prisma.profile.findUnique({
+          where: { userId: input.authorId },
+          select: { nickname: true },
+        }),
+      ]);
+      const authorNickname = authorProfile?.nickname ?? '';
       const candidateRecipients = profiles
         .map((p) => ({ id: p.userId, nickname: p.nickname }))
         .filter((p) => p.id !== input.authorId);
@@ -127,7 +136,12 @@ export class MentionService {
             ? 'MENTIONED_IN_POST'
             : 'MENTIONED_IN_REPLY',
         payload: {
+          // `actorId` is read by NotificationService block/mute filter.
           actorId: input.authorId,
+          // `authorNickname` matches the field every other notification
+          // type carries so the mobile copy ("$author님이 …") doesn't
+          // need a type-specific branch.
+          authorNickname,
           mentionedNickname: r.nickname,
           sourceType: input.sourceType,
           sourceId: input.sourceId,

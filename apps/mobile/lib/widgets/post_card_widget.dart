@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../app/design_tokens.dart';
 import '../features/post/data/post_dto.dart';
+import '../features/user_profile/data/user_search_repository.dart';
 import 'event_card_widget.dart';
 import 'media_image.dart';
+import 'mention_text.dart';
 import 'prism_avatar.dart';
 import 'reference_card_widget.dart';
 
@@ -15,7 +19,7 @@ import 'reference_card_widget.dart';
 /// dividers between (Room timeline — that screen pulls only the inner
 /// Padded content via this widget's `Card` anyway; the Card border is light
 /// enough that visual chrome stays subtle).
-class PostCardWidget extends StatelessWidget {
+class PostCardWidget extends ConsumerWidget {
   const PostCardWidget({
     super.key,
     required this.post,
@@ -39,7 +43,7 @@ class PostCardWidget extends StatelessWidget {
   final bool compact;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final header = _HeaderRow(post: post, onAuthorTap: onAuthorTap);
 
     return Card(
@@ -53,16 +57,12 @@ class PostCardWidget extends StatelessWidget {
             children: [
               header,
               const SizedBox(height: PrismSpacing.md),
-              Text(
-                post.body,
+              MentionText(
+                body: post.body,
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  height: 1.55,
-                  letterSpacing: -0.2,
-                  color: PrismColors.ink1,
-                ),
+                onMentionTap: (nick) =>
+                    _navigateToMention(context, ref, nick),
               ),
               if (post.quotedPost != null) ...[
                 const SizedBox(height: PrismSpacing.md),
@@ -95,6 +95,31 @@ class PostCardWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Resolve a tapped @nickname to a user id via /users/search, then
+  /// push to the profile. Silent failure if nothing matches — the
+  /// nickname may have been deleted since the post was written.
+  Future<void> _navigateToMention(
+    BuildContext context,
+    WidgetRef ref,
+    String nickname,
+  ) async {
+    try {
+      final hits = await ref
+          .read(userSearchRepositoryProvider)
+          .searchByNickname(nickname);
+      final exact = hits.firstWhere(
+        (h) => h.nickname == nickname,
+        orElse: () => hits.isNotEmpty
+            ? hits.first
+            : const UserSearchHitDto(id: '', nickname: ''),
+      );
+      if (exact.id.isEmpty || !context.mounted) return;
+      context.push('/users/${exact.id}');
+    } catch (_) {
+      // ignore — best-effort navigation
+    }
   }
 }
 
