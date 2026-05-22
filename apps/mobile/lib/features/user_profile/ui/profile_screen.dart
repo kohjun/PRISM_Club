@@ -8,6 +8,7 @@ import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/prism_avatar.dart';
 import '../../../widgets/role_badge.dart';
 import '../../../widgets/state_views.dart';
+import '../data/block_mute_repository.dart';
 import '../data/reputation_repository.dart';
 import '../data/user_follow_repository.dart';
 import '../data/user_profile_dto.dart';
@@ -45,7 +46,7 @@ class ProfileScreen extends ConsumerWidget {
                       initialProfile: b.profile,
                     ),
                   )
-                : const SizedBox.shrink(),
+                : _OtherUserMenu(userId: userId),
             orElse: () => const SizedBox.shrink(),
           ),
         ],
@@ -586,3 +587,96 @@ class _SectionHeader extends StatelessWidget {
         ),
       );
 }
+
+/// P6.2 action menu that appears on the OTHER user's profile (when
+/// `bundle.isSelf == false`). Block + mute are the load-bearing
+/// destructive actions; report routes to the existing moderation flow.
+class _OtherUserMenu extends ConsumerWidget {
+  const _OtherUserMenu({required this.userId});
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<_OtherUserAction>(
+      icon: const Icon(Icons.more_vert),
+      tooltip: '더보기',
+      onSelected: (action) => _handle(context, ref, action),
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: _OtherUserAction.mute,
+          child: ListTile(
+            leading: Icon(Icons.volume_off_outlined),
+            title: Text('음소거'),
+            subtitle: Text('피드/알림에서만 숨김'),
+            dense: true,
+          ),
+        ),
+        PopupMenuItem(
+          value: _OtherUserAction.block,
+          child: ListTile(
+            leading: Icon(Icons.block, color: PrismColors.danger),
+            title: Text('차단'),
+            subtitle: Text('상호 노출 / 답글 / 멘션 차단'),
+            dense: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handle(
+    BuildContext context,
+    WidgetRef ref,
+    _OtherUserAction action,
+  ) async {
+    final repo = ref.read(blockMuteRepositoryProvider);
+    try {
+      if (action == _OtherUserAction.mute) {
+        await repo.mute(userId);
+        ref.invalidate(muteListProvider);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('음소거했어요')),
+        );
+      } else {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('차단하시겠어요?'),
+            content: const Text(
+              '차단하면 이 사용자의 글이 보이지 않고, '
+              '서로 답글·멘션·팔로우를 할 수 없어요.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: PrismColors.danger,
+                ),
+                child: const Text('차단'),
+              ),
+            ],
+          ),
+        );
+        if (ok != true) return;
+        await repo.block(userId);
+        ref.invalidate(blockListProvider);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('차단했어요')),
+        );
+      }
+    } on ApiError catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('처리 실패: ${e.message}')),
+      );
+    }
+  }
+}
+
+enum _OtherUserAction { mute, block }

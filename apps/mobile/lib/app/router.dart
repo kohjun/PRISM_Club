@@ -31,6 +31,7 @@ import '../features/moderation/ui/moderation_detail_screen.dart';
 import '../features/moderation/ui/moderation_queue_screen.dart';
 import '../features/moderation/ui/my_reports_screen.dart';
 import '../features/ops/ui/ops_dashboard_screen.dart';
+import '../features/user_profile/ui/blocks_screen.dart';
 import '../features/user_profile/ui/profile_activity_screen.dart';
 import '../features/user_profile/ui/profile_screen.dart';
 
@@ -180,6 +181,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           title: st.uri.queryParameters['nickname'],
         ),
       ),
+      // P6.2: viewer-managed block + mute lists.
+      GoRoute(path: '/me/blocks', builder: (_, _) => const BlockListScreen()),
+      GoRoute(path: '/me/mutes', builder: (_, _) => const MuteListScreen()),
       // Milestone 9: moderation
       GoRoute(path: '/me/reports', builder: (_, _) => const MyReportsScreen()),
       GoRoute(
