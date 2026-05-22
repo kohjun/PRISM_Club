@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { CategoryService } from '../community/category.service';
@@ -229,6 +230,13 @@ export class KnowledgeContributionService {
     if (existing.status !== 'PENDING') {
       throw new ConflictException(`Contribution already ${existing.status.toLowerCase()}`);
     }
+    // P2.2: prevent score inflation via self-resolve. A contributor must
+    // never sit on both sides of the curation flow for the same row.
+    if (existing.contributorId === resolverId) {
+      throw new ForbiddenException(
+        'You cannot resolve your own contribution',
+      );
+    }
 
     const spaceAccessPolicy =
       (existing.hub as any)?.category?.space?.accessPolicy ?? 'PUBLIC';
@@ -240,18 +248,18 @@ export class KnowledgeContributionService {
         input.decision === 'REJECT' ? 'REJECTED'
         : input.decision === 'REQUEST_CHANGES' ? 'NEEDS_CHANGES'
         : (() => { throw new BadRequestException(`Invalid decision: ${input.decision}`); })();
-      await this.prisma.knowledgeContribution.update({
-        where: { id },
-        data: {
-          status,
-          curatorNote: input.note ?? null,
-          resolvedBy: resolverId,
-          resolvedAt: new Date(),
-        },
-      });
-      // Notify contributor of rejection/changes request
-      if (existing.contributorId !== resolverId) {
-        await this.prisma.notification.create({
+      await this.prisma.$transaction(async (tx) => {
+        await tx.knowledgeContribution.update({
+          where: { id },
+          data: {
+            status,
+            curatorNote: input.note ?? null,
+            resolvedBy: resolverId,
+            resolvedAt: new Date(),
+          },
+        });
+        await this._bumpReputation(tx, existing.contributorId, status);
+        await tx.notification.create({
           data: {
             userId: existing.contributorId,
             type: 'CONTRIBUTION_RESOLVED',
@@ -264,7 +272,7 @@ export class KnowledgeContributionService {
             },
           },
         });
-      }
+      });
     }
 
     return this.getDetail(id);
@@ -367,6 +375,10 @@ export class KnowledgeContributionService {
         },
       });
 
+      // P2.2: bump contributor reputation in lockstep with the
+      // contribution status change.
+      await this._bumpReputation(tx, contribution.contributorId, 'APPROVED');
+
       // Notify contributor of approval
       if (contribution.contributorId !== resolverId) {
         await tx.notification.create({
@@ -384,6 +396,70 @@ export class KnowledgeContributionService {
         });
       }
     });
+  }
+
+  /**
+   * P2.2: bump the contributor's aggregate counters by 1 for the
+   * decided status, then recompute weighted_score from all four
+   * counts so the column never drifts from the formula (defense in
+   * depth — a missed increment somewhere else is self-healing on the
+   * next resolve).
+   *
+   * Skipping `withdrawn` from `withdraw()` is intentional: the
+   * contributor pulled the row themselves; the score formula's
+   * -0.2 penalty is reserved for resolution-flow withdrawals. To
+   * apply it from `withdraw()`, call this helper there too — we
+   * intentionally do NOT today so users can experiment without a
+   * permanent score hit.
+   */
+  private async _bumpReputation(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    status: string,
+  ): Promise<void> {
+    const data: Prisma.ContributionReputationUpdateInput = {
+      lastResolvedAt: new Date(),
+    };
+    const createData: Prisma.ContributionReputationCreateInput = {
+      user: { connect: { id: userId } },
+      lastResolvedAt: new Date(),
+    };
+    switch (status) {
+      case 'APPROVED':
+        data.approvedCount = { increment: 1 };
+        createData.approvedCount = 1;
+        break;
+      case 'REJECTED':
+        data.rejectedCount = { increment: 1 };
+        createData.rejectedCount = 1;
+        break;
+      case 'NEEDS_CHANGES':
+        data.needsChangesCount = { increment: 1 };
+        createData.needsChangesCount = 1;
+        break;
+      case 'WITHDRAWN':
+        data.withdrawnCount = { increment: 1 };
+        createData.withdrawnCount = 1;
+        break;
+      default:
+        return;
+    }
+    await tx.contributionReputation.upsert({
+      where: { userId },
+      create: createData,
+      update: data,
+    });
+    await tx.$executeRaw`
+      UPDATE "contribution_reputation"
+      SET "weighted_score" = GREATEST(
+          0::numeric,
+            "approved_count" * 3
+          - "rejected_count" * 1
+          - "needs_changes_count" * 0.5
+          - "withdrawn_count" * 0.2
+      )::decimal(10,2)
+      WHERE "user_id" = ${userId}::uuid
+    `;
   }
 
   private async validateEvidencePair(

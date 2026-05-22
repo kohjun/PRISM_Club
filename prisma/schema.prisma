@@ -52,6 +52,7 @@ model User {
   deviceTokens           DeviceToken[]
   notificationPreference NotificationPreference?
   knowledgeRevisions     KnowledgeBlockRevision[]
+  contributionReputation ContributionReputation?
 
   @@map("users")
 }
@@ -293,6 +294,32 @@ model KnowledgeBlockRevision {
   @@index([blockId, changedAt(sort: Desc)])
   @@index([changedById, changedAt(sort: Desc)])
   @@map("knowledge_block_revisions")
+}
+
+// Aggregate reputation per contributor (P2.2). Lazily updated inside
+// the same transaction that resolves the contribution row, so the
+// counter stays in lockstep with the contribution table.
+//
+// weighted_score formula (floored at 0):
+//   approved*3 - rejected*1 - needs_changes*0.5 - withdrawn*0.2
+//
+// Self-approve is blocked at the service layer; this prevents a
+// curator from inflating their own score by approving their own work.
+model ContributionReputation {
+  userId            String    @id @map("user_id") @db.Uuid
+  approvedCount     Int       @default(0) @map("approved_count")
+  rejectedCount     Int       @default(0) @map("rejected_count")
+  needsChangesCount Int       @default(0) @map("needs_changes_count")
+  withdrawnCount    Int       @default(0) @map("withdrawn_count")
+  weightedScore     Decimal   @default(0) @map("weighted_score") @db.Decimal(10, 2)
+  lastResolvedAt    DateTime? @map("last_resolved_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([weightedScore(sort: Desc)])
+  @@map("contribution_reputation")
 }
 
 // Static in milestone 1 — populated by seed, not recomputed.
