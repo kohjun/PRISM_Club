@@ -9,6 +9,7 @@ import * as crypto from 'crypto';
 import sharp from 'sharp';
 import { PrismaService } from '../../shared/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { MetricsService } from '../../shared/metrics.service';
 import {
   IMediaStorage,
   MEDIA_STORAGE,
@@ -56,6 +57,7 @@ export class MediaService {
     private readonly prisma: PrismaService,
     @Inject(MEDIA_STORAGE) private readonly storage: IMediaStorage,
     private readonly analytics: AnalyticsService,
+    private readonly metrics: MetricsService,
   ) {}
 
   storageMode(): string {
@@ -86,12 +88,20 @@ export class MediaService {
     const ext = MIME_TO_EXT[file.mimetype];
 
     // 1. Upload the original byte-for-byte.
-    const stored = await this.storage.upload({
-      id,
-      ext,
-      contentType: file.mimetype,
-      body: file.buffer,
-    });
+    let stored;
+    try {
+      stored = await this.storage.upload({
+        id,
+        ext,
+        contentType: file.mimetype,
+        body: file.buffer,
+      });
+    } catch (e) {
+      this.metrics.inc('media.upload.fail');
+      throw e;
+    }
+    this.metrics.inc('media.upload.success');
+    this.metrics.record('media.upload.bytes', file.size);
 
     // 2. Read dimensions + render variants. Failures here are non-fatal —
     //    we still persist the original so the asset is usable; variants can

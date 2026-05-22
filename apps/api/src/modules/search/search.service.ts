@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { MetricsService } from '../../shared/metrics.service';
 import {
   SEARCH_TYPES,
   SearchEntityType,
@@ -52,6 +53,7 @@ export class SearchService {
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
     private readonly analytics: AnalyticsService,
+    private readonly metrics: MetricsService,
   ) {}
 
   // -- /v1/search ---------------------------------------------------------
@@ -103,6 +105,9 @@ export class SearchService {
         ms_elapsed: elapsedMs,
       },
     });
+    // F5: surface latency to the system-health dashboard.
+    this.metrics.record('search.latency_ms', elapsedMs);
+    if (totalHits === 0) this.metrics.inc('search.zero_result');
 
     return { query: q, groups };
   }

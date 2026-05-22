@@ -3,6 +3,7 @@ import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import { DeviceTokenService } from '../device-token.service';
 import { NotificationPreferencesService } from '../notification-preferences.service';
+import { MetricsService } from '../../../shared/metrics.service';
 import {
   DeliveryAttempt,
   DeliveryRequest,
@@ -37,6 +38,7 @@ export class PushDelivery implements INotificationDeliverer {
   constructor(
     private readonly prefs: NotificationPreferencesService,
     private readonly deviceTokens: DeviceTokenService,
+    private readonly metrics: MetricsService,
   ) {}
 
   mode(): string {
@@ -156,12 +158,14 @@ export class PushDelivery implements INotificationDeliverer {
       }
 
       if (response.successCount > 0) {
+        this.metrics.record('notification.push.sent', response.successCount);
         attempts.push({
           channel: 'PUSH',
           status: 'SENT',
           ref: `fcm:${response.successCount}/${fcmTokens.length}`,
         });
       } else {
+        this.metrics.inc('notification.push.failed');
         attempts.push({
           channel: 'PUSH',
           status: 'FAILED',
@@ -172,6 +176,7 @@ export class PushDelivery implements INotificationDeliverer {
         });
       }
     } catch (e) {
+      this.metrics.inc('notification.push.failed');
       attempts.push({
         channel: 'PUSH',
         status: 'FAILED',
