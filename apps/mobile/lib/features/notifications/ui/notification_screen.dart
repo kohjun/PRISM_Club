@@ -19,6 +19,11 @@ class NotificationScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('알림'),
         actions: [
+          IconButton(
+            tooltip: '알림 설정',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.go('/me/notifications/settings'),
+          ),
           TextButton(
             onPressed: () => _markAllRead(context, ref),
             child: const Text('모두 읽음'),

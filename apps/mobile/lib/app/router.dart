@@ -19,6 +19,7 @@ import '../features/room/ui/room_timeline_screen.dart';
 import '../features/space/ui/space_list_screen.dart';
 import '../features/home/ui/home_shell_screen.dart';
 import '../features/notifications/ui/notification_screen.dart';
+import '../features/notifications/ui/notification_settings_screen.dart';
 import '../features/saves/ui/saved_items_screen.dart';
 import '../features/topic_hub/ui/topic_hub_screen.dart';
 import '../features/moderation/ui/moderation_detail_screen.dart';
@@ -123,6 +124,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // Milestone 6: notifications + saves
       GoRoute(path: '/me/notifications', builder: (_, _) => const NotificationScreen()),
+      // P1.2: notification preference settings (push + per-type toggles).
+      GoRoute(
+        path: '/me/notifications/settings',
+        builder: (_, _) => const NotificationSettingsScreen(),
+      ),
       GoRoute(path: '/me/saves', builder: (_, _) => const SavedItemsScreen()),
       // Milestone 8: user profile
       GoRoute(
