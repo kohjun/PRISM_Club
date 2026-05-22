@@ -2,6 +2,8 @@ import { Logger, Module } from '@nestjs/common';
 import { PrismaModule } from '../../shared/prisma.module';
 import { AccessControlModule } from '../../shared/access-control.module';
 import { NotificationService } from './notification.service';
+import { NotificationPreferencesService } from './notification-preferences.service';
+import { DeviceTokenService } from './device-token.service';
 import { NotificationController } from './notification.controller';
 import { LocalNoopDelivery } from './delivery/local-noop-delivery';
 import { EmailDelivery } from './delivery/email-delivery';
@@ -31,11 +33,17 @@ function selectDelivery():
   controllers: [NotificationController],
   providers: [
     NotificationService,
+    NotificationPreferencesService,
+    DeviceTokenService,
     LocalNoopDelivery,
     EmailDelivery,
     PushDelivery,
     { provide: NOTIFICATION_DELIVERY, useClass: selectDelivery() },
   ],
-  exports: [NotificationService],
+  exports: [
+    NotificationService,
+    NotificationPreferencesService,
+    DeviceTokenService,
+  ],
 })
 export class NotificationsModule {}

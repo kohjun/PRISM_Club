@@ -1,6 +1,8 @@
 import { LocalNoopDelivery } from './local-noop-delivery';
 import { EmailDelivery } from './email-delivery';
 import { PushDelivery } from './push-delivery';
+import { NotificationPreferencesService } from '../notification-preferences.service';
+import { DeviceTokenService } from '../device-token.service';
 
 const baseReq = {
   notificationId: 'n-1',
@@ -8,6 +10,25 @@ const baseReq = {
   type: 'REPLY_ON_POST',
   payload: { roomSlug: 'r' },
 };
+
+function buildPushDelivery(opts: {
+  pushAllowed?: { allow: boolean; reason?: string };
+  tokens?: Array<{ id: string; provider: string; token: string }>;
+} = {}) {
+  const prefs = {
+    pushAllowedFor: jest
+      .fn()
+      .mockResolvedValue(opts.pushAllowed ?? { allow: true }),
+  } as unknown as NotificationPreferencesService;
+  const deviceTokens = {
+    activeTokensForUser: jest
+      .fn()
+      .mockResolvedValue(
+        opts.tokens ?? [{ id: 't-1', provider: 'FCM', token: 'tok-xxxxxxxx' }],
+      ),
+  } as unknown as DeviceTokenService;
+  return new PushDelivery(prefs, deviceTokens);
+}
 
 describe('NotificationDelivery providers', () => {
   let envSnapshot: NodeJS.ProcessEnv;
@@ -58,12 +79,40 @@ describe('NotificationDelivery providers', () => {
   });
 
   test('PushDelivery stub returns SKIPPED with helpful ref when no provider configured', async () => {
-    const d = new PushDelivery();
+    const d = buildPushDelivery();
     expect(d.mode()).toBe('push(stub — no provider configured)');
     const attempts = await d.deliver(baseReq);
     const push = attempts.find((a) => a.channel === 'PUSH');
     expect(push?.status).toBe('SKIPPED');
     expect(push?.ref).toBe('no-provider-configured');
+  });
+
+  test('PushDelivery skips when user disabled push at the master switch', async () => {
+    const d = buildPushDelivery({
+      pushAllowed: { allow: false, reason: 'user-pref-push-off' },
+    });
+    const attempts = await d.deliver(baseReq);
+    const push = attempts.find((a) => a.channel === 'PUSH');
+    expect(push?.status).toBe('SKIPPED');
+    expect(push?.ref).toBe('user-pref-push-off');
+  });
+
+  test('PushDelivery skips when user disabled this notification type', async () => {
+    const d = buildPushDelivery({
+      pushAllowed: { allow: false, reason: 'user-pref-type-off' },
+    });
+    const attempts = await d.deliver(baseReq);
+    const push = attempts.find((a) => a.channel === 'PUSH');
+    expect(push?.status).toBe('SKIPPED');
+    expect(push?.ref).toBe('user-pref-type-off');
+  });
+
+  test('PushDelivery skips when the user has no active device tokens', async () => {
+    const d = buildPushDelivery({ tokens: [] });
+    const attempts = await d.deliver(baseReq);
+    const push = attempts.find((a) => a.channel === 'PUSH');
+    expect(push?.status).toBe('SKIPPED');
+    expect(push?.ref).toBe('no-active-device-tokens');
   });
 
   test('Delivery providers MUST NOT throw — they return FAILED attempts instead', async () => {
