@@ -16,6 +16,7 @@ import { Viewer } from '../../shared/access-control.service';
  */
 export type EventType =
   | 'AUTH_LOGIN'
+  | 'AUTH_SIGNUP'
   | 'POST_CREATED'
   | 'REPLY_CREATED'
   | 'ROOM_FOLLOWED'

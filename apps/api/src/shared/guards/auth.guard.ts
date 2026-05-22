@@ -37,9 +37,21 @@ export class AuthGuard implements CanActivate {
     }
 
     // 2. Fallback to X-User-Id (dev/test/smoke only).
-    const allowXUserId =
-      process.env.ALLOW_X_USER_ID === '1' ||
-      process.env.NODE_ENV !== 'production';
+    //
+    // Policy (P1.1+):
+    //   - production: never honor X-User-Id, regardless of env.
+    //   - staging:    only when ALLOW_X_USER_ID=1 (so smoke.sh keeps working).
+    //   - dev/test:   honored by default unless ALLOW_X_USER_ID=0 explicitly.
+    const env = process.env.NODE_ENV;
+    const explicitFlag = process.env.ALLOW_X_USER_ID;
+    let allowXUserId: boolean;
+    if (env === 'production') {
+      allowXUserId = false;
+    } else if (env === 'staging') {
+      allowXUserId = explicitFlag === '1';
+    } else {
+      allowXUserId = explicitFlag !== '0';
+    }
     const headerUserId = req.headers['x-user-id'];
     if (
       allowXUserId &&
