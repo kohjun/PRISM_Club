@@ -13,6 +13,10 @@ plugins {
     // time — operators fetch it from the team secret store; the file is
     // gitignored.
     id("com.google.gms.google-services")
+    // Uploads R8 mapping + native symbols to Firebase Crashlytics so the
+    // backtrace in the console is symbolicated for release builds. No-op
+    // for debug. Must be applied AFTER com.google.gms.google-services.
+    id("com.google.firebase.crashlytics")
 }
 
 // -----------------------------------------------------------------------------

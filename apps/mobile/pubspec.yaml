@@ -35,6 +35,15 @@ dependencies:
   # Pick image files for post composer — M10
   file_picker: ^8.1.4
 
+  # Firebase core + Crashlytics (P1.3). FCM (firebase_messaging) lands in
+  # the P1.2 mobile follow-up. The native android-side Gradle plugins
+  # (com.google.gms.google-services, com.google.firebase.crashlytics) are
+  # wired up in apps/mobile/android — see settings.gradle.kts +
+  # app/build.gradle.kts. Symbol upload happens automatically during
+  # release build because the crashlytics plugin is applied.
+  firebase_core: ^3.6.0
+  firebase_crashlytics: ^4.1.3
+
   # Codegen helpers (annotations only at runtime)
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
