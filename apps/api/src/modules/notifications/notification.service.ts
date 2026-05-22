@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { BlockMuteService } from '../../shared/block-mute.service';
@@ -17,6 +18,10 @@ import {
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+// P6.3 grouping window. Anything older than this gets a fresh row.
+const GROUP_WINDOW_MS = 60 * 60 * 1000;
+// Beyond this many actors we surface "외 N명" via `payload.actors_overflow`.
+const ACTORS_CAP = 10;
 
 export interface ListOpts {
   cursor?: string;
@@ -39,6 +44,103 @@ export class NotificationService {
 
   deliveryMode(): string {
     return this.delivery.mode();
+  }
+
+  /**
+   * P6.3 grouping-aware notification creation.
+   *
+   * Single-row writes that share a `(userId, groupKey)` within a 1h
+   * window are coalesced — the actor is appended to `payload.actors`
+   * (deduped, cap 10), the row is marked unread, and `updatedAt`
+   * bumps so the recipient sees the merged row re-surface at the top
+   * of their inbox.
+   *
+   * Passing `groupKey: null` (the default) preserves the old
+   * "one row per call" behaviour — used by mentions / digests /
+   * reminders where each event is a discrete signal.
+   *
+   * Callers pass `actorId` (the user who triggered the notification);
+   * we copy it into `payload.actorId` so the existing block/mute
+   * filter in `listForUser` keeps working without a per-type branch.
+   */
+  async createOrGroup(input: {
+    userId: string;
+    type: string;
+    payload: Record<string, unknown>;
+    actorId?: string;
+    groupKey?: string | null;
+  }): Promise<void> {
+    const { userId, type, payload, actorId, groupKey } = input;
+    // Stamp actorId into payload so the unified filter sees it.
+    const enrichedPayload: Record<string, unknown> = {
+      ...payload,
+      ...(actorId ? { actorId } : {}),
+      actors: actorId
+        ? [...((payload.actors as string[] | undefined) ?? []), actorId]
+        : (payload.actors as string[] | undefined) ?? [],
+    };
+
+    if (!groupKey) {
+      await this.prisma.notification.create({
+        data: {
+          userId,
+          type,
+          payload: enrichedPayload as Prisma.InputJsonValue,
+          groupKey: null,
+        },
+      });
+      return;
+    }
+
+    const cutoff = new Date(Date.now() - GROUP_WINDOW_MS);
+    const existing = await this.prisma.notification.findFirst({
+      where: {
+        userId,
+        groupKey,
+        isRead: false,
+        createdAt: { gte: cutoff },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existing) {
+      const prevPayload = (existing.payload as Record<string, unknown>) ?? {};
+      const prevActors = Array.isArray(prevPayload.actors)
+        ? (prevPayload.actors as string[])
+        : [];
+      // Merge actors: keep insertion order, dedupe, cap. Cap is soft
+      // — beyond the cap we still count via `actors_overflow`.
+      const merged: string[] = [...prevActors];
+      if (actorId && !merged.includes(actorId)) {
+        merged.push(actorId);
+      }
+      const overflow = Math.max(0, merged.length - ACTORS_CAP);
+      const capped = overflow > 0 ? merged.slice(-ACTORS_CAP) : merged;
+      const nextPayload: Record<string, unknown> = {
+        ...prevPayload,
+        ...payload,
+        actors: capped,
+        actors_overflow: overflow,
+        ...(actorId ? { actorId } : {}),
+      };
+      await this.prisma.notification.update({
+        where: { id: existing.id },
+        data: {
+          payload: nextPayload as Prisma.InputJsonValue,
+          updatedAt: new Date(),
+        },
+      });
+      return;
+    }
+
+    await this.prisma.notification.create({
+      data: {
+        userId,
+        type,
+        payload: enrichedPayload as Prisma.InputJsonValue,
+        groupKey,
+      },
+    });
   }
 
   /**
@@ -164,6 +266,7 @@ export class NotificationService {
     isRead: boolean;
     payload: unknown;
     createdAt: Date;
+    updatedAt: Date;
   }): NotificationDTO {
     return {
       id: n.id,
@@ -171,6 +274,7 @@ export class NotificationService {
       is_read: n.isRead,
       payload: n.payload as Record<string, unknown>,
       created_at: n.createdAt.toISOString(),
+      updated_at: n.updatedAt.toISOString(),
     };
   }
 }

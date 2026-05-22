@@ -5,6 +5,7 @@ class NotificationDto {
     required this.isRead,
     required this.payload,
     required this.createdAt,
+    required this.updatedAt,
   });
 
   final String id;
@@ -13,13 +14,40 @@ class NotificationDto {
   final Map<String, dynamic> payload;
   final DateTime createdAt;
 
-  factory NotificationDto.fromJson(Map<String, dynamic> json) => NotificationDto(
-        id: json['id'] as String,
-        type: json['type'] as String,
-        isRead: json['is_read'] as bool? ?? false,
-        payload: (json['payload'] as Map?)?.cast<String, dynamic>() ?? {},
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+  /// P6.3 grouping: when actors are appended to a notification within
+  /// a 1h window the row's `updated_at` bumps but `created_at` stays
+  /// pinned. Mobile sorts by `updated_at` so the freshly-grouped row
+  /// re-surfaces at top-of-inbox.
+  final DateTime updatedAt;
+
+  factory NotificationDto.fromJson(Map<String, dynamic> json) {
+    final created = DateTime.parse(json['created_at'] as String);
+    final updatedRaw = json['updated_at'] as String?;
+    return NotificationDto(
+      id: json['id'] as String,
+      type: json['type'] as String,
+      isRead: json['is_read'] as bool? ?? false,
+      payload: (json['payload'] as Map?)?.cast<String, dynamic>() ?? {},
+      createdAt: created,
+      updatedAt: updatedRaw != null ? DateTime.parse(updatedRaw) : created,
+    );
+  }
+
+  /// Number of actors merged into this row (defaults to 1 for the
+  /// originator). Used to render "민서 외 N명이 좋아요" copy.
+  int get actorCount {
+    final actors = payload['actors'];
+    if (actors is List) {
+      final overflow = payload['actors_overflow'];
+      final cap = actors.length;
+      if (overflow is num && overflow > 0) return cap + overflow.toInt();
+      return cap;
+    }
+    return 1;
+  }
+
+  /// Returns true when the row carries more than one merged actor.
+  bool get isGrouped => actorCount > 1;
 }
 
 /// Per-user notification preferences mirror. Maps 1:1 to the API DTO

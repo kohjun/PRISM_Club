@@ -15,6 +15,7 @@ import { RoomService } from '../community/room.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { AutoModerationService } from '../moderation/auto-moderation.service';
 import { MentionService } from '../notifications/mention.service';
+import { NotificationService } from '../notifications/notification.service';
 import {
   BlockMuteService,
   assertNotBlocked,
@@ -72,6 +73,7 @@ export class PostService {
     private readonly autoMod: AutoModerationService,
     private readonly mentions: MentionService,
     private readonly blockMute: BlockMuteService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
@@ -232,19 +234,28 @@ export class PostService {
     const followers = await this.prisma.roomFollow.findMany({ where: { roomId: room.id } });
     if (followers.length > 0) {
       const bodyPreview = input.body.slice(0, 80);
-      const notifs = followers
-        .filter((f) => f.userId !== viewer.id)
-        .map((f) => ({
-          userId: f.userId,
-          type: 'NEW_POST_IN_FOLLOWED_ROOM',
-          payload: {
-            postId: post.id, roomSlug: room.slug, roomName: room.name,
-            spaceAccessPolicy, bodyPreview,
-          },
-        }));
-      if (notifs.length > 0) {
-        await this.prisma.notification.createMany({ data: notifs });
-      }
+      // P6.3: per-recipient grouping. Multiple new posts in the same
+      // room within 1h merge into a single "민서 외 N명이 새 글을
+      // 올렸어요" row per follower.
+      const groupKey = `NEW_POST_IN_FOLLOWED_ROOM:${room.slug}`;
+      const targets = followers.filter((f) => f.userId !== viewer.id);
+      await Promise.all(
+        targets.map((f) =>
+          this.notifications.createOrGroup({
+            userId: f.userId,
+            type: 'NEW_POST_IN_FOLLOWED_ROOM',
+            actorId: viewer.id,
+            groupKey,
+            payload: {
+              postId: post.id,
+              roomSlug: room.slug,
+              roomName: room.name,
+              spaceAccessPolicy,
+              bodyPreview,
+            },
+          }),
+        ),
+      );
     }
 
     // P6.1: mention fanout. Fire-and-forget; the underlying post is

@@ -8,6 +8,7 @@ import {
   assertNotBlocked,
 } from '../../shared/block-mute.service';
 import { MentionService } from '../notifications/mention.service';
+import { NotificationService } from '../notifications/notification.service';
 import { PostAuthorDTO, ReplyDTO } from './dto/post.dto';
 
 export interface CreateReplyInput {
@@ -23,6 +24,7 @@ export class ReplyService {
     private readonly analytics: AnalyticsService,
     private readonly mentions: MentionService,
     private readonly blockMute: BlockMuteService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async create(postId: string, input: CreateReplyInput, viewer: RequestUser): Promise<ReplyDTO> {
@@ -78,37 +80,49 @@ export class ReplyService {
         where: { id: postId },
         data: { replyCount: { increment: 1 } },
       });
-
-      // Emit notifications (never notify self)
-      const notifs: Array<{ userId: string; type: string; payload: object }> = [];
-      if (post.authorId !== viewer.id) {
-        notifs.push({
-          userId: post.authorId,
-          type: 'REPLY_ON_POST',
-          payload: {
-            postId, replyId: reply.id,
-            roomSlug: post.room.slug, roomName: post.room.name,
-            spaceAccessPolicy, authorNickname: viewerNickname, bodyPreview,
-          },
-        });
-      }
-      if (parent && parent.authorId !== viewer.id && parent.authorId !== post.authorId) {
-        notifs.push({
-          userId: parent.authorId,
-          type: 'NESTED_REPLY',
-          payload: {
-            postId, replyId: reply.id, parentReplyId: parent.id,
-            roomSlug: post.room.slug, roomName: post.room.name,
-            spaceAccessPolicy, authorNickname: viewerNickname, bodyPreview,
-          },
-        });
-      }
-      if (notifs.length > 0) {
-        await tx.notification.createMany({ data: notifs });
-      }
-
       return reply;
     });
+
+    // P6.3: notification fan-out runs POST-transaction so the grouping
+    // upsert (read existing → conditional INSERT/UPDATE) doesn't pin a
+    // transaction open longer than needed. Notification write failures
+    // never block the reply itself — the underlying tx already
+    // committed.
+    if (post.authorId !== viewer.id) {
+      await this.notifications.createOrGroup({
+        userId: post.authorId,
+        type: 'REPLY_ON_POST',
+        actorId: viewer.id,
+        groupKey: `REPLY_ON_POST:${postId}`,
+        payload: {
+          postId,
+          replyId: created.id,
+          roomSlug: post.room.slug,
+          roomName: post.room.name,
+          spaceAccessPolicy,
+          authorNickname: viewerNickname,
+          bodyPreview,
+        },
+      });
+    }
+    if (parent && parent.authorId !== viewer.id && parent.authorId !== post.authorId) {
+      await this.notifications.createOrGroup({
+        userId: parent.authorId,
+        type: 'NESTED_REPLY',
+        actorId: viewer.id,
+        groupKey: `NESTED_REPLY:${parent.id}`,
+        payload: {
+          postId,
+          replyId: created.id,
+          parentReplyId: parent.id,
+          roomSlug: post.room.slug,
+          roomName: post.room.name,
+          spaceAccessPolicy,
+          authorNickname: viewerNickname,
+          bodyPreview,
+        },
+      });
+    }
 
     this.analytics.record({
       actorId: viewer.id,

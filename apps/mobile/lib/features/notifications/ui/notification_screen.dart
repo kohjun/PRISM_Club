@@ -308,13 +308,20 @@ class _NotificationTile extends StatelessWidget {
   String _titleFor(NotificationDto notif) {
     final author = notif.payload['authorNickname'] as String? ?? '';
     final room = notif.payload['roomName'] as String? ?? '';
+    // P6.3: when multiple actors were merged within the 1h window we
+    // surface "외 N명" instead of just the first actor's nickname.
+    final actorPhrase = notif.isGrouped
+        ? '$author님 외 ${notif.actorCount - 1}명'
+        : '$author님';
     switch (notif.type) {
       case 'REPLY_ON_POST':
-        return '$author님이 내 글에 댓글을 남겼어요.';
+        return '$actorPhrase이 내 글에 댓글을 남겼어요.';
       case 'NESTED_REPLY':
-        return '$author님이 내 댓글에 답글을 남겼어요.';
+        return '$actorPhrase이 내 댓글에 답글을 남겼어요.';
       case 'NEW_POST_IN_FOLLOWED_ROOM':
-        return '[$room] 팔로우 중인 방에 새 글이 올라왔어요.';
+        return notif.isGrouped
+            ? '[$room] $actorPhrase이 새 글을 올렸어요.'
+            : '[$room] 팔로우 중인 방에 새 글이 올라왔어요.';
       case 'RECRUITMENT_STATUS_CHANGED':
         final status = notif.payload['status'] as String? ?? '';
         return '[$room] 모집 상태가 $status 로 변경됐어요.';

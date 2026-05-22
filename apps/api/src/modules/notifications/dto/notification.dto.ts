@@ -3,6 +3,12 @@ export interface NotificationDTO {
   type: string;
   is_read: boolean;
   payload: Record<string, unknown>;
+  /**
+   * P6.3 grouping: ISO timestamp of the latest actor merged into the
+   * row. Equal to `created_at` for ungrouped rows. Mobile sorts by
+   * `updated_at` so a freshly-grouped row pops back to the top.
+   */
+  updated_at: string;
   created_at: string;
 }
 

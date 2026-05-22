@@ -951,11 +951,19 @@ model Notification {
   type      String
   isRead    Boolean  @default(false) @map("is_read")
   payload   Json
+  // P6.3: composite of (type + target) used by the grouping upsert.
+  // Null means "no grouping — always create a new row" (mention,
+  // digest, reminder). Service-side writers compute the key.
+  groupKey  String?  @map("group_key")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  // P6.3: bumps when an actor is appended to the group so the read
+  // surface can re-surface the row to top-of-inbox.
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead, createdAt(sort: Desc)])
+  @@index([userId, groupKey, createdAt(sort: Desc)], map: "notifications_group_key_idx")
   @@map("notifications")
 }
 
