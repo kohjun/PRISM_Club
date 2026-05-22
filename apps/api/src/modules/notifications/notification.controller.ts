@@ -32,6 +32,7 @@ interface UpdatePrefsBody {
   pref_contribution_resolved?: boolean;
   pref_push_enabled?: boolean;
   pref_email_enabled?: boolean;
+  weekly_digest_enabled?: boolean;
 }
 
 @Controller()

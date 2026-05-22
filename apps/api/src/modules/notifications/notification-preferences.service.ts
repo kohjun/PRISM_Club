@@ -33,6 +33,7 @@ export class NotificationPreferencesService {
       pref_contribution_resolved: boolean;
       pref_push_enabled: boolean;
       pref_email_enabled: boolean;
+      weekly_digest_enabled: boolean;
     }>,
   ): Promise<NotificationPreferencesDTO> {
     const data: Record<string, boolean> = {};
@@ -50,6 +51,8 @@ export class NotificationPreferencesService {
       data.prefPushEnabled = input.pref_push_enabled;
     if (typeof input.pref_email_enabled === 'boolean')
       data.prefEmailEnabled = input.pref_email_enabled;
+    if (typeof input.weekly_digest_enabled === 'boolean')
+      data.weeklyDigestEnabled = input.weekly_digest_enabled;
 
     const row = await this.prisma.notificationPreference.upsert({
       where: { userId },
@@ -117,6 +120,7 @@ export class NotificationPreferencesService {
     prefContributionResolved: boolean;
     prefPushEnabled: boolean;
     prefEmailEnabled: boolean;
+    weeklyDigestEnabled?: boolean;
     updatedAt: Date;
   }): NotificationPreferencesDTO {
     return {
@@ -127,6 +131,7 @@ export class NotificationPreferencesService {
       pref_contribution_resolved: row.prefContributionResolved,
       pref_push_enabled: row.prefPushEnabled,
       pref_email_enabled: row.prefEmailEnabled,
+      weekly_digest_enabled: row.weeklyDigestEnabled ?? false,
       updated_at: row.updatedAt.toISOString(),
     };
   }

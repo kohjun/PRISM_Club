@@ -9,6 +9,9 @@ import { LocalNoopDelivery } from './delivery/local-noop-delivery';
 import { EmailDelivery } from './delivery/email-delivery';
 import { PushDelivery } from './delivery/push-delivery';
 import { NOTIFICATION_DELIVERY } from './delivery/notification-delivery.interface';
+import { WeeklyDigestService } from './weekly-digest.service';
+import { WeeklyDigestCron } from './weekly-digest.cron';
+import { WeeklyDigestOpsController } from './weekly-digest-ops.controller';
 
 const moduleLog = new Logger('NotificationsModule');
 
@@ -30,7 +33,7 @@ function selectDelivery():
 
 @Module({
   imports: [PrismaModule, AccessControlModule],
-  controllers: [NotificationController],
+  controllers: [NotificationController, WeeklyDigestOpsController],
   providers: [
     NotificationService,
     NotificationPreferencesService,
@@ -39,11 +42,14 @@ function selectDelivery():
     EmailDelivery,
     PushDelivery,
     { provide: NOTIFICATION_DELIVERY, useClass: selectDelivery() },
+    WeeklyDigestService,
+    WeeklyDigestCron,
   ],
   exports: [
     NotificationService,
     NotificationPreferencesService,
     DeviceTokenService,
+    WeeklyDigestService,
   ],
 })
 export class NotificationsModule {}
