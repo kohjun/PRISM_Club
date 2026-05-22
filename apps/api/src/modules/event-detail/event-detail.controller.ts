@@ -11,6 +11,7 @@ import { Public } from '../../shared/decorators/public.decorator';
 import { ZodValidationPipe } from '../../shared/pipes/zod-validation.pipe';
 import { EventDetailService } from './event-detail.service';
 import { EventIcsService } from './event-ics.service';
+import { EventDigestService } from './event-digest.service';
 
 const querySchema = z
   .object({
@@ -27,6 +28,7 @@ export class EventDetailController {
   constructor(
     private readonly events: EventDetailService,
     private readonly ics: EventIcsService,
+    private readonly digest: EventDigestService,
   ) {}
 
   @Get('event-cards/:id')
@@ -59,5 +61,14 @@ export class EventDetailController {
   )
   async getIcs(@Param('id') id: string): Promise<string> {
     return this.ics.buildIcs(id);
+  }
+
+  /**
+   * Post-event recap (P3.5). Returns null when no digest has been
+   * generated yet — the mobile section hides itself in that case.
+   */
+  @Get('event-cards/:id/digest')
+  async getDigest(@Param('id') id: string) {
+    return this.digest.getForEvent(id);
   }
 }

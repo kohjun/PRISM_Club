@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
+import { EventDigestService } from './event-digest.service';
 
 /**
  * Event reminder + status-refresh cron (P3.2).
@@ -31,7 +32,10 @@ const TICK_EVENT_CAP = 100;
 export class EventReminderCron {
   private readonly log = new Logger(EventReminderCron.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly digest: EventDigestService,
+  ) {}
 
   // ---- Schedule wrappers (single instance via advisory lock) ----------
 
@@ -79,10 +83,12 @@ export class EventReminderCron {
     d1: number;
     h1: number;
     review_prompt: number;
+    recap_written: number;
   }> {
     let d1 = 0;
     let h1 = 0;
     let reviewPrompt = 0;
+    let recapWritten = 0;
 
     // D-1 window: events starting now+24h ± 30min.
     const d1Start = new Date(
@@ -108,7 +114,19 @@ export class EventReminderCron {
     const rpEnd = new Date(now.getTime() - 24 * 60 * 60 * 1000 + 30 * 60 * 1000);
     reviewPrompt = await this._fanoutReviewPrompt(rpStart, rpEnd);
 
-    return { d1, h1, review_prompt: reviewPrompt };
+    // P3.5: generate post-event recap digests for events that crossed
+    // their D+1 mark in the last hour. Idempotent upsert so a missed
+    // tick re-publishes on the next run.
+    try {
+      const recap = await this.digest.generateDueRecaps(now);
+      recapWritten = recap.written;
+    } catch (e) {
+      this.log.warn(
+        `recap digest generation failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+
+    return { d1, h1, review_prompt: reviewPrompt, recap_written: recapWritten };
   }
 
   async runStatusRefresh(now: Date): Promise<{ flipped: number }> {
