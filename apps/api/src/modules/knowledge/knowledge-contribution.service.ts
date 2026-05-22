@@ -295,6 +295,7 @@ export class KnowledgeContributionService {
     spaceAccessPolicy: string,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      let revisionBlockId: string;
       if (contribution.targetBlockId && contribution.targetBlock) {
         // Edit existing: snapshot the current content before overwriting.
         await tx.knowledgeBlock.update({
@@ -317,6 +318,7 @@ export class KnowledgeContributionService {
             snapshotBody: contribution.targetBlock.body,
           },
         });
+        revisionBlockId = contribution.targetBlockId;
       } else {
         // Propose new: create a new block at end of hub's sort_order.
         const max = await tx.knowledgeBlock.aggregate({
@@ -324,7 +326,7 @@ export class KnowledgeContributionService {
           _max: { sortOrder: true },
         });
         const nextOrder = (max._max.sortOrder ?? 0) + 1;
-        await tx.knowledgeBlock.create({
+        const created = await tx.knowledgeBlock.create({
           data: {
             topicHubId: contribution.topicHubId,
             blockType: contribution.proposedBlockType,
@@ -342,7 +344,28 @@ export class KnowledgeContributionService {
             resolvedAt: new Date(),
           },
         });
+        revisionBlockId = created.id;
       }
+
+      // P2.1: record the audit revision row. Version is the next integer
+      // for this block — relies on the (block_id, version) unique
+      // constraint to surface concurrent-approval races as ConflictError.
+      const maxVersion = await tx.knowledgeBlockRevision.aggregate({
+        where: { blockId: revisionBlockId },
+        _max: { version: true },
+      });
+      await tx.knowledgeBlockRevision.create({
+        data: {
+          blockId: revisionBlockId,
+          version: (maxVersion._max.version ?? 0) + 1,
+          blockType: contribution.proposedBlockType,
+          title: contribution.proposedTitle,
+          body: contribution.proposedBody,
+          changedById: contribution.contributorId,
+          contributionId: contribution.id,
+          source: 'CONTRIBUTION',
+        },
+      });
 
       // Notify contributor of approval
       if (contribution.contributorId !== resolverId) {

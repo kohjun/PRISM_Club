@@ -8,6 +8,7 @@ import '../features/auth/ui/login_screen.dart';
 import '../features/auth/ui/signup_screen.dart';
 import '../features/category/ui/category_list_screen.dart';
 import '../features/event_detail/ui/event_detail_screen.dart';
+import '../features/knowledge/ui/block_revision_history_screen.dart';
 import '../features/knowledge/ui/contribution_composer_screen.dart';
 import '../features/knowledge/ui/curation_detail_screen.dart';
 import '../features/knowledge/ui/curation_queue_screen.dart';
@@ -127,6 +128,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/curate/:id',
         builder: (_, st) => CurationDetailScreen(
           contributionId: st.pathParameters['id']!,
+        ),
+      ),
+      // P2.1: knowledge block revision history timeline.
+      GoRoute(
+        path: '/knowledge-blocks/:blockId/revisions',
+        builder: (_, st) => BlockRevisionHistoryScreen(
+          blockId: st.pathParameters['blockId']!,
         ),
       ),
       // Milestone 5: event detail
