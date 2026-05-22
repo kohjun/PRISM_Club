@@ -13,8 +13,10 @@ import '../features/knowledge/ui/contribution_composer_screen.dart';
 import '../features/knowledge/ui/curation_detail_screen.dart';
 import '../features/knowledge/ui/curation_queue_screen.dart';
 import '../features/knowledge/ui/my_contributions_screen.dart';
+import '../features/post/ui/my_applications_screen.dart';
 import '../features/post/ui/post_composer_screen.dart';
 import '../features/post/ui/post_detail_screen.dart';
+import '../features/post/ui/recruitment_applicants_screen.dart';
 import '../features/post/ui/recruitment_composer_screen.dart';
 import '../features/search/ui/search_screen.dart';
 import '../features/room/ui/room_creator_screen.dart';
@@ -111,6 +113,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, st) => PostDetailScreen(
           postId: st.pathParameters['postId']!,
         ),
+      ),
+      // P3.6: recruitment applicants (author/admin) + my-applications
+      GoRoute(
+        path: '/posts/:postId/applications',
+        builder: (_, st) => RecruitmentApplicantsScreen(
+          postId: st.pathParameters['postId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/me/applications',
+        builder: (_, _) => const MyApplicationsScreen(),
       ),
       // Milestone 2: knowledge contributions
       GoRoute(
