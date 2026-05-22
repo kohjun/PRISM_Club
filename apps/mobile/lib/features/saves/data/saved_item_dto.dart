@@ -8,6 +8,7 @@ class SavedItemDto {
     required this.targetType,
     required this.targetId,
     required this.savedAt,
+    this.collectionId,
     this.postTarget,
     this.referenceTarget,
     this.eventCardTarget,
@@ -17,6 +18,7 @@ class SavedItemDto {
   final String targetType;
   final String targetId;
   final DateTime savedAt;
+  final String? collectionId;
   final PostDto? postTarget;
   final ReferenceDto? referenceTarget;
   final EventCardDto? eventCardTarget;
@@ -51,11 +53,34 @@ class SavedItemDto {
       targetType: type,
       targetId: json['target_id'] as String,
       savedAt: DateTime.parse(json['saved_at'] as String),
+      collectionId: json['collection_id'] as String?,
       postTarget: postTarget,
       referenceTarget: referenceTarget,
       eventCardTarget: eventCardTarget,
     );
   }
+}
+
+class SavedCollectionDto {
+  const SavedCollectionDto({
+    required this.id,
+    required this.name,
+    required this.sortOrder,
+    required this.itemCount,
+  });
+
+  final String id;
+  final String name;
+  final int sortOrder;
+  final int itemCount;
+
+  factory SavedCollectionDto.fromJson(Map<String, dynamic> json) =>
+      SavedCollectionDto(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+        itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
+      );
 }
 
 class SavedItemListDto {

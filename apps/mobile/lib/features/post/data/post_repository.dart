@@ -71,6 +71,7 @@ class PostRepository {
     String postType = 'GENERAL',
     CreateRecruitmentFields? recruitmentFields,
     List<CreatePostAttachment> attachments = const [],
+    String? quotedPostId,
   }) async {
     try {
       final res = await _ref.read(dioProvider).post<dynamic>(
@@ -82,6 +83,7 @@ class PostRepository {
             'recruitment_fields': recruitmentFields.toJson(),
           if (attachments.isNotEmpty)
             'attachments': attachments.map((a) => a.toJson()).toList(),
+          if (quotedPostId != null) 'quoted_post_id': quotedPostId,
         },
       );
       if (res.statusCode != 201) {

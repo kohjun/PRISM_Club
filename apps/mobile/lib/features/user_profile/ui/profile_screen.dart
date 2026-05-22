@@ -95,6 +95,30 @@ class _ProfileBody extends ConsumerWidget {
               ),
             ),
           ),
+          if (bundle.counts.postCount > bundle.recentPosts.length)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                PrismSpacing.xl,
+                PrismSpacing.sm,
+                PrismSpacing.xl,
+                0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () {
+                    final nick = bundle.user.nickname ?? '';
+                    final encoded = Uri.encodeQueryComponent(nick);
+                    context.go(
+                      '/users/$userId/activity${nick.isNotEmpty ? '?nickname=$encoded' : ''}',
+                    );
+                  },
+                  child: Text(
+                    '전체 글 ${bundle.counts.postCount}개 보기',
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: PrismSpacing.lg),
         ],
         if (bundle.userRooms.isNotEmpty) ...[

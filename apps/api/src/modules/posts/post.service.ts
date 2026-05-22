@@ -19,6 +19,7 @@ import {
   PostAuthorDTO,
   PostDTO,
   PostType,
+  QuotedPostRefDTO,
   RecruitmentFieldsDTO,
   RecruitmentStatus,
 } from './dto/post.dto';
@@ -437,7 +438,10 @@ export class PostService {
     }>[],
     viewerId: string,
   ): Promise<PostDTO[]> {
-    return Promise.all(rows.map((p) => this.toDTO(p, viewerId)));
+    const quoteMap = await this.fetchQuoteRefs(rows.map((r) => r.id));
+    return Promise.all(
+      rows.map((p) => this.toDTO(p, viewerId, quoteMap.get(p.id) ?? null)),
+    );
   }
 
   private async toDTO(
@@ -445,9 +449,14 @@ export class PostService {
       include: { room: true; author: { include: { profile: true } }; attachments: true };
     }>,
     viewerId: string,
+    quotedPost?: QuotedPostRefDTO | null,
   ): Promise<PostDTO> {
     const attachments = await this.resolveAttachments(post.attachments);
     const likedByMe = await this.isLikedBy(viewerId, 'POST', post.id);
+    const quote =
+      quotedPost === undefined
+        ? (await this.fetchQuoteRefs([post.id])).get(post.id) ?? null
+        : quotedPost;
 
     return {
       id: post.id,
@@ -462,7 +471,52 @@ export class PostService {
       attachments,
       counts: { reply_count: post.replyCount, like_count: post.likeCount },
       liked_by_me: likedByMe,
+      quoted_post: quote,
     };
+  }
+
+  /**
+   * Batch-resolve PostQuote rows for a set of quoting posts in one query
+   * so the timeline serializer stays O(rows) instead of O(rows²). Each
+   * value is the quoted-post reference or a sentinel "deleted" reference
+   * when the original was nulled out via FK SET NULL.
+   */
+  private async fetchQuoteRefs(
+    quotingPostIds: string[],
+  ): Promise<Map<string, QuotedPostRefDTO | null>> {
+    if (quotingPostIds.length === 0) return new Map();
+    const quotes = await this.prisma.postQuote.findMany({
+      where: { quotingPostId: { in: quotingPostIds } },
+      include: {
+        quotedPost: {
+          include: {
+            room: true,
+            author: { include: { profile: true } },
+          },
+        },
+      },
+    });
+    const out = new Map<string, QuotedPostRefDTO | null>();
+    for (const q of quotes) {
+      if (!q.quotedPost) {
+        out.set(q.quotingPostId, {
+          id: '',
+          body_preview: '(삭제된 글)',
+          author_nickname: '',
+          room_slug: '',
+          available: false,
+        });
+        continue;
+      }
+      out.set(q.quotingPostId, {
+        id: q.quotedPost.id,
+        body_preview: q.quotedPost.body.slice(0, 140),
+        author_nickname: q.quotedPost.author.profile?.nickname ?? '',
+        room_slug: q.quotedPost.room.slug,
+        available: q.quotedPost.status !== 'DELETED' && q.quotedPost.status !== 'HIDDEN',
+      });
+    }
+    return out;
   }
 
   private toRecruitmentFieldsDTO(raw: Prisma.JsonValue | null): RecruitmentFieldsDTO | null {

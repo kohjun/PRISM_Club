@@ -20,7 +20,11 @@ export class SaveController {
   }
 
   @Get('me/saves')
-  list(@CurrentUser() user: RequestUser, @Query('type') type?: string) {
-    return this.svc.listForUser(user, type);
+  list(
+    @CurrentUser() user: RequestUser,
+    @Query('type') type?: string,
+    @Query('collection_id') collectionId?: string,
+  ) {
+    return this.svc.listForUser(user, type, collectionId);
   }
 }

@@ -63,6 +63,7 @@ class _FakePostRepository implements PostRepository {
     String postType = 'GENERAL',
     CreateRecruitmentFields? recruitmentFields,
     List<CreatePostAttachment> attachments = const [],
+    String? quotedPostId,
   }) async =>
       throw UnimplementedError();
 

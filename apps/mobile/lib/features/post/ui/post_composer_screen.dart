@@ -22,6 +22,8 @@ class PostComposerScreen extends ConsumerStatefulWidget {
     super.key,
     required this.roomSlug,
     this.initialEventCardId,
+    this.quotedPostId,
+    this.quotedPreview,
   });
   final String roomSlug;
 
@@ -29,6 +31,13 @@ class PostComposerScreen extends ConsumerStatefulWidget {
   /// The user can still remove it via the close button before submitting
   /// (M5 acceptance criterion #3).
   final String? initialEventCardId;
+
+  /// P4.2: when set, the composer sends `quoted_post_id` to the server so
+  /// the new post stores a `post_quotes` row. `quotedPreview` is shown
+  /// inline above the body field so the user can see what they're
+  /// quoting (and remove it).
+  final String? quotedPostId;
+  final String? quotedPreview;
 
   @override
   ConsumerState<PostComposerScreen> createState() => _PostComposerScreenState();
@@ -42,6 +51,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   bool _submitting = false;
   bool _prefetchingEvent = false;
   bool _uploadingImage = false;
+  String? _quotedPostId;
+  String? _quotedPreview;
 
   @override
   void initState() {
@@ -50,6 +61,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     if (id != null && id.isNotEmpty) {
       _prefetchInitialEvent(id);
     }
+    _quotedPostId = widget.quotedPostId;
+    _quotedPreview = widget.quotedPreview;
   }
 
   Future<void> _prefetchInitialEvent(String id) async {
@@ -152,6 +165,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             widget.roomSlug,
             body: text,
             attachments: attachments,
+            quotedPostId: _quotedPostId,
           );
       ref.invalidate(timelineProvider(widget.roomSlug));
       if (mounted) context.go('/rooms/${widget.roomSlug}');
@@ -191,6 +205,16 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         children: [
           _ComposerCaption(text: '방: ${widget.roomSlug}'),
           const SizedBox(height: PrismSpacing.md),
+          if (_quotedPostId != null && _quotedPreview != null) ...[
+            _QuoteChip(
+              preview: _quotedPreview!,
+              onRemove: () => setState(() {
+                _quotedPostId = null;
+                _quotedPreview = null;
+              }),
+            ),
+            const SizedBox(height: PrismSpacing.md),
+          ],
           TextField(
             controller: _body,
             maxLines: 8,
@@ -479,6 +503,67 @@ class _ComposerCaption extends StatelessWidget {
       style: const TextStyle(
         color: PrismColors.ink3,
         fontSize: 12.5,
+      ),
+    );
+  }
+}
+
+class _QuoteChip extends StatelessWidget {
+  const _QuoteChip({required this.preview, required this.onRemove});
+  final String preview;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: PrismSpacing.cardPad,
+        vertical: PrismSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: PrismColors.bgTint,
+        borderRadius: BorderRadius.circular(PrismRadius.md),
+        border: Border(
+          left: BorderSide(color: PrismColors.pp400, width: 3),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '인용 중',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: PrismColors.ink3,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  preview,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: PrismColors.ink2,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: '인용 해제',
+            icon: const Icon(Icons.close, size: 18, color: PrismColors.ink3),
+            onPressed: onRemove,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+          ),
+        ],
       ),
     );
   }

@@ -37,6 +37,15 @@ export interface RecruitmentFieldsDTO {
   status: RecruitmentStatus;
 }
 
+export interface QuotedPostRefDTO {
+  id: string;
+  body_preview: string;
+  author_nickname: string;
+  room_slug: string;
+  /** Null when the original was deleted (FK SetNull). */
+  available: boolean;
+}
+
 export interface PostDTO {
   id: string;
   room: { id: string; slug: string; name: string };
@@ -50,6 +59,8 @@ export interface PostDTO {
   attachments: PostAttachmentDTO[];
   counts: { reply_count: number; like_count: number };
   liked_by_me: boolean;
+  /** P4.2: the post this one quotes, or null if it is not a quoter. */
+  quoted_post: QuotedPostRefDTO | null;
 }
 
 export interface ReplyDTO {

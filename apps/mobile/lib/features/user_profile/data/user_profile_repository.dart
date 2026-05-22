@@ -2,7 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api_error.dart';
 import '../../../core/dio_provider.dart';
+import '../../post/data/post_dto.dart';
 import 'user_profile_dto.dart';
+
+class ProfileActivityPage {
+  const ProfileActivityPage({required this.items, required this.nextCursor});
+  final List<PostDto> items;
+  final String? nextCursor;
+}
 
 class UserProfileRepository {
   UserProfileRepository(this._ref);
@@ -32,6 +39,43 @@ class UserProfileRepository {
         throw ApiError('UNEXPECTED', 'Failed to update profile', res.statusCode);
       }
       return ProfileSubDto.fromJson(res.data as Map<String, dynamic>);
+    } catch (e) {
+      throw ApiError.from(e);
+    }
+  }
+
+  /// P4.5: cursor-paginated activity. Server emits a discriminated list,
+  /// v1 returns posts only — but the response shape leaves room for
+  /// CONTRIBUTION/ROOM entries to land later without a breaking change.
+  Future<ProfileActivityPage> getActivity(
+    String userId, {
+    String? cursor,
+    int limit = 20,
+  }) async {
+    try {
+      final res = await _ref.read(dioProvider).get<dynamic>(
+        '/profiles/$userId/activity',
+        queryParameters: {
+          if (cursor != null) 'cursor': cursor,
+          'limit': limit,
+        },
+      );
+      if (res.statusCode != 200) {
+        throw ApiError(
+          'UNEXPECTED',
+          'Failed to load activity',
+          res.statusCode,
+        );
+      }
+      final map = res.data as Map<String, dynamic>;
+      final items = (map['items'] as List<dynamic>)
+          .whereType<Map<String, dynamic>>()
+          .map(PostDto.fromJson)
+          .toList(growable: false);
+      return ProfileActivityPage(
+        items: items,
+        nextCursor: map['next_cursor'] as String?,
+      );
     } catch (e) {
       throw ApiError.from(e);
     }

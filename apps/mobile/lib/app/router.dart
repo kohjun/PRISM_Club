@@ -31,6 +31,7 @@ import '../features/moderation/ui/moderation_detail_screen.dart';
 import '../features/moderation/ui/moderation_queue_screen.dart';
 import '../features/moderation/ui/my_reports_screen.dart';
 import '../features/ops/ui/ops_dashboard_screen.dart';
+import '../features/user_profile/ui/profile_activity_screen.dart';
 import '../features/user_profile/ui/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -100,6 +101,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           roomSlug: st.pathParameters['roomSlug']!,
           initialEventCardId:
               st.uri.queryParameters['attach_event_card_id'],
+          quotedPostId: st.uri.queryParameters['quoted_post_id'],
+          quotedPreview: st.uri.queryParameters['quoted_preview'],
         ),
       ),
       GoRoute(
@@ -169,6 +172,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/users/:id',
         builder: (_, st) => ProfileScreen(userId: st.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/users/:id/activity',
+        builder: (_, st) => ProfileActivityScreen(
+          userId: st.pathParameters['id']!,
+          title: st.uri.queryParameters['nickname'],
+        ),
       ),
       // Milestone 9: moderation
       GoRoute(path: '/me/reports', builder: (_, _) => const MyReportsScreen()),

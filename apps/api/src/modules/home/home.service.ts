@@ -271,6 +271,7 @@ export class HomeService {
         target_type: row.targetType as 'POST' | 'REFERENCE' | 'EVENT_CARD',
         target_id: row.targetId,
         saved_at: row.createdAt.toISOString(),
+        collection_id: row.collectionId ?? null,
         target,
       });
     }

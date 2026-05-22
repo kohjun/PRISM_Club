@@ -24,6 +24,7 @@ export interface SavedItemDTO {
   target_type: SaveTargetType;
   target_id: string;
   saved_at: string;
+  collection_id: string | null;
   target: Record<string, unknown>;
 }
 
@@ -98,16 +99,27 @@ export class SaveService {
   async listForUser(
     viewer: Viewer & { id: string },
     type?: string,
+    collectionId?: string | null,
   ): Promise<SavedItemListDTO> {
     const allowed = this.access.accessPoliciesAllowedFor(viewer);
     const typeFilter = type && VALID_TYPES.includes(type as SaveTargetType)
       ? (type as SaveTargetType)
       : undefined;
 
+    // Sentinel '__none__' = "items NOT in any collection". A real UUID
+    // narrows to that single collection. Undefined leaves the filter off.
+    const collectionFilter =
+      collectionId === undefined
+        ? undefined
+        : collectionId === null || collectionId === '__none__'
+          ? { collectionId: null }
+          : { collectionId };
+
     const rows = await this.prisma.savedItem.findMany({
       where: {
         userId: viewer.id,
         ...(typeFilter ? { targetType: typeFilter } : {}),
+        ...(collectionFilter ?? {}),
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -125,6 +137,7 @@ export class SaveService {
         target_type: row.targetType as SaveTargetType,
         target_id: row.targetId,
         saved_at: row.createdAt.toISOString(),
+        collection_id: row.collectionId ?? null,
         target,
       });
     }

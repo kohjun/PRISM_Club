@@ -57,6 +57,31 @@ class PostAttachmentDto {
   }
 }
 
+class QuotedPostRefDto {
+  const QuotedPostRefDto({
+    required this.id,
+    required this.bodyPreview,
+    required this.authorNickname,
+    required this.roomSlug,
+    required this.available,
+  });
+
+  final String id;
+  final String bodyPreview;
+  final String authorNickname;
+  final String roomSlug;
+  final bool available;
+
+  factory QuotedPostRefDto.fromJson(Map<String, dynamic> json) =>
+      QuotedPostRefDto(
+        id: json['id'] as String? ?? '',
+        bodyPreview: json['body_preview'] as String? ?? '',
+        authorNickname: json['author_nickname'] as String? ?? '',
+        roomSlug: json['room_slug'] as String? ?? '',
+        available: json['available'] as bool? ?? true,
+      );
+}
+
 class PostDto {
   const PostDto({
     required this.id,
@@ -74,6 +99,7 @@ class PostDto {
     required this.replyCount,
     required this.likeCount,
     required this.likedByMe,
+    this.quotedPost,
   });
 
   final String id;
@@ -91,6 +117,7 @@ class PostDto {
   final int replyCount;
   final int likeCount;
   final bool likedByMe;
+  final QuotedPostRefDto? quotedPost;
 
   bool get isRecruitment => postType == 'RECRUITMENT';
 
@@ -116,12 +143,14 @@ class PostDto {
         replyCount: replyCount ?? this.replyCount,
         likeCount: likeCount ?? this.likeCount,
         likedByMe: likedByMe ?? this.likedByMe,
+        quotedPost: quotedPost,
       );
 
   factory PostDto.fromJson(Map<String, dynamic> json) {
     final roomMap = (json['room'] as Map).cast<String, dynamic>();
     final counts = (json['counts'] as Map?)?.cast<String, dynamic>() ?? const {};
     final rfRaw = json['recruitment_fields'];
+    final quotedRaw = json['quoted_post'];
     return PostDto(
       id: json['id'] as String,
       roomId: roomMap['id'] as String,
@@ -144,6 +173,9 @@ class PostDto {
       replyCount: counts['reply_count'] as int? ?? 0,
       likeCount: counts['like_count'] as int? ?? 0,
       likedByMe: json['liked_by_me'] as bool? ?? false,
+      quotedPost: quotedRaw is Map
+          ? QuotedPostRefDto.fromJson(quotedRaw.cast<String, dynamic>())
+          : null,
     );
   }
 }

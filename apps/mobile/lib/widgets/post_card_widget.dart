@@ -64,6 +64,10 @@ class PostCardWidget extends StatelessWidget {
                   color: PrismColors.ink1,
                 ),
               ),
+              if (post.quotedPost != null) ...[
+                const SizedBox(height: PrismSpacing.md),
+                _QuotedBlock(quoted: post.quotedPost!),
+              ],
               if (!compact && post.attachments.isNotEmpty) ...[
                 const SizedBox(height: PrismSpacing.md),
                 for (final a in post.attachments) ...[
@@ -162,6 +166,78 @@ class _HeaderRow extends StatelessWidget {
       onTap: () => onAuthorTap!(post.author.id),
       borderRadius: BorderRadius.circular(PrismRadius.sm),
       child: inner,
+    );
+  }
+}
+
+class _QuotedBlock extends StatelessWidget {
+  const _QuotedBlock({required this.quoted});
+  final QuotedPostRefDto quoted;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!quoted.available) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: PrismSpacing.cardPad,
+          vertical: PrismSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: PrismColors.bgTint,
+          borderRadius: BorderRadius.circular(PrismRadius.md),
+        ),
+        child: Row(
+          children: const [
+            Icon(Icons.block, size: 14, color: PrismColors.ink4),
+            SizedBox(width: 6),
+            Text(
+              '삭제된 글입니다',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: PrismColors.ink3,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: PrismSpacing.cardPad,
+        vertical: PrismSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: PrismColors.bgTint,
+        borderRadius: BorderRadius.circular(PrismRadius.md),
+        border: Border(
+          left: BorderSide(color: PrismColors.pp400, width: 3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '@${quoted.authorNickname} · #${quoted.roomSlug}',
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: PrismColors.ink3,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            quoted.bodyPreview,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              color: PrismColors.ink2,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -137,6 +137,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         title: const Text('게시글'),
         actions: [
           post.maybeWhen(
+            data: (p) => IconButton(
+              icon: const Icon(Icons.format_quote),
+              tooltip: '인용하여 게시',
+              onPressed: () => _quotePost(p),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+          post.maybeWhen(
             data: (p) {
               if (me?.id != p.author.id) return const SizedBox.shrink();
               return IconButton(
@@ -246,6 +254,16 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _quotePost(PostDto post) {
+    final preview = post.body.length > 140
+        ? '${post.body.substring(0, 140)}…'
+        : post.body;
+    final encodedPreview = Uri.encodeQueryComponent(preview);
+    context.go(
+      '/rooms/${post.roomSlug}/compose?quoted_post_id=${post.id}&quoted_preview=$encodedPreview',
     );
   }
 

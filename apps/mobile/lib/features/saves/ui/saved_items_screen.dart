@@ -20,15 +20,34 @@ class SavedItemsScreen extends ConsumerStatefulWidget {
 
 class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
   String? _selectedType; // null = all
+  String? _selectedCollectionId; // null = all collections
+
+  SavedItemsFilter get _filter =>
+      SavedItemsFilter(type: _selectedType, collectionId: _selectedCollectionId);
 
   @override
   Widget build(BuildContext context) {
-    final saves = ref.watch(savedItemsProvider(_selectedType));
+    final saves = ref.watch(filteredSavedItemsProvider(_filter));
+    final collections = ref.watch(savedCollectionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('저장한 항목')),
+      appBar: AppBar(
+        title: const Text('저장한 항목'),
+        actions: [
+          IconButton(
+            tooltip: '새 폴더',
+            icon: const Icon(Icons.create_new_folder_outlined),
+            onPressed: () => _promptCreateCollection(context),
+          ),
+        ],
+      ),
       body: Column(
         children: [
+          _CollectionTabRow(
+            collections: collections,
+            selected: _selectedCollectionId,
+            onSelect: (id) => setState(() => _selectedCollectionId = id),
+          ),
           _TypeChipRow(
             selected: _selectedType,
             onSelect: (type) => setState(() => _selectedType = type),
@@ -39,15 +58,16 @@ class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
               loading: () => const LoadingView(),
               error: (e, _) => ErrorView(
                 message: e is ApiError ? e.message : '저장 목록을 불러오지 못했어요.',
-                onRetry: () =>
-                    ref.invalidate(savedItemsProvider(_selectedType)),
+                onRetry: () => ref.invalidate(filteredSavedItemsProvider(_filter)),
               ),
               data: (list) => list.items.isEmpty
                   ? const EmptyView(message: '저장한 항목이 없어요')
                   : RefreshIndicator(
                       color: PrismColors.pp600,
-                      onRefresh: () async => ref
-                          .invalidate(savedItemsProvider(_selectedType)),
+                      onRefresh: () async {
+                        ref.invalidate(filteredSavedItemsProvider(_filter));
+                        ref.invalidate(savedCollectionsProvider);
+                      },
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(
                           PrismSpacing.xl,
@@ -61,6 +81,7 @@ class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
                         itemBuilder: (context, index) => _SavedItemTile(
                           item: list.items[index],
                           onUnsave: () => _unsave(list.items[index]),
+                          onMove: () => _moveItem(list.items[index]),
                         ),
                       ),
                     ),
@@ -71,11 +92,92 @@ class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
     );
   }
 
+  Future<void> _promptCreateCollection(BuildContext context) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('새 폴더'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 50,
+          decoration: const InputDecoration(hintText: '폴더 이름 (1~50자)'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: const Text('만들기'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    try {
+      await ref.read(savesRepositoryProvider).createCollection(name);
+      ref.invalidate(savedCollectionsProvider);
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('폴더 생성 실패: ${e.message}')),
+      );
+    }
+  }
+
+  Future<void> _moveItem(SavedItemDto item) async {
+    final collections = await ref.read(savedCollectionsProvider.future);
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<_MoveChoice>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_off_outlined),
+              title: const Text('폴더 없음'),
+              onTap: () =>
+                  Navigator.of(ctx).pop(const _MoveChoice(collectionId: null)),
+            ),
+            const Divider(height: 1),
+            for (final c in collections)
+              ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: Text(c.name),
+                subtitle: Text('${c.itemCount}개'),
+                onTap: () => Navigator.of(ctx)
+                    .pop(_MoveChoice(collectionId: c.id)),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    try {
+      await ref
+          .read(savesRepositoryProvider)
+          .moveSave(item.id, picked.collectionId);
+      ref.invalidate(filteredSavedItemsProvider(_filter));
+      ref.invalidate(savedCollectionsProvider);
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('이동 실패: ${e.message}')),
+      );
+    }
+  }
+
   Future<void> _unsave(SavedItemDto item) async {
     try {
       await ref
           .read(savesRepositoryProvider)
           .toggle(item.targetType, item.targetId);
+      ref.invalidate(filteredSavedItemsProvider(_filter));
+      ref.invalidate(savedCollectionsProvider);
       ref.invalidate(savedItemsProvider(_selectedType));
       ref.invalidate(savedItemsProvider(null));
       ref.invalidate(saveStateProvider('${item.targetType}:${item.targetId}'));
@@ -86,6 +188,109 @@ class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
         );
       }
     }
+  }
+}
+
+class _MoveChoice {
+  const _MoveChoice({required this.collectionId});
+  final String? collectionId;
+}
+
+class _CollectionTabRow extends StatelessWidget {
+  const _CollectionTabRow({
+    required this.collections,
+    required this.selected,
+    required this.onSelect,
+  });
+  final AsyncValue<List<SavedCollectionDto>> collections;
+  final String? selected;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final list = collections.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <SavedCollectionDto>[],
+    );
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: PrismSpacing.xl,
+          vertical: PrismSpacing.sm,
+        ),
+        children: [
+          _CollectionChip(
+            label: '모든 폴더',
+            selected: selected == null,
+            onTap: () => onSelect(null),
+          ),
+          const SizedBox(width: 8),
+          _CollectionChip(
+            label: '폴더 없음',
+            selected: selected == '__none__',
+            onTap: () => onSelect('__none__'),
+          ),
+          const SizedBox(width: 8),
+          for (final c in list) ...[
+            _CollectionChip(
+              label: '${c.name} (${c.itemCount})',
+              selected: selected == c.id,
+              onTap: () => onSelect(c.id),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CollectionChip extends StatelessWidget {
+  const _CollectionChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: '$label 폴더',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(PrismRadius.pill),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 32),
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.cardPad,
+              vertical: 6,
+            ),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? PrismColors.pp600 : PrismColors.bgTint,
+              borderRadius: BorderRadius.circular(PrismRadius.pill),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : PrismColors.ink2,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -178,9 +383,14 @@ class _Chip extends StatelessWidget {
 }
 
 class _SavedItemTile extends StatelessWidget {
-  const _SavedItemTile({required this.item, required this.onUnsave});
+  const _SavedItemTile({
+    required this.item,
+    required this.onUnsave,
+    required this.onMove,
+  });
   final SavedItemDto item;
   final VoidCallback onUnsave;
+  final VoidCallback onMove;
 
   @override
   Widget build(BuildContext context) {
@@ -188,15 +398,25 @@ class _SavedItemTile extends StatelessWidget {
     final reference = item.referenceTarget;
     final eventCard = item.eventCardTarget;
 
-    final trailing = Padding(
-      padding: const EdgeInsets.only(top: PrismSpacing.sm),
-      child: IconButton(
-        icon: const Icon(Icons.bookmark, size: 22, color: PrismColors.pp700),
-        tooltip: '저장 취소',
-        onPressed: onUnsave,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-      ),
+    final trailing = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.bookmark, size: 22, color: PrismColors.pp700),
+          tooltip: '저장 취소',
+          onPressed: onUnsave,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        ),
+        IconButton(
+          icon: const Icon(Icons.drive_file_move_outline,
+              size: 20, color: PrismColors.ink2),
+          tooltip: '폴더 이동',
+          onPressed: onMove,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        ),
+      ],
     );
 
     if (post != null) {
