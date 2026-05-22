@@ -26,4 +26,13 @@ export interface EventDetailBundleDTO {
     post_count: number;
     room_count: number;
   };
+  /** P3.1 RSVP state for the calling viewer. */
+  rsvp: {
+    my_status: 'INTERESTED' | 'GOING' | 'ATTENDED' | null;
+    counts: {
+      interested: number;
+      going: number;
+      attended: number;
+    };
+  };
 }

@@ -27,6 +27,8 @@ export type EventType =
   | 'REPORT_CREATED'
   | 'MEDIA_UPLOADED'
   | 'EVENT_DETAIL_VIEWED'
+  | 'EVENT_RSVP_CHANGED'
+  | 'EVENT_UPDATED_NOTIFY'
   | 'SEARCH_QUERY';
 
 export interface EventInput {

@@ -9,6 +9,7 @@ import { AccessControlService, Viewer } from '../../shared/access-control.servic
 import { RoomService } from '../community/room.service';
 import { PostService } from '../posts/post.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { EventRsvpService } from './event-rsvp.service';
 import {
   EventDetailBundleDTO,
   RelatedRoomDTO,
@@ -39,6 +40,7 @@ export class EventDetailService {
     private readonly rooms: RoomService,
     private readonly posts: PostService,
     private readonly analytics: AnalyticsService,
+    private readonly rsvps: EventRsvpService,
   ) {}
 
   async getBundle(
@@ -144,6 +146,8 @@ export class EventDetailService {
       },
     });
 
+    const rsvpState = await this.rsvps.getState(cardId, viewer.id);
+
     return {
       event_card: this.rooms.toEventCardDTO(card),
       related_rooms: relatedRooms,
@@ -159,6 +163,7 @@ export class EventDetailService {
         post_count: postCount,
         room_count: relatedRooms.length,
       },
+      rsvp: rsvpState,
     };
   }
 

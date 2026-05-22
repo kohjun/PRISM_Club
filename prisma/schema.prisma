@@ -54,6 +54,7 @@ model User {
   knowledgeRevisions     KnowledgeBlockRevision[]
   contributionReputation ContributionReputation?
   referenceSourceRules   ReferenceSourceRule[]
+  eventRsvps             EventRsvp[]
 
   @@map("users")
 }
@@ -558,8 +559,32 @@ model EventCard {
   syncedAt        DateTime @default(now()) @map("synced_at") @db.Timestamptz(6)
 
   topicHubLinks TopicHubEventLink[]
+  rsvps         EventRsvp[]
 
   @@map("event_cards")
+}
+
+// Per-user RSVP per event card (P3.1). Status state machine:
+//   INTERESTED → GOING → ATTENDED
+// ATTENDED can only be set after the event has started (server-side
+// gated; the client just calls POST with status=ATTENDED). DELETE
+// removes the row entirely so users can withdraw without leaving a
+// historical INTERESTED ghost behind.
+model EventRsvp {
+  id          String   @id @default(uuid()) @db.Uuid
+  eventCardId String   @map("event_card_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  status      String // INTERESTED | GOING | ATTENDED
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  eventCard EventCard @relation(fields: [eventCardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventCardId, userId])
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([eventCardId, status])
+  @@map("event_rsvps")
 }
 
 // Prisma model name is `Reference` but table is `reference_items` —

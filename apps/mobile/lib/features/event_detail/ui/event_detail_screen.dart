@@ -9,6 +9,7 @@ import '../../../widgets/state_views.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../post/data/post_dto.dart';
 import '../../saves/data/saves_repository.dart';
+import 'widgets/rsvp_segment.dart';
 import '../data/event_detail_dto.dart';
 import '../data/event_detail_repository.dart';
 import 'widgets/compose_room_picker.dart';
@@ -85,6 +86,14 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
               slivers: [
                 SliverToBoxAdapter(child: _Hero(card: b.eventCard)),
                 SliverToBoxAdapter(child: _DateVenueCard(card: b.eventCard)),
+                SliverToBoxAdapter(
+                  child: RsvpSegment(
+                    eventCardId: b.eventCard.id,
+                    rsvp: b.rsvp,
+                    eventStatus: b.eventCard.eventStatus,
+                    startsAt: b.eventCard.startsAt,
+                  ),
+                ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
                     PrismSpacing.xl,

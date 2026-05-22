@@ -31,6 +31,38 @@ class RelatedRoomDto {
       );
 }
 
+class RsvpStateDto {
+  const RsvpStateDto({
+    required this.myStatus,
+    required this.interestedCount,
+    required this.goingCount,
+    required this.attendedCount,
+  });
+
+  /// null when no RSVP exists yet.
+  final String? myStatus;
+  final int interestedCount;
+  final int goingCount;
+  final int attendedCount;
+
+  static const empty = RsvpStateDto(
+    myStatus: null,
+    interestedCount: 0,
+    goingCount: 0,
+    attendedCount: 0,
+  );
+
+  factory RsvpStateDto.fromJson(Map<String, dynamic> json) {
+    final counts = (json['counts'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return RsvpStateDto(
+      myStatus: json['my_status'] as String?,
+      interestedCount: counts['interested'] as int? ?? 0,
+      goingCount: counts['going'] as int? ?? 0,
+      attendedCount: counts['attended'] as int? ?? 0,
+    );
+  }
+}
+
 class EventDetailBundleDto {
   const EventDetailBundleDto({
     required this.eventCard,
@@ -40,6 +72,7 @@ class EventDetailBundleDto {
     required this.defaultComposeRoomSlug,
     required this.postCount,
     required this.roomCount,
+    required this.rsvp,
   });
 
   final EventCardDto eventCard;
@@ -49,6 +82,7 @@ class EventDetailBundleDto {
   final String? defaultComposeRoomSlug;
   final int postCount;
   final int roomCount;
+  final RsvpStateDto rsvp;
 
   factory EventDetailBundleDto.fromJson(Map<String, dynamic> json) {
     final card = EventCardDto.fromJson(
@@ -65,6 +99,10 @@ class EventDetailBundleDto {
         .map(PostDto.fromJson)
         .toList(growable: false);
     final counts = (json['counts'] as Map).cast<String, dynamic>();
+    final rsvpRaw = json['rsvp'];
+    final rsvp = rsvpRaw is Map
+        ? RsvpStateDto.fromJson(rsvpRaw.cast<String, dynamic>())
+        : RsvpStateDto.empty;
     return EventDetailBundleDto(
       eventCard: card,
       relatedRooms: rooms,
@@ -73,6 +111,7 @@ class EventDetailBundleDto {
       defaultComposeRoomSlug: json['default_compose_room_slug'] as String?,
       postCount: counts['post_count'] as int? ?? 0,
       roomCount: counts['room_count'] as int? ?? 0,
+      rsvp: rsvp,
     );
   }
 }
