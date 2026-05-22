@@ -264,6 +264,10 @@ void main() {
                 defaultComposeRoomSlug: null,
                 postCount: 0,
                 roomCount: 0,
+                rsvp: RsvpStateDto.empty,
+                verifiedReviews: const [],
+                reviewCount: 0,
+                reviewAverage: null,
               ),
             ),
             savedItemsProvider('EVENT_CARD').overrideWith(

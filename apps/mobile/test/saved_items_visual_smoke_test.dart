@@ -51,6 +51,7 @@ SavedItemDto _savedReference(String id) => SavedItemDto(
         thumbnailUrl: null,
         summary: '요약이 길어도 두 줄 ellipsis로 안전.',
         status: 'VISIBLE',
+        sourceTier: 'TRUSTED',
       ),
     );
 

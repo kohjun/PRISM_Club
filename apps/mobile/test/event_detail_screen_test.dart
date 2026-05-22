@@ -43,6 +43,10 @@ EventDetailBundleDto _bundle({
       defaultComposeRoomSlug: defaultSlug,
       postCount: postCount,
       roomCount: rooms.length,
+      rsvp: RsvpStateDto.empty,
+      verifiedReviews: const [],
+      reviewCount: 0,
+      reviewAverage: null,
     );
 
 Widget _wrap(Widget child, {required EventDetailBundleDto bundle}) =>

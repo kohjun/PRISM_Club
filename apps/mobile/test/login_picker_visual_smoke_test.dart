@@ -19,7 +19,30 @@ class _FakeAuthRepository implements AuthRepository {
       throw UnimplementedError();
 
   @override
-  Future<void> logout() async => throw UnimplementedError();
+  Future<LoginResult> loginWithEmail({
+    required String email,
+    required String password,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<LoginResult> signupWithEmail({
+    required String email,
+    required String password,
+    required String nickname,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<LoginResult> refresh(String refreshToken) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> logout({String? refreshToken}) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> logoutEverywhere() async => throw UnimplementedError();
 }
 
 Widget _wrap() => ProviderScope(

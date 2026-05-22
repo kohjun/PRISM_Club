@@ -44,6 +44,10 @@ EventDetailBundleDto _populatedBundle() => EventDetailBundleDto(
       defaultComposeRoomSlug: 'dating-event-reviews',
       postCount: 0,
       roomCount: 2,
+      rsvp: RsvpStateDto.empty,
+      verifiedReviews: const [],
+      reviewCount: 0,
+      reviewAverage: null,
     );
 
 Widget _wrap(EventDetailBundleDto bundle) => ProviderScope(

@@ -66,6 +66,7 @@ void main() {
       thumbnailUrl: null,
       summary: null,
       status: 'VISIBLE',
+      sourceTier: 'UNKNOWN',
     );
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(

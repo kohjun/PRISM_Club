@@ -67,6 +67,7 @@ TopicHubBundle _populatedBundle() => TopicHubBundle(
           thumbnailUrl: null,
           summary: '본문 요약이 길게 들어와도 카드 폭을 넘기지 않습니다.',
           status: 'VISIBLE',
+          sourceTier: 'TRUSTED',
         ),
       ],
       rooms: const [

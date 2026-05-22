@@ -6,7 +6,12 @@ import 'package:mobile/core/dio_provider.dart';
 import 'package:mobile/features/post/data/post_dto.dart';
 import 'package:mobile/features/reference/data/reference_dto.dart';
 import 'package:mobile/features/saves/data/saved_item_dto.dart';
-import 'package:mobile/features/saves/data/saves_repository.dart' show savedItemsProvider;
+import 'package:mobile/features/saves/data/saves_repository.dart'
+    show
+        SavedItemsFilter,
+        filteredSavedItemsProvider,
+        savedCollectionsProvider,
+        savedItemsProvider;
 import 'package:mobile/features/saves/ui/saved_items_screen.dart';
 
 PostDto _post(String id) => PostDto(
@@ -37,6 +42,7 @@ ReferenceDto _ref(String id) => ReferenceDto(
       thumbnailUrl: null,
       summary: null,
       status: 'VISIBLE',
+      sourceTier: 'UNKNOWN',
     );
 
 SavedItemListDto _mixedList() => SavedItemListDto(
@@ -96,11 +102,17 @@ void main() {
   testWidgets('shows 1 post + 1 reference; 글 chip filters to post only',
       (tester) async {
     await tester.pumpWidget(_wrap([
-      savedItemsProvider(null).overrideWith((_) async => _mixedList()),
-      savedItemsProvider('POST').overrideWith((_) async => _postOnlyList()),
-      savedItemsProvider('REFERENCE')
+      savedCollectionsProvider.overrideWith((_) async => const []),
+      filteredSavedItemsProvider(const SavedItemsFilter())
+          .overrideWith((_) async => _mixedList()),
+      filteredSavedItemsProvider(const SavedItemsFilter(type: 'POST'))
+          .overrideWith((_) async => _postOnlyList()),
+      filteredSavedItemsProvider(const SavedItemsFilter(type: 'REFERENCE'))
           .overrideWith((_) async => SavedItemListDto(items: const [])),
-      savedItemsProvider('EVENT_CARD')
+      filteredSavedItemsProvider(const SavedItemsFilter(type: 'EVENT_CARD'))
+          .overrideWith((_) async => SavedItemListDto(items: const [])),
+      // Legacy provider that the unsave handler also invalidates.
+      savedItemsProvider(null)
           .overrideWith((_) async => SavedItemListDto(items: const [])),
     ]));
     await tester.pump();
@@ -125,12 +137,16 @@ void main() {
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
-        savedItemsProvider(null).overrideWith((_) async => _mixedList()),
-        savedItemsProvider('POST')
+        savedCollectionsProvider.overrideWith((_) async => const []),
+        filteredSavedItemsProvider(const SavedItemsFilter())
+            .overrideWith((_) async => _mixedList()),
+        filteredSavedItemsProvider(const SavedItemsFilter(type: 'POST'))
             .overrideWith((_) async => SavedItemListDto(items: const [])),
-        savedItemsProvider('REFERENCE')
+        filteredSavedItemsProvider(const SavedItemsFilter(type: 'REFERENCE'))
             .overrideWith((_) async => SavedItemListDto(items: const [])),
-        savedItemsProvider('EVENT_CARD')
+        filteredSavedItemsProvider(const SavedItemsFilter(type: 'EVENT_CARD'))
+            .overrideWith((_) async => SavedItemListDto(items: const [])),
+        savedItemsProvider(null)
             .overrideWith((_) async => SavedItemListDto(items: const [])),
         dioProvider.overrideWith((_) => _fakeDio(
               onPost: (opts) => togglePath = opts.path,
