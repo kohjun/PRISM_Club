@@ -33,7 +33,8 @@ export type EventType =
   | 'RECRUITMENT_DECISION_MADE'
   | 'EVENT_REVIEW_CREATED'
   | 'AUTO_MODERATION_TRIGGERED'
-  | 'SEARCH_QUERY';
+  | 'SEARCH_QUERY'
+  | 'PROFILE_SHARED';
 
 export interface EventInput {
   actorId?: string | null;
