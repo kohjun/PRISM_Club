@@ -67,6 +67,7 @@ model User {
   blockedBy               UserBlock[]              @relation("Blocked")
   muting                  UserMute[]               @relation("Muter")
   mutedBy                 UserMute[]               @relation("Muted")
+  pollVotes               PollVote[]
 
   @@map("users")
 }
@@ -505,6 +506,10 @@ model Post {
   // admin queue surfaces these separately from manual reports.
   autoModeratedAt      DateTime? @map("auto_moderated_at") @db.Timestamptz(6)
   autoModerationReason String?   @map("auto_moderation_reason")
+  // P6.7 reply gate. ANYONE | FOLLOWERS | MENTIONED_ONLY | DISABLED.
+  // Enforced in ReplyService.create(); ANYONE keeps the legacy
+  // open-to-anyone behaviour so existing posts don't need backfill.
+  replyPolicy          String    @default("ANYONE") @map("reply_policy")
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -515,9 +520,61 @@ model Post {
   recruitment RecruitmentPost?
   quote       PostQuote?       @relation("QuotingPost")
   quotedBy    PostQuote[]      @relation("QuotedPost")
+  poll        Poll?
 
   @@index([roomId, createdAt(sort: Desc)])
   @@map("posts")
+}
+
+// P6.5 polls. 1:1 sidecar on a post: the post body carries the
+// preamble + author's opinion, the poll row carries the structured
+// choices + vote counts. `expires_at` is enforced service-side; a
+// poll past its expiry only accepts reads.
+model Poll {
+  id            String       @id @default(uuid()) @db.Uuid
+  postId        String       @unique @map("post_id") @db.Uuid
+  question      String
+  expiresAt     DateTime?    @map("expires_at") @db.Timestamptz(6)
+  allowMultiple Boolean      @default(false) @map("allow_multiple")
+  status        String       @default("OPEN") // OPEN | CLOSED
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  post    Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  options PollOption[]
+  votes   PollVote[]
+
+  @@map("polls")
+}
+
+model PollOption {
+  id        String @id @default(uuid()) @db.Uuid
+  pollId    String @map("poll_id") @db.Uuid
+  label     String
+  sortOrder Int    @default(0) @map("sort_order")
+
+  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes PollVote[]
+
+  @@index([pollId, sortOrder], map: "poll_options_poll_id_idx")
+  @@map("poll_options")
+}
+
+model PollVote {
+  id        String   @id @default(uuid()) @db.Uuid
+  pollId    String   @map("poll_id") @db.Uuid
+  optionId  String   @map("option_id") @db.Uuid
+  voterId   String   @map("voter_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  voter  User       @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, voterId, optionId], map: "poll_votes_poll_voter_option_unique")
+  @@index([optionId], map: "poll_votes_option_idx")
+  @@index([voterId], map: "poll_votes_voter_idx")
+  @@map("poll_votes")
 }
 
 // P3.6: structured recruitment metadata. 1:1 with the parent Post

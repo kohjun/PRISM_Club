@@ -46,6 +46,24 @@ export interface QuotedPostRefDTO {
   available: boolean;
 }
 
+export interface PollOptionDTO {
+  id: string;
+  label: string;
+  sort_order: number;
+  vote_count: number;
+}
+
+export interface PollDTO {
+  id: string;
+  question: string;
+  expires_at: string | null;
+  allow_multiple: boolean;
+  status: 'OPEN' | 'CLOSED';
+  options: PollOptionDTO[];
+  total_votes: number;
+  my_vote_option_ids: string[];
+}
+
 /**
  * P6.4 reaction palette identifiers. The string union is duplicated
  * from `reaction.service.ts:REACTION_TYPES` so DTO consumers don't
@@ -58,6 +76,19 @@ export type ReactionType =
   | 'THINK'
   | 'IDEA'
   | 'LAUGH';
+
+/**
+ * P6.7 reply gate.
+ *   ANYONE          — default (legacy behaviour)
+ *   FOLLOWERS       — viewer must follow the post author
+ *   MENTIONED_ONLY  — viewer must be @-mentioned in the body OR be the author
+ *   DISABLED        — only the author can reply (self-thread mode)
+ */
+export type ReplyPolicy =
+  | 'ANYONE'
+  | 'FOLLOWERS'
+  | 'MENTIONED_ONLY'
+  | 'DISABLED';
 
 export interface PostDTO {
   id: string;
@@ -84,6 +115,10 @@ export interface PostDTO {
   my_reaction: ReactionType | null;
   /** P4.2: the post this one quotes, or null if it is not a quoter. */
   quoted_post: QuotedPostRefDTO | null;
+  /** P6.5: poll sidecar (1:1 with the post) or null. */
+  poll: PollDTO | null;
+  /** P6.7 reply gate. ANYONE / FOLLOWERS / MENTIONED_ONLY / DISABLED. */
+  reply_policy: ReplyPolicy;
 }
 
 export interface ReplyDTO {

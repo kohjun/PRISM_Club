@@ -16,11 +16,13 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import { AutoModerationService } from '../moderation/auto-moderation.service';
 import { MentionService } from '../notifications/mention.service';
 import { NotificationService } from '../notifications/notification.service';
+import { PollService, CreatePollInput } from './poll.service';
 import {
   BlockMuteService,
   assertNotBlocked,
 } from '../../shared/block-mute.service';
 import {
+  PollDTO,
   PostAttachmentDTO,
   PostAuthorDTO,
   PostDTO,
@@ -28,7 +30,15 @@ import {
   QuotedPostRefDTO,
   RecruitmentFieldsDTO,
   RecruitmentStatus,
+  ReplyPolicy,
 } from './dto/post.dto';
+
+const REPLY_POLICY_VALUES: ReplyPolicy[] = [
+  'ANYONE',
+  'FOLLOWERS',
+  'MENTIONED_ONLY',
+  'DISABLED',
+];
 
 export interface AttachmentInput {
   attachment_type: 'EVENT_CARD' | 'REFERENCE' | 'IMAGE';
@@ -52,6 +62,11 @@ export interface CreatePostInput {
   attachments?: AttachmentInput[];
   /** P4.2: optional quoted post; access-checked at create time. */
   quoted_post_id?: string | null;
+  /** P6.5: optional poll sidecar. Creating one in the same tx ensures
+   *  post + poll are atomic. */
+  poll?: CreatePollInput | null;
+  /** P6.7: reply gate. Defaults to ANYONE. */
+  reply_policy?: ReplyPolicy;
 }
 
 export interface TimelinePage {
@@ -74,6 +89,7 @@ export class PostService {
     private readonly mentions: MentionService,
     private readonly blockMute: BlockMuteService,
     private readonly notifications: NotificationService,
+    private readonly polls: PollService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
@@ -168,6 +184,10 @@ export class PostService {
     });
 
     const post = await this.prisma.$transaction(async (tx) => {
+      const replyPolicy: ReplyPolicy =
+        input.reply_policy && REPLY_POLICY_VALUES.includes(input.reply_policy)
+          ? input.reply_policy
+          : 'ANYONE';
       const created = await tx.post.create({
         data: {
           roomId: room.id,
@@ -177,6 +197,7 @@ export class PostService {
           status: autoModDecision.hide ? 'HIDDEN' : 'VISIBLE',
           autoModeratedAt: autoModDecision.hide ? new Date() : null,
           autoModerationReason: autoModDecision.reason,
+          replyPolicy,
           recruitmentFields:
             recruitmentFields === null
               ? Prisma.JsonNull
@@ -220,6 +241,12 @@ export class PostService {
             quotedPostId,
           },
         });
+      }
+      // P6.5: poll sidecar — same transaction so a malformed poll
+      // payload rolls the whole post back. The poll service handles
+      // its own validation + option insert.
+      if (input.poll) {
+        await this.polls.createForPost(tx, created.id, input.poll);
       }
       return created;
     });
@@ -478,9 +505,20 @@ export class PostService {
     }>[],
     viewerId: string,
   ): Promise<PostDTO[]> {
-    const quoteMap = await this.fetchQuoteRefs(rows.map((r) => r.id));
+    const ids = rows.map((r) => r.id);
+    const [quoteMap, pollMap] = await Promise.all([
+      this.fetchQuoteRefs(ids),
+      this.polls.summarizeForPosts(ids, viewerId),
+    ]);
     return Promise.all(
-      rows.map((p) => this.toDTO(p, viewerId, quoteMap.get(p.id) ?? null)),
+      rows.map((p) =>
+        this.toDTO(
+          p,
+          viewerId,
+          quoteMap.get(p.id) ?? null,
+          pollMap.get(p.id) ?? null,
+        ),
+      ),
     );
   }
 
@@ -490,6 +528,7 @@ export class PostService {
     }>,
     viewerId: string,
     quotedPost?: QuotedPostRefDTO | null,
+    poll?: PollDTO | null,
   ): Promise<PostDTO> {
     const attachments = await this.resolveAttachments(post.attachments);
     const myReaction = await this.myReactionFor(viewerId, 'POST', post.id);
@@ -497,6 +536,10 @@ export class PostService {
       quotedPost === undefined
         ? (await this.fetchQuoteRefs([post.id])).get(post.id) ?? null
         : quotedPost;
+    const pollDto =
+      poll === undefined
+        ? (await this.polls.summarizeForPosts([post.id], viewerId)).get(post.id) ?? null
+        : poll;
 
     return {
       id: post.id,
@@ -515,6 +558,14 @@ export class PostService {
       my_reaction:
         (myReaction as PostDTO['my_reaction'] | null) ?? null,
       quoted_post: quote,
+      poll: pollDto,
+      reply_policy:
+        (post as { replyPolicy?: string }).replyPolicy &&
+        REPLY_POLICY_VALUES.includes(
+          (post as { replyPolicy: string }).replyPolicy as ReplyPolicy,
+        )
+          ? ((post as { replyPolicy: string }).replyPolicy as ReplyPolicy)
+          : 'ANYONE',
     };
   }
 

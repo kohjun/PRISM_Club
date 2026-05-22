@@ -9,6 +9,7 @@ import '../features/user_profile/data/user_search_repository.dart';
 import 'event_card_widget.dart';
 import 'media_image.dart';
 import 'mention_text.dart';
+import 'poll_widget.dart';
 import 'prism_avatar.dart';
 import 'reaction_palette.dart';
 import 'reference_card_widget.dart';
@@ -69,6 +70,16 @@ class PostCardWidget extends ConsumerWidget {
               if (post.quotedPost != null) ...[
                 const SizedBox(height: PrismSpacing.md),
                 _QuotedBlock(quoted: post.quotedPost!),
+              ],
+              if (post.poll != null) ...[
+                const SizedBox(height: PrismSpacing.md),
+                PollWidget(
+                  poll: post.poll!,
+                  onVoted: (_) {
+                    // The card itself is stateless; parent screens
+                    // invalidate their providers on pull-to-refresh.
+                  },
+                ),
               ],
               if (!compact && post.attachments.isNotEmpty) ...[
                 const SizedBox(height: PrismSpacing.md),

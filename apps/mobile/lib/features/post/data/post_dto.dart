@@ -82,6 +82,73 @@ class QuotedPostRefDto {
       );
 }
 
+/// P6.5 poll sidecar attached to a post.
+class PollOptionDto {
+  const PollOptionDto({
+    required this.id,
+    required this.label,
+    required this.sortOrder,
+    required this.voteCount,
+  });
+  final String id;
+  final String label;
+  final int sortOrder;
+  final int voteCount;
+
+  factory PollOptionDto.fromJson(Map<String, dynamic> json) => PollOptionDto(
+        id: json['id'] as String,
+        label: json['label'] as String,
+        sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+        voteCount: (json['vote_count'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class PollDto {
+  const PollDto({
+    required this.id,
+    required this.question,
+    required this.expiresAt,
+    required this.allowMultiple,
+    required this.status,
+    required this.options,
+    required this.totalVotes,
+    required this.myVoteOptionIds,
+  });
+  final String id;
+  final String question;
+  final DateTime? expiresAt;
+  final bool allowMultiple;
+  final String status; // OPEN | CLOSED
+  final List<PollOptionDto> options;
+  final int totalVotes;
+  final List<String> myVoteOptionIds;
+
+  bool get isExpired =>
+      expiresAt != null && expiresAt!.isBefore(DateTime.now());
+  bool get isOpen => status == 'OPEN' && !isExpired;
+  bool hasVotedFor(String optionId) => myVoteOptionIds.contains(optionId);
+
+  factory PollDto.fromJson(Map<String, dynamic> json) {
+    final expiresRaw = json['expires_at'] as String?;
+    return PollDto(
+      id: json['id'] as String,
+      question: json['question'] as String,
+      expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
+      allowMultiple: json['allow_multiple'] as bool? ?? false,
+      status: json['status'] as String? ?? 'OPEN',
+      options: ((json['options'] as List<dynamic>?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(PollOptionDto.fromJson)
+          .toList(growable: false),
+      totalVotes: (json['total_votes'] as num?)?.toInt() ?? 0,
+      myVoteOptionIds:
+          ((json['my_vote_option_ids'] as List<dynamic>?) ?? const [])
+              .whereType<String>()
+              .toList(growable: false),
+    );
+  }
+}
+
 class PostDto {
   const PostDto({
     required this.id,
@@ -101,6 +168,8 @@ class PostDto {
     required this.likedByMe,
     this.myReaction,
     this.quotedPost,
+    this.poll,
+    this.replyPolicy = 'ANYONE',
   });
 
   final String id;
@@ -122,6 +191,10 @@ class PostDto {
   /// or null if the viewer has not reacted.
   final String? myReaction;
   final QuotedPostRefDto? quotedPost;
+  /// P6.5: poll sidecar (1:1 with the post) or null.
+  final PollDto? poll;
+  /// P6.7: ANYONE / FOLLOWERS / MENTIONED_ONLY / DISABLED.
+  final String replyPolicy;
 
   bool get isRecruitment => postType == 'RECRUITMENT';
 
@@ -184,6 +257,12 @@ class PostDto {
       quotedPost: quotedRaw is Map
           ? QuotedPostRefDto.fromJson(quotedRaw.cast<String, dynamic>())
           : null,
+      poll: json['poll'] is Map
+          ? PollDto.fromJson(
+              (json['poll'] as Map).cast<String, dynamic>(),
+            )
+          : null,
+      replyPolicy: json['reply_policy'] as String? ?? 'ANYONE',
     );
   }
 }

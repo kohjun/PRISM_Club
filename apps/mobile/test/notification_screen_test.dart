@@ -15,6 +15,7 @@ NotificationListDto _twoNotifs() => NotificationListDto(
           isRead: false,
           payload: {'postId': 'p1', 'authorNickname': 'joon'},
           createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
+          updatedAt: DateTime.now().subtract(const Duration(minutes: 5)),
         ),
         NotificationDto(
           id: 'n2',
@@ -26,6 +27,7 @@ NotificationListDto _twoNotifs() => NotificationListDto(
             'spaceAccessPolicy': 'PUBLIC',
           },
           createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
         ),
       ],
       nextCursor: null,

@@ -45,6 +45,8 @@ export class ReplyService {
     if (post.authorId !== viewer.id) {
       await assertNotBlocked(this.blockMute, viewer.id, post.authorId);
     }
+    // P6.7 reply policy gate.
+    await this.assertReplyAllowed(post, input.body, viewer.id);
     const spaceAccessPolicy = post.room.category?.space?.accessPolicy ?? 'PUBLIC';
 
     // Depth check: parent_reply_id may only reference a top-level reply.
@@ -249,5 +251,67 @@ export class ReplyService {
       my_reaction:
         (myReaction as ReplyDTO['my_reaction'] | null) ?? null,
     };
+  }
+
+  /**
+   * P6.7: enforce the post's reply_policy. The author is exempt from
+   * every policy (so they can self-thread + answer their own
+   * recruitment post).
+   */
+  private async assertReplyAllowed(
+    post: { id: string; authorId: string; body: string; replyPolicy: string },
+    replyBody: string,
+    viewerId: string,
+  ): Promise<void> {
+    if (viewerId === post.authorId) return;
+
+    switch (post.replyPolicy) {
+      case 'ANYONE':
+        return;
+
+      case 'DISABLED':
+        throw new ForbiddenException('이 글은 작성자가 답변을 비활성화했어요.');
+
+      case 'FOLLOWERS': {
+        // Threads semantics: "your followers can reply" — the viewer
+        // must follow the post author (viewer → author edge exists).
+        const follow = await this.prisma.userFollow.findUnique({
+          where: {
+            followerId_followedId: {
+              followerId: viewerId,
+              followedId: post.authorId,
+            },
+          },
+          select: { id: true },
+        });
+        if (!follow) {
+          throw new ForbiddenException(
+            '작성자를 팔로우한 사람만 답변할 수 있어요.',
+          );
+        }
+        return;
+      }
+
+      case 'MENTIONED_ONLY': {
+        // Viewer's nickname must appear as a @mention in the post body.
+        const profile = await this.prisma.profile.findUnique({
+          where: { userId: viewerId },
+          select: { nickname: true },
+        });
+        const nick = profile?.nickname ?? '';
+        if (!nick) {
+          throw new ForbiddenException('이 글은 멘션된 사람만 답변할 수 있어요.');
+        }
+        const re = new RegExp(`@${nick}(?![가-힣a-zA-Z0-9_])`);
+        if (!re.test(post.body)) {
+          throw new ForbiddenException('이 글은 멘션된 사람만 답변할 수 있어요.');
+        }
+        return;
+      }
+
+      default:
+        // Unknown policy → fail closed.
+        throw new ForbiddenException('알 수 없는 답글 정책이에요.');
+    }
   }
 }

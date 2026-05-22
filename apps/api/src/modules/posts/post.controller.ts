@@ -29,12 +29,27 @@ const recruitmentFieldsSchema = z.object({
   status: z.enum(['OPEN', 'CLOSED', 'FILLED']).optional(),
 });
 
+// P6.5 poll attachment schema. The label cap matches the service-side
+// LABEL_MAX (80) and option count matches MIN_OPTIONS / MAX_OPTIONS.
+const pollSchema = z.object({
+  question: z.string().min(1).max(200),
+  options: z.array(z.string().min(1).max(80)).min(2).max(6),
+  expires_at: z.string().datetime().optional().nullable(),
+  allow_multiple: z.boolean().optional(),
+});
+
 const createPostSchema = z
   .object({
     body: z.string().min(1).max(8000),
     post_type: z.enum(['GENERAL', 'RECRUITMENT']).optional(),
     recruitment_fields: recruitmentFieldsSchema.optional(),
     attachments: z.array(attachmentSchema).max(10).optional(),
+    quoted_post_id: z.string().uuid().optional().nullable(),
+    poll: pollSchema.optional().nullable(),
+    // P6.7 reply gate. Defaults to ANYONE.
+    reply_policy: z
+      .enum(['ANYONE', 'FOLLOWERS', 'MENTIONED_ONLY', 'DISABLED'])
+      .optional(),
   })
   .refine(
     (v) => v.post_type !== 'RECRUITMENT' || v.recruitment_fields !== undefined,

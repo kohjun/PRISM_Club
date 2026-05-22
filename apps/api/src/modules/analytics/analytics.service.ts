@@ -35,7 +35,8 @@ export type EventType =
   | 'AUTO_MODERATION_TRIGGERED'
   | 'SEARCH_QUERY'
   | 'PROFILE_SHARED'
-  | 'USER_MENTIONED';
+  | 'USER_MENTIONED'
+  | 'POLL_VOTED';
 
 export interface EventInput {
   actorId?: string | null;

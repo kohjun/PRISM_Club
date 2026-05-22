@@ -19,6 +19,7 @@ NotificationDto _notif(
       isRead: isRead,
       payload: payload,
       createdAt: DateTime(2026, 5, 18, 10),
+      updatedAt: DateTime(2026, 5, 18, 10),
     );
 
 NotificationListDto _list() => NotificationListDto(
