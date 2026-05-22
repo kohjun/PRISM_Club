@@ -34,7 +34,8 @@ class _CurationQueueScreenState extends ConsumerState<CurationQueueScreen> {
         title: const Text('지식 기여 검수'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/spaces'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/spaces'),
         ),
       ),
       body: Column(
@@ -90,9 +91,9 @@ class _CurationQueueScreenState extends ConsumerState<CurationQueueScreen> {
                           final c = items[i];
                           return ContributionCardWidget(
                             contribution: c,
-                            onTap: () => context.go('/curate/${c.id}'),
+                            onTap: () => context.push('/curate/${c.id}'),
                             onAuthorTap: (uid) =>
-                                context.go('/users/$uid'),
+                                context.push('/users/$uid'),
                           );
                         },
                       ),

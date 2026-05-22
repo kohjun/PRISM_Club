@@ -199,7 +199,7 @@ class RoomTimelineScreen extends ConsumerWidget {
                           action: FilledButton.icon(
                             icon: Icon(composeIcon),
                             label: Text(composeLabel),
-                            onPressed: () => context.go(composePath),
+                            onPressed: () => context.push(composePath),
                           ),
                         ),
                       )
@@ -215,9 +215,9 @@ class RoomTimelineScreen extends ConsumerWidget {
                             for (final post in page.items) ...[
                               PostCardWidget(
                                 post: post,
-                                onTap: () => context.go('/posts/${post.id}'),
+                                onTap: () => context.push('/posts/${post.id}'),
                                 onAuthorTap: (uid) =>
-                                    context.go('/users/$uid'),
+                                    context.push('/users/$uid'),
                               ),
                               const SizedBox(height: PrismSpacing.md),
                             ],
@@ -239,7 +239,7 @@ class RoomTimelineScreen extends ConsumerWidget {
           backgroundColor: PrismColors.pp700,
           foregroundColor: Colors.white,
           elevation: 0,
-          onPressed: () => context.go(composePath),
+          onPressed: () => context.push(composePath),
           tooltip: composeLabel,
           child: Icon(composeIcon, size: 24),
         ),

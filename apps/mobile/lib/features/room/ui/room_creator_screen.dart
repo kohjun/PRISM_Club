@@ -84,7 +84,12 @@ class _RoomCreatorScreenState extends ConsumerState<RoomCreatorScreen> {
       // Invalidate so Topic Hub picks up the new room on the way back.
       ref.invalidate(topicHubProvider(widget.categorySlug));
       ref.invalidate(categoryListProvider('participant'));
-      if (mounted) context.go('/rooms/${room.slug}');
+      if (mounted) {
+        // Replace the composer in the stack with the new room timeline so
+        // back from the timeline returns to the Topic Hub directly.
+        if (context.canPop()) context.pop();
+        context.push('/rooms/${room.slug}');
+      }
     } on ApiError catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -110,7 +115,8 @@ class _RoomCreatorScreenState extends ConsumerState<RoomCreatorScreen> {
         title: const Text('방 만들기'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(_hubUrl()),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(_hubUrl()),
         ),
         actions: [
           TextButton(

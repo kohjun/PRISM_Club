@@ -90,8 +90,8 @@ class _ProfileBody extends ConsumerWidget {
               ),
               child: PostCardWidget(
                 post: p,
-                onTap: () => context.go('/posts/${p.id}'),
-                onAuthorTap: (uid) => context.go('/users/$uid'),
+                onTap: () => context.push('/posts/${p.id}'),
+                onAuthorTap: (uid) => context.push('/users/$uid'),
               ),
             ),
           ),
@@ -109,7 +109,7 @@ class _ProfileBody extends ConsumerWidget {
                   onPressed: () {
                     final nick = bundle.user.nickname ?? '';
                     final encoded = Uri.encodeQueryComponent(nick);
-                    context.go(
+                    context.push(
                       '/users/$userId/activity${nick.isNotEmpty ? '?nickname=$encoded' : ''}',
                     );
                   },
@@ -136,7 +136,7 @@ class _ProfileBody extends ConsumerWidget {
                     (r) => Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => context.go('/rooms/${r.slug}'),
+                        onTap: () => context.push('/rooms/${r.slug}'),
                         borderRadius:
                             BorderRadius.circular(PrismRadius.pill),
                         child: Semantics(
@@ -199,7 +199,7 @@ class _ProfileBody extends ConsumerWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(PrismRadius.md),
-                  onTap: () => context.go(
+                  onTap: () => context.push(
                     '/categories/${c.categorySlug}'
                     '?returnTo=${Uri.encodeQueryComponent('/users/$userId')}',
                   ),

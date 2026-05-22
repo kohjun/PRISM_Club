@@ -89,22 +89,22 @@ class SearchResultTile extends StatelessWidget {
               ..write('?returnTo=')
               ..write(Uri.encodeQueryComponent(returnTo!));
           }
-          context.go(dest.toString());
+          context.push(dest.toString());
         }
         break;
       }
       case SearchEntityType.room: {
         final slug = hit.ctxString('room_slug');
-        if (slug != null && slug.isNotEmpty) context.go('/rooms/$slug');
+        if (slug != null && slug.isNotEmpty) context.push('/rooms/$slug');
         break;
       }
       case SearchEntityType.post: {
         final id = hit.ctxString('post_id');
-        if (id != null && id.isNotEmpty) context.go('/posts/$id');
+        if (id != null && id.isNotEmpty) context.push('/posts/$id');
         break;
       }
       case SearchEntityType.eventCard:
-        context.go('/events/${hit.id}');
+        context.push('/events/${hit.id}');
         break;
       case SearchEntityType.reference: {
         final url = hit.ctxString('url');

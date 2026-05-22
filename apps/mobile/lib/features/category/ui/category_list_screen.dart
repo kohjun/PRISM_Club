@@ -22,7 +22,8 @@ class CategoryListScreen extends ConsumerWidget {
         title: const Text('카테고리'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/spaces'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/spaces'),
         ),
       ),
       body: cats.when(
@@ -63,7 +64,7 @@ class _CategoryCard extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(PrismRadius.lg),
-        onTap: () => context.go(
+        onTap: () => context.push(
           '/categories/${cat.slug}?spaceSlug=${Uri.encodeQueryComponent(spaceSlug)}',
         ),
         child: Padding(

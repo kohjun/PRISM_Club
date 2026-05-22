@@ -43,7 +43,7 @@ class ModerationQueueScreen extends ConsumerWidget {
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(PrismRadius.md),
-                        onTap: () => context.go('/admin/reports/${r.id}'),
+                        onTap: () => context.push('/admin/reports/${r.id}'),
                         child: Container(
                           padding: const EdgeInsets.all(PrismSpacing.cardPad),
                           decoration: BoxDecoration(

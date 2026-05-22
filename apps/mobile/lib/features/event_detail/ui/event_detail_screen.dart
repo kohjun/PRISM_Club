@@ -502,7 +502,7 @@ class _RelatedRoomsSection extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(PrismRadius.md),
-                onTap: () => context.go('/rooms/${r.slug}'),
+                onTap: () => context.push('/rooms/${r.slug}'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: PrismSpacing.cardPad,
@@ -600,8 +600,8 @@ class _RelatedPostsSection extends StatelessWidget {
           for (final p in posts) ...[
             PostCardWidget(
               post: p,
-              onTap: () => context.go('/posts/${p.id}'),
-              onAuthorTap: (uid) => context.go('/users/$uid'),
+              onTap: () => context.push('/posts/${p.id}'),
+              onAuthorTap: (uid) => context.push('/users/$uid'),
             ),
             const SizedBox(height: PrismSpacing.sm),
           ],
@@ -636,7 +636,7 @@ class _ComposeFab extends StatelessWidget {
 
     if (targetSlug == null || targetSlug.isEmpty) return;
     if (!context.mounted) return;
-    context.go(
+    context.push(
       '/rooms/$targetSlug/compose?attach_event_card_id=${Uri.encodeQueryComponent(bundle.eventCard.id)}',
     );
   }

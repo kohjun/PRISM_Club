@@ -22,7 +22,7 @@ class NotificationScreen extends ConsumerWidget {
           IconButton(
             tooltip: '알림 설정',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.go('/me/notifications/settings'),
+            onPressed: () => context.push('/me/notifications/settings'),
           ),
           TextButton(
             onPressed: () => _markAllRead(context, ref),
@@ -71,9 +71,9 @@ class NotificationScreen extends ConsumerWidget {
         type == 'NEW_POST_IN_FOLLOWED_ROOM' ||
         type == 'RECRUITMENT_STATUS_CHANGED') {
       final postId = notif.payload['postId'] as String?;
-      if (postId != null) context.go('/posts/$postId');
+      if (postId != null) context.push('/posts/$postId');
     } else if (type == 'CONTRIBUTION_RESOLVED') {
-      context.go('/me/contributions');
+      context.push('/me/contributions');
     }
   }
 }

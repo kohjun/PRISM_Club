@@ -168,7 +168,11 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             quotedPostId: _quotedPostId,
           );
       ref.invalidate(timelineProvider(widget.roomSlug));
-      if (mounted) context.go('/rooms/${widget.roomSlug}');
+      if (mounted) {
+        context.canPop()
+            ? context.pop()
+            : context.go('/rooms/${widget.roomSlug}');
+      }
     } on ApiError catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -192,7 +196,9 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       appBar: _ComposerAppBar(
         title: '글쓰기',
         submitting: _submitting,
-        onClose: () => context.go('/rooms/${widget.roomSlug}'),
+        onClose: () => context.canPop()
+            ? context.pop()
+            : context.go('/rooms/${widget.roomSlug}'),
         onSubmit: _submit,
       ),
       body: ListView(

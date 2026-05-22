@@ -166,7 +166,7 @@ class _ContributionComposerScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('검수 요청이 등록되었습니다.')),
         );
-        context.go(_hubUrl());
+        context.canPop() ? context.pop() : context.go(_hubUrl());
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -215,7 +215,8 @@ class _ContributionComposerScreenState
         leading: IconButton(
           icon: const Icon(Icons.close),
           tooltip: '닫기',
-          onPressed: () => context.go(_hubUrl()),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(_hubUrl()),
         ),
         actions: [
           Padding(

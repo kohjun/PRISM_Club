@@ -84,13 +84,13 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(Icons.search, size: 22),
           color: PrismColors.ink2,
-          onPressed: () => context.go('/search'),
+          onPressed: () => context.push('/search'),
           tooltip: '검색',
         ),
         IconButton(
           icon: const Icon(Icons.bookmark_outline, size: 22),
           color: PrismColors.ink2,
-          onPressed: () => context.go('/me/saves'),
+          onPressed: () => context.push('/me/saves'),
           tooltip: '저장',
         ),
         const SizedBox(width: 4),
@@ -193,8 +193,8 @@ class _HomeBody extends StatelessWidget {
               ),
               child: PostCardWidget(
                 post: p,
-                onTap: () => context.go('/posts/${p.id}'),
-                onAuthorTap: (uid) => context.go('/users/$uid'),
+                onTap: () => context.push('/posts/${p.id}'),
+                onAuthorTap: (uid) => context.push('/users/$uid'),
               ),
             ),
           )
@@ -212,7 +212,7 @@ class _HomeBody extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(PrismRadius.md),
-                  onTap: () => context.go(
+                  onTap: () => context.push(
                     '/categories/${h.categorySlug}'
                     '?returnTo=${Uri.encodeQueryComponent('/home')}',
                   ),
@@ -273,17 +273,17 @@ class _HomeBody extends StatelessWidget {
         final body = item.postTarget!.body;
         title = body.length > 60 ? '${body.substring(0, 60)}…' : body;
         icon = Icons.chat_bubble_outline;
-        onTap = () => context.go('/posts/${item.targetId}');
+        onTap = () => context.push('/posts/${item.targetId}');
       } else if (item.targetType == 'REFERENCE' &&
           item.referenceTarget != null) {
         title = item.referenceTarget!.title;
         icon = Icons.link;
-        onTap = () => context.go('/me/saves');
+        onTap = () => context.push('/me/saves');
       } else if (item.targetType == 'EVENT_CARD' &&
           item.eventCardTarget != null) {
         title = item.eventCardTarget!.title;
         icon = Icons.event_outlined;
-        onTap = () => context.go('/events/${item.targetId}');
+        onTap = () => context.push('/events/${item.targetId}');
       } else {
         continue;
       }
@@ -430,7 +430,7 @@ class _TopicHubStrip extends StatelessWidget {
           return SizedBox(
             width: 64,
             child: GestureDetector(
-              onTap: () => context.go(
+              onTap: () => context.push(
                 '/categories/${hub.categorySlug}'
                 '?returnTo=${Uri.encodeQueryComponent('/home')}',
               ),
@@ -490,8 +490,8 @@ class _HorizontalPostRow extends StatelessWidget {
               // reference preview + MediaImage(height: 180)) so a
               // post with attachments doesn't exceed the 224dp strip.
               compact: true,
-              onTap: () => context.go('/posts/${posts[i].id}'),
-              onAuthorTap: (uid) => context.go('/users/$uid'),
+              onTap: () => context.push('/posts/${posts[i].id}'),
+              onAuthorTap: (uid) => context.push('/users/$uid'),
             ),
           ),
         ),
@@ -519,7 +519,7 @@ class _RoomChipRow extends StatelessWidget {
                 color: PrismColors.pp700,
               ),
               label: Text(room.name),
-              onPressed: () => context.go('/rooms/${room.slug}'),
+              onPressed: () => context.push('/rooms/${room.slug}'),
               backgroundColor: PrismColors.pp50,
               labelStyle: const TextStyle(
                 fontSize: 12,
@@ -554,7 +554,7 @@ class _HorizontalEventRow extends StatelessWidget {
             child: EventCardWidget(
               card: events[i],
               compact: true,
-              onTap: () => context.go('/events/${events[i].id}'),
+              onTap: () => context.push('/events/${events[i].id}'),
             ),
           ),
         ),

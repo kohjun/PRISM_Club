@@ -20,7 +20,8 @@ class MyContributionsScreen extends ConsumerWidget {
         title: const Text('내 제안'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/spaces'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/spaces'),
         ),
       ),
       body: mine.when(
@@ -47,11 +48,11 @@ class MyContributionsScreen extends ConsumerWidget {
                 final c = items[i];
                 return ContributionCardWidget(
                   contribution: c,
-                  onTap: () => context.go(
+                  onTap: () => context.push(
                     '/categories/${c.categorySlug}'
                     '?returnTo=${Uri.encodeQueryComponent('/me/contributions')}',
                   ),
-                  onAuthorTap: (uid) => context.go('/users/$uid'),
+                  onAuthorTap: (uid) => context.push('/users/$uid'),
                 );
               },
             ),

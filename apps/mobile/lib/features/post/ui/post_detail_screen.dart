@@ -235,7 +235,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           onReply: (parent) =>
                               setState(() => _replyTarget = parent),
                           onLike: _toggleLikeReply,
-                          onAuthorTap: (uid) => context.go('/users/$uid'),
+                          onAuthorTap: (uid) => context.push('/users/$uid'),
                         ),
                       ),
                     ),
@@ -262,7 +262,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         ? '${post.body.substring(0, 140)}…'
         : post.body;
     final encodedPreview = Uri.encodeQueryComponent(preview);
-    context.go(
+    context.push(
       '/rooms/${post.roomSlug}/compose?quoted_post_id=${post.id}&quoted_preview=$encodedPreview',
     );
   }
@@ -289,7 +289,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       try {
         await ref.read(postRepositoryProvider).delete(post.id);
         ref.invalidate(timelineProvider(post.roomSlug));
-        if (context.mounted) context.go('/rooms/${post.roomSlug}');
+        if (context.mounted) {
+          // After delete, return to whatever screen brought us here
+          // (room timeline, profile, etc.). Fall back to the room
+          // timeline if we somehow have no stack history.
+          context.canPop()
+              ? context.pop()
+              : context.go('/rooms/${post.roomSlug}');
+        }
       } on ApiError catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -329,7 +336,7 @@ class _PostBody extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => context.go('/users/${post.author.id}'),
+            onTap: () => context.push('/users/${post.author.id}'),
             behavior: HitTestBehavior.opaque,
             child: Row(
               children: [
@@ -380,7 +387,7 @@ class _PostBody extends ConsumerWidget {
               if (a.asEventCard != null)
                 EventCardWidget(
                   card: a.asEventCard!,
-                  onTap: () => context.go('/events/${a.asEventCard!.id}'),
+                  onTap: () => context.push('/events/${a.asEventCard!.id}'),
                 ),
               if (a.asReference != null)
                 ReferenceCardWidget(reference: a.asReference!),

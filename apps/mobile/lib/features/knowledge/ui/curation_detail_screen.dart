@@ -24,7 +24,8 @@ class CurationDetailScreen extends ConsumerWidget {
         title: const Text('제안 검토'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/curate'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/curate'),
         ),
       ),
       body: detail.when(
@@ -68,7 +69,7 @@ class _Body extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_resultMessage(decision))),
         );
-        context.go('/curate');
+        context.canPop() ? context.pop() : context.go('/curate');
       }
     } on ApiError catch (e) {
       if (context.mounted) {

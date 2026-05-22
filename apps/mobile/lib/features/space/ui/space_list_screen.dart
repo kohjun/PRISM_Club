@@ -60,7 +60,7 @@ class SpaceListScreen extends ConsumerWidget {
                 child: IconButton(
                   icon: const Icon(Icons.notifications_outlined),
                   tooltip: '알림',
-                  onPressed: () => context.go('/me/notifications'),
+                  onPressed: () => context.push('/me/notifications'),
                 ),
               );
             },
@@ -68,7 +68,7 @@ class SpaceListScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: '검색',
-            onPressed: () => context.go('/search'),
+            onPressed: () => context.push('/search'),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -125,7 +125,7 @@ class _CuratorBanner extends ConsumerWidget {
         icon: Icons.fact_check_outlined,
         title: '검수 큐로 가기',
         subtitle: '대기 중인 지식 기여 제안을 검토하세요.',
-        onTap: () => context.go('/curate'),
+        onTap: () => context.push('/curate'),
       ),
     );
   }
@@ -145,7 +145,7 @@ class _OpsBanner extends ConsumerWidget {
         icon: Icons.dashboard_outlined,
         title: '운영 대시보드',
         subtitle: '신고/기여/모집/신규 가입 현황을 한눈에 보세요.',
-        onTap: () => context.go('/admin/ops'),
+        onTap: () => context.push('/admin/ops'),
       ),
     );
   }
@@ -223,7 +223,7 @@ class _MyContributionsTile extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(PrismRadius.lg),
-        onTap: () => context.go('/me/contributions'),
+        onTap: () => context.push('/me/contributions'),
         child: Padding(
           padding: const EdgeInsets.all(PrismSpacing.lg),
           child: Row(
@@ -296,7 +296,7 @@ class _SpaceCard extends ConsumerWidget {
             _showLockDialog(context);
             return;
           }
-          context.go('/spaces/${space.slug}/categories');
+          context.push('/spaces/${space.slug}/categories');
         },
         child: Padding(
           padding: const EdgeInsets.all(PrismSpacing.lg),

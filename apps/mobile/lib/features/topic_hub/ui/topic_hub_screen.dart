@@ -120,7 +120,7 @@ class TopicHubScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.search, size: 22),
             tooltip: '검색',
-            onPressed: () => context.go(
+            onPressed: () => context.push(
               '/search?categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
             ),
           ),
@@ -166,7 +166,7 @@ class TopicHubScreen extends ConsumerWidget {
                 sliver: SliverToBoxAdapter(
                   child: OutlinedButton.icon(
                     onPressed: () =>
-                        context.go(_composerRoute('contributions/new')),
+                        context.push(_composerRoute('contributions/new')),
                     icon: const Icon(Icons.edit_note),
                     label: const Text('정보 개선 제안'),
                   ),
@@ -182,7 +182,7 @@ class TopicHubScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(bottom: PrismSpacing.md),
                         child: _KnowledgeBlockCard(
                           block: block,
-                          onPropose: () => context.go(_composerRoute(
+                          onPropose: () => context.push(_composerRoute(
                             'contributions/new',
                             extra: {'target_block_id': block.id},
                           )),
@@ -216,7 +216,7 @@ class TopicHubScreen extends ConsumerWidget {
                               const EdgeInsets.only(bottom: PrismSpacing.sm),
                           child: EventCardWidget(
                             card: e,
-                            onTap: () => context.go('/events/${e.id}'),
+                            onTap: () => context.push('/events/${e.id}'),
                           ),
                         ),
                     ],
@@ -240,7 +240,7 @@ class TopicHubScreen extends ConsumerWidget {
                 child: _RoomsSection(
                   rooms: b.rooms,
                   onCreateRoom: () =>
-                      context.go(_composerRoute('rooms/new')),
+                      context.push(_composerRoute('rooms/new')),
                 ),
               ),
               const SliverPadding(
@@ -641,7 +641,7 @@ class _RoomTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(PrismRadius.md),
-          onTap: () => context.go('/rooms/${room.slug}'),
+          onTap: () => context.push('/rooms/${room.slug}'),
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: PrismSpacing.cardPad,
@@ -766,7 +766,7 @@ class _RelatedSearches extends ConsumerWidget {
                       (s) => Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => context.go(
+                          onTap: () => context.push(
                             '/search?q=${Uri.encodeQueryComponent(s)}&categorySlug=${Uri.encodeQueryComponent(categorySlug)}',
                           ),
                           borderRadius:

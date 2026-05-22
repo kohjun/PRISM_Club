@@ -155,8 +155,8 @@ class _ProfileActivityScreenState extends ConsumerState<ProfileActivityScreen> {
           final p = _items[index];
           return PostCardWidget(
             post: p,
-            onTap: () => context.go('/posts/${p.id}'),
-            onAuthorTap: (uid) => context.go('/users/$uid'),
+            onTap: () => context.push('/posts/${p.id}'),
+            onAuthorTap: (uid) => context.push('/users/$uid'),
           );
         },
       ),

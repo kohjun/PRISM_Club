@@ -41,7 +41,9 @@ class _ModerationDetailScreenState
           );
       ref.invalidate(moderationQueueProvider);
       ref.invalidate(reportDetailProvider(widget.id));
-      if (mounted) context.go('/admin/reports');
+      if (mounted) {
+        context.canPop() ? context.pop() : context.go('/admin/reports');
+      }
     } catch (e) {
       setState(() {
         _error = e is ApiError ? e.message : e.toString();

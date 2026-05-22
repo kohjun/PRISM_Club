@@ -97,7 +97,13 @@ class _RecruitmentComposerScreenState
             recruitmentFields: fields,
           );
       ref.invalidate(timelineProvider(widget.roomSlug));
-      if (mounted) context.go('/posts/${post.id}');
+      if (mounted) {
+        // Replace the composer with the new post detail. canPop+push
+        // would leave the composer in the stack; using replace keeps
+        // back-from-detail returning to the room timeline directly.
+        if (context.canPop()) context.pop();
+        context.push('/posts/${post.id}');
+      }
     } on ApiError catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -117,7 +123,9 @@ class _RecruitmentComposerScreenState
         leading: IconButton(
           icon: const Icon(Icons.close),
           tooltip: '닫기',
-          onPressed: () => context.go('/rooms/${widget.roomSlug}'),
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go('/rooms/${widget.roomSlug}'),
         ),
         actions: [
           Padding(

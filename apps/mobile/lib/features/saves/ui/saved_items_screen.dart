@@ -426,8 +426,8 @@ class _SavedItemTile extends StatelessWidget {
           Expanded(
             child: PostCardWidget(
               post: post,
-              onTap: () => context.go('/posts/${post.id}'),
-              onAuthorTap: (uid) => context.go('/users/$uid'),
+              onTap: () => context.push('/posts/${post.id}'),
+              onAuthorTap: (uid) => context.push('/users/$uid'),
             ),
           ),
           trailing,
@@ -450,7 +450,7 @@ class _SavedItemTile extends StatelessWidget {
           Expanded(
             child: EventCardWidget(
               card: eventCard,
-              onTap: () => context.go('/events/${eventCard.id}'),
+              onTap: () => context.push('/events/${eventCard.id}'),
             ),
           ),
           trailing,
