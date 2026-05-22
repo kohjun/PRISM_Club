@@ -46,6 +46,19 @@ export interface QuotedPostRefDTO {
   available: boolean;
 }
 
+/**
+ * P6.4 reaction palette identifiers. The string union is duplicated
+ * from `reaction.service.ts:REACTION_TYPES` so DTO consumers don't
+ * need a service import.
+ */
+export type ReactionType =
+  | 'HEART'
+  | 'THUMBS_UP'
+  | 'FIRE'
+  | 'THINK'
+  | 'IDEA'
+  | 'LAUGH';
+
 export interface PostDTO {
   id: string;
   room: { id: string; slug: string; name: string };
@@ -58,7 +71,17 @@ export interface PostDTO {
   updated_at: string;
   attachments: PostAttachmentDTO[];
   counts: { reply_count: number; like_count: number };
+  /**
+   * Backwards-compatible flag: true when viewer reacted with ANY
+   * emoji on this target. Old UI keeps working unchanged.
+   */
   liked_by_me: boolean;
+  /**
+   * P6.4: the specific emoji the viewer chose, or null when the
+   * viewer has not reacted. Used by the reaction palette to
+   * highlight the active selection.
+   */
+  my_reaction: ReactionType | null;
   /** P4.2: the post this one quotes, or null if it is not a quoter. */
   quoted_post: QuotedPostRefDTO | null;
 }
@@ -74,4 +97,6 @@ export interface ReplyDTO {
   updated_at: string;
   like_count: number;
   liked_by_me: boolean;
+  /** P6.4: viewer's emoji reaction, or null. See PostDTO.my_reaction. */
+  my_reaction: ReactionType | null;
 }

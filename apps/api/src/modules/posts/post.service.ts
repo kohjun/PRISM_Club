@@ -492,7 +492,7 @@ export class PostService {
     quotedPost?: QuotedPostRefDTO | null,
   ): Promise<PostDTO> {
     const attachments = await this.resolveAttachments(post.attachments);
-    const likedByMe = await this.isLikedBy(viewerId, 'POST', post.id);
+    const myReaction = await this.myReactionFor(viewerId, 'POST', post.id);
     const quote =
       quotedPost === undefined
         ? (await this.fetchQuoteRefs([post.id])).get(post.id) ?? null
@@ -510,7 +510,10 @@ export class PostService {
       updated_at: post.updatedAt.toISOString(),
       attachments,
       counts: { reply_count: post.replyCount, like_count: post.likeCount },
-      liked_by_me: likedByMe,
+      // Backwards-compat boolean derived from the new reaction lookup.
+      liked_by_me: myReaction !== null,
+      my_reaction:
+        (myReaction as PostDTO['my_reaction'] | null) ?? null,
       quoted_post: quote,
     };
   }
@@ -663,10 +666,29 @@ export class PostService {
   }
 
   private async isLikedBy(userId: string, targetType: 'POST' | 'REPLY', targetId: string): Promise<boolean> {
+    // P6.4: "liked_by_me" now means "viewer reacted with ANY emoji",
+    // not just HEART. Mobile UI that hasn't migrated to the multi-
+    // emoji palette still gets the correct filled-heart state.
     const r = await this.prisma.reaction.findFirst({
-      where: { userId, targetType, targetId, reactionType: 'LIKE' },
+      where: { userId, targetType, targetId },
       select: { id: true },
     });
     return r !== null;
+  }
+
+  /**
+   * P6.4: returns the viewer's reaction emoji (or null) on this
+   * target. Public so ReplyService can reuse the same query.
+   */
+  async myReactionFor(
+    userId: string,
+    targetType: 'POST' | 'REPLY',
+    targetId: string,
+  ): Promise<string | null> {
+    const r = await this.prisma.reaction.findFirst({
+      where: { userId, targetType, targetId },
+      select: { reactionType: true },
+    });
+    return r?.reactionType ?? null;
   }
 }

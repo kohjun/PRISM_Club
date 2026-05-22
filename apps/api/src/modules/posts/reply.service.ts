@@ -9,7 +9,9 @@ import {
 } from '../../shared/block-mute.service';
 import { MentionService } from '../notifications/mention.service';
 import { NotificationService } from '../notifications/notification.service';
-import { PostAuthorDTO, ReplyDTO } from './dto/post.dto';
+import { PostAuthorDTO, ReplyDTO, ReactionType } from './dto/post.dto';
+// Imported for typing only — silence unused-import warnings.
+void ({} as ReactionType);
 
 export interface CreateReplyInput {
   body: string;
@@ -168,19 +170,26 @@ export class ReplyService {
       orderBy: [{ createdAt: 'asc' }],
     });
 
-    // Resolve liked-by-me in a single query
-    const likedReplyIds = await this.prisma.reaction.findMany({
+    // P6.4: batch-resolve the viewer's reaction emoji per reply.
+    // Note: dropped the reactionType filter — any reaction counts as
+    // "liked" so the old heart UI keeps rendering even after the
+    // viewer picks a non-HEART emoji on the multi-emoji palette.
+    const reactions = await this.prisma.reaction.findMany({
       where: {
         userId: viewer.id,
         targetType: 'REPLY',
         targetId: { in: replies.map((r) => r.id) },
-        reactionType: 'LIKE',
       },
-      select: { targetId: true },
+      select: { targetId: true, reactionType: true },
     });
-    const likedSet = new Set(likedReplyIds.map((r) => r.targetId));
+    const myReactionByReply = new Map<string, string>();
+    for (const r of reactions) {
+      myReactionByReply.set(r.targetId, r.reactionType);
+    }
 
-    return replies.map((r) => this.toDTO(r, viewer.id, likedSet.has(r.id)));
+    return replies.map((r) =>
+      this.toDTO(r, viewer.id, myReactionByReply.get(r.id) ?? null),
+    );
   }
 
   async softDelete(replyId: string, viewer: RequestUser): Promise<void> {
@@ -219,7 +228,7 @@ export class ReplyService {
       author: { id: string; profile: { nickname: string; avatarUrl: string | null } | null } | null;
     },
     _viewerId: string,
-    likedByMe: boolean = false,
+    myReaction: string | null = null,
   ): ReplyDTO {
     const author: PostAuthorDTO = {
       id: reply.author?.id ?? '',
@@ -236,7 +245,9 @@ export class ReplyService {
       created_at: reply.createdAt.toISOString(),
       updated_at: reply.updatedAt.toISOString(),
       like_count: reply.likeCount,
-      liked_by_me: likedByMe,
+      liked_by_me: myReaction !== null,
+      my_reaction:
+        (myReaction as ReplyDTO['my_reaction'] | null) ?? null,
     };
   }
 }

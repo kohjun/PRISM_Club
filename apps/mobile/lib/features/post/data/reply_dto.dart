@@ -12,6 +12,7 @@ class ReplyDto {
     required this.updatedAt,
     required this.likeCount,
     required this.likedByMe,
+    this.myReaction,
   });
 
   final String id;
@@ -24,8 +25,15 @@ class ReplyDto {
   final DateTime updatedAt;
   final int likeCount;
   final bool likedByMe;
+  final String? myReaction;
 
-  ReplyDto copyWith({int? likeCount, bool? likedByMe}) => ReplyDto(
+  ReplyDto copyWith({
+    int? likeCount,
+    bool? likedByMe,
+    String? myReaction,
+    bool clearMyReaction = false,
+  }) =>
+      ReplyDto(
         id: id,
         postId: postId,
         parentReplyId: parentReplyId,
@@ -36,6 +44,8 @@ class ReplyDto {
         updatedAt: updatedAt,
         likeCount: likeCount ?? this.likeCount,
         likedByMe: likedByMe ?? this.likedByMe,
+        myReaction:
+            clearMyReaction ? null : (myReaction ?? this.myReaction),
       );
 
   factory ReplyDto.fromJson(Map<String, dynamic> json) => ReplyDto(
@@ -50,5 +60,6 @@ class ReplyDto {
         updatedAt: DateTime.parse(json['updated_at'] as String),
         likeCount: json['like_count'] as int? ?? 0,
         likedByMe: json['liked_by_me'] as bool? ?? false,
+        myReaction: json['my_reaction'] as String?,
       );
 }

@@ -628,12 +628,15 @@ model Reaction {
   userId       String   @map("user_id") @db.Uuid
   targetType   String   @map("target_type") // POST | REPLY
   targetId     String   @map("target_id") @db.Uuid
-  reactionType String   @default("LIKE") @map("reaction_type")
+  // P6.4 reaction taxonomy:
+  //   HEART | THUMBS_UP | FIRE | THINK | IDEA | LAUGH
+  // Legacy LIKE rows were migrated to HEART in the P6.4 migration.
+  reactionType String   @default("HEART") @map("reaction_type")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, targetType, targetId, reactionType])
+  @@unique([userId, targetType, targetId], map: "reactions_user_target_unique")
   @@index([targetType, targetId])
   @@map("reactions")
 }

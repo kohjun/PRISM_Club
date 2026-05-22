@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../app/design_tokens.dart';
 import '../features/post/data/post_dto.dart';
+import '../features/post/data/reaction_repository.dart';
 import '../features/user_profile/data/user_search_repository.dart';
 import 'event_card_widget.dart';
 import 'media_image.dart';
 import 'mention_text.dart';
 import 'prism_avatar.dart';
+import 'reaction_palette.dart';
 import 'reference_card_widget.dart';
 
 /// Post card. Header (avatar + name + handle + time + room) → body → optional
@@ -88,7 +90,9 @@ class PostCardWidget extends ConsumerWidget {
                 likeCount: post.likeCount,
                 replyCount: post.replyCount,
                 likedByMe: post.likedByMe,
+                myReaction: post.myReaction,
                 onLikePressed: onLikePressed,
+                onReactionPick: (type) => _onPick(context, ref, type),
               ),
             ],
           ),
@@ -119,6 +123,25 @@ class PostCardWidget extends ConsumerWidget {
       context.push('/users/${exact.id}');
     } catch (_) {
       // ignore — best-effort navigation
+    }
+  }
+
+  /// P6.4: fires when the user picks an emoji from the palette. We
+  /// toggle directly via the repo — the parent screen's `onLikePressed`
+  /// is left intact for the legacy "tap heart" path (back-compat).
+  /// State refresh after toggle is the parent's job via its existing
+  /// provider invalidation.
+  Future<void> _onPick(
+    BuildContext context,
+    WidgetRef ref,
+    String type,
+  ) async {
+    try {
+      await ref
+          .read(reactionRepositoryProvider)
+          .toggle('POST', post.id, reactionType: type);
+    } catch (_) {
+      // Silent — palette interaction shouldn't break the surface.
     }
   }
 }
@@ -272,48 +295,72 @@ class _ActionRow extends StatelessWidget {
     required this.likeCount,
     required this.replyCount,
     required this.likedByMe,
+    this.myReaction,
     this.onLikePressed,
+    this.onReactionPick,
   });
 
   final int likeCount;
   final int replyCount;
   final bool likedByMe;
+  final String? myReaction;
   final VoidCallback? onLikePressed;
+  final void Function(String type)? onReactionPick;
 
   @override
   Widget build(BuildContext context) {
+    // P6.4: render the chosen emoji when set; fall back to the heart
+    // icon for legacy "no reaction yet" + tap-only paths.
+    final Widget reactionIcon = myReaction != null
+        ? Text(
+            kReactionEmoji[myReaction!] ?? '❤️',
+            style: const TextStyle(fontSize: 18),
+          )
+        : Icon(
+            likedByMe ? Icons.favorite : Icons.favorite_border,
+            size: 20,
+            color: likedByMe ? PrismColors.danger : PrismColors.ink4,
+          );
+
     return Row(
       children: [
         Semantics(
           button: true,
           toggled: likedByMe,
-          label: likedByMe ? '좋아요 취소' : '좋아요',
-          child: InkWell(
-            onTap: onLikePressed,
-            borderRadius: BorderRadius.circular(PrismRadius.sm),
-            child: Container(
-              constraints:
-                  const BoxConstraints(minHeight: 44, minWidth: 44),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    likedByMe ? Icons.favorite : Icons.favorite_border,
-                    size: 20,
-                    color: likedByMe ? PrismColors.danger : PrismColors.ink4,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$likeCount',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: likedByMe ? PrismColors.danger : PrismColors.ink3,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+          label: likedByMe ? '리액션 변경' : '리액션 추가',
+          child: GestureDetector(
+            onLongPress: onReactionPick == null
+                ? null
+                : () async {
+                    final picked = await showReactionPalette(
+                      context,
+                      currentReaction: myReaction,
+                    );
+                    if (picked != null) onReactionPick!(picked);
+                  },
+            child: InkWell(
+              onTap: onLikePressed,
+              borderRadius: BorderRadius.circular(PrismRadius.sm),
+              child: Container(
+                constraints:
+                    const BoxConstraints(minHeight: 44, minWidth: 44),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                child: Row(
+                  children: [
+                    reactionIcon,
+                    const SizedBox(width: 6),
+                    Text(
+                      '$likeCount',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: likedByMe ? PrismColors.danger : PrismColors.ink3,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

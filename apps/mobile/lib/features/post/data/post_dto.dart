@@ -99,6 +99,7 @@ class PostDto {
     required this.replyCount,
     required this.likeCount,
     required this.likedByMe,
+    this.myReaction,
     this.quotedPost,
   });
 
@@ -117,6 +118,9 @@ class PostDto {
   final int replyCount;
   final int likeCount;
   final bool likedByMe;
+  /// P6.4: viewer's specific emoji (HEART/THUMBS_UP/FIRE/THINK/IDEA/LAUGH),
+  /// or null if the viewer has not reacted.
+  final String? myReaction;
   final QuotedPostRefDto? quotedPost;
 
   bool get isRecruitment => postType == 'RECRUITMENT';
@@ -124,6 +128,8 @@ class PostDto {
   PostDto copyWith({
     int? likeCount,
     bool? likedByMe,
+    String? myReaction,
+    bool clearMyReaction = false,
     int? replyCount,
     RecruitmentFieldsDto? recruitmentFields,
   }) =>
@@ -143,6 +149,7 @@ class PostDto {
         replyCount: replyCount ?? this.replyCount,
         likeCount: likeCount ?? this.likeCount,
         likedByMe: likedByMe ?? this.likedByMe,
+        myReaction: clearMyReaction ? null : (myReaction ?? this.myReaction),
         quotedPost: quotedPost,
       );
 
@@ -173,6 +180,7 @@ class PostDto {
       replyCount: counts['reply_count'] as int? ?? 0,
       likeCount: counts['like_count'] as int? ?? 0,
       likedByMe: json['liked_by_me'] as bool? ?? false,
+      myReaction: json['my_reaction'] as String?,
       quotedPost: quotedRaw is Map
           ? QuotedPostRefDto.fromJson(quotedRaw.cast<String, dynamic>())
           : null,
