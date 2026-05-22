@@ -88,7 +88,7 @@ export class PostService {
     }
 
     const post = await this.prisma.$transaction(async (tx) => {
-      return tx.post.create({
+      const created = await tx.post.create({
         data: {
           roomId: room.id,
           authorId: viewer.id,
@@ -110,6 +110,25 @@ export class PostService {
               : undefined,
         },
       });
+      // P3.6: also write the structured RecruitmentPost row so the
+      // application-tracking surface has a 1:1 anchor to query. The
+      // legacy `recruitmentFields` JSON is still written for
+      // backward-compat with mobile reads — dual-write window until
+      // those readers move to the new shape.
+      if (postType === 'RECRUITMENT' && recruitmentFields !== null) {
+        await tx.recruitmentPost.create({
+          data: {
+            postId: created.id,
+            capacity: recruitmentFields.capacity ?? null,
+            status: recruitmentFields.status ?? 'OPEN',
+            // deadline_at is not on the existing RecruitmentFieldsInput
+            // shape today — the structured row keeps it nullable so a
+            // future composer that surfaces a deadline picker can fill
+            // it in without a schema migration.
+          },
+        });
+      }
+      return created;
     });
 
     // Notify room followers of new post (post-tx, non-blocking)

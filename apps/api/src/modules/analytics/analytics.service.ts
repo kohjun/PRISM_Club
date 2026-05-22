@@ -29,6 +29,8 @@ export type EventType =
   | 'EVENT_DETAIL_VIEWED'
   | 'EVENT_RSVP_CHANGED'
   | 'EVENT_UPDATED_NOTIFY'
+  | 'RECRUITMENT_APPLIED'
+  | 'RECRUITMENT_DECISION_MADE'
   | 'SEARCH_QUERY';
 
 export interface EventInput {

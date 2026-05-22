@@ -30,31 +30,32 @@ model User {
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  profile                Profile?
-  roles                  UserRole[]
-  rooms                  Room[]
-  posts                  Post[]
-  replies                Reply[]
-  reactions              Reaction[]
-  references             Reference[]
-  contributions          KnowledgeContribution[]  @relation("Contributor")
-  resolvedContributions  KnowledgeContribution[]  @relation("Resolver")
-  follows                RoomFollow[]
-  savedItems             SavedItem[]
-  notifications          Notification[]
-  following              UserFollow[]             @relation("UserFollowing")
-  followers              UserFollow[]             @relation("UserFollowers")
-  reports                Report[]                 @relation("ReportReporter")
-  resolvedReports        Report[]                 @relation("ReportResolver")
-  moderationActions      ModerationAction[]
-  mediaAssets            MediaAsset[]
-  refreshTokens          RefreshToken[]
-  deviceTokens           DeviceToken[]
-  notificationPreference NotificationPreference?
-  knowledgeRevisions     KnowledgeBlockRevision[]
-  contributionReputation ContributionReputation?
-  referenceSourceRules   ReferenceSourceRule[]
-  eventRsvps             EventRsvp[]
+  profile                 Profile?
+  roles                   UserRole[]
+  rooms                   Room[]
+  posts                   Post[]
+  replies                 Reply[]
+  reactions               Reaction[]
+  references              Reference[]
+  contributions           KnowledgeContribution[]  @relation("Contributor")
+  resolvedContributions   KnowledgeContribution[]  @relation("Resolver")
+  follows                 RoomFollow[]
+  savedItems              SavedItem[]
+  notifications           Notification[]
+  following               UserFollow[]             @relation("UserFollowing")
+  followers               UserFollow[]             @relation("UserFollowers")
+  reports                 Report[]                 @relation("ReportReporter")
+  resolvedReports         Report[]                 @relation("ReportResolver")
+  moderationActions       ModerationAction[]
+  mediaAssets             MediaAsset[]
+  refreshTokens           RefreshToken[]
+  deviceTokens            DeviceToken[]
+  notificationPreference  NotificationPreference?
+  knowledgeRevisions      KnowledgeBlockRevision[]
+  contributionReputation  ContributionReputation?
+  referenceSourceRules    ReferenceSourceRule[]
+  eventRsvps              EventRsvp[]
+  recruitmentApplications RecruitmentApplication[]
 
   @@map("users")
 }
@@ -463,9 +464,53 @@ model Post {
   author      User             @relation(fields: [authorId], references: [id])
   attachments PostAttachment[]
   replies     Reply[]
+  recruitment RecruitmentPost?
 
   @@index([roomId, createdAt(sort: Desc)])
   @@map("posts")
+}
+
+// P3.6: structured recruitment metadata. 1:1 with the parent Post
+// (PK == post_id, so the row is created in the same transaction that
+// creates a RECRUITMENT post). Status state machine:
+//   OPEN → CLOSED      (planner manually closes)
+//        → FILLED      (auto when ACCEPTED count == capacity)
+//        → CANCELLED   (planner cancels before close)
+// `deadline_at` is informational today; future cron will auto-CLOSE
+// past-deadline rows.
+model RecruitmentPost {
+  postId     String    @id @map("post_id") @db.Uuid
+  capacity   Int?
+  status     String    @default("OPEN")
+  deadlineAt DateTime? @map("deadline_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  post         Post                     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  applications RecruitmentApplication[]
+
+  @@map("recruitment_posts")
+}
+
+// P3.6: per-applicant submission for a recruitment post. Unique on
+// (post_id, applicant_id) so an applicant can't submit twice; the
+// applicant can withdraw (status=WITHDRAWN) but a single row is the
+// canonical history.
+model RecruitmentApplication {
+  id          String   @id @default(uuid()) @db.Uuid
+  postId      String   @map("post_id") @db.Uuid
+  applicantId String   @map("applicant_id") @db.Uuid
+  message     String?
+  status      String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | WITHDRAWN
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  recruitmentPost RecruitmentPost @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  applicant       User            @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, applicantId])
+  @@index([applicantId, createdAt(sort: Desc)])
+  @@map("recruitment_applications")
 }
 
 model PostAttachment {
