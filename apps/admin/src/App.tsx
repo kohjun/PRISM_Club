@@ -10,6 +10,7 @@ import {
   fetchHealthVersion,
   fetchOpenReports,
   fetchOpsSummary,
+  fetchSystemHealth,
   getSession,
   getApiBase,
   HealthReady,
@@ -20,7 +21,9 @@ import {
   Session,
   setApiBase,
   setSession,
+  type MetricBlock,
   type OpsSummary,
+  type SystemHealthSnapshot,
 } from './api';
 
 const DOC_LINKS: { label: string; path: string; what: string }[] = [
@@ -158,6 +161,8 @@ function Dashboard({
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [version, setVersion] = useState<HealthVersion | null>(null);
   const [ready, setReady] = useState<HealthReady | null>(null);
+  const [systemHealth, setSystemHealth] =
+    useState<SystemHealthSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -167,13 +172,14 @@ function Dashboard({
     setLoading(true);
     setError(null);
     try {
-      const [s, r, ec, an, v, rd] = await Promise.all([
+      const [s, r, ec, an, v, rd, sh] = await Promise.all([
         fetchOpsSummary(),
         fetchOpenReports(),
         fetchEventsClientStatus().catch(() => null),
         fetchAnalyticsSummary().catch(() => null),
         fetchHealthVersion().catch(() => null),
         fetchHealthReady().catch(() => null),
+        fetchSystemHealth().catch(() => null),
       ]);
       setSummary(s);
       setReports(r.items);
@@ -181,6 +187,7 @@ function Dashboard({
       setAnalytics(an);
       setVersion(v);
       setReady(rd);
+      setSystemHealth(sh);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -358,6 +365,10 @@ function Dashboard({
               </div>
             )}
 
+            {systemHealth && (
+              <SystemHealthCard snapshot={systemHealth} />
+            )}
+
             <div className="card">
               <h3>Recent users ({summary.recent_users.count})</h3>
               <div className="list">
@@ -528,6 +539,86 @@ function BetaLaunchCard({
       </ul>
     </div>
   );
+}
+
+function SystemHealthCard({ snapshot }: { snapshot: SystemHealthSnapshot }) {
+  // Group by subsystem prefix (everything before the first dot) so the
+  // operator scans search vs notification vs media at a glance instead of
+  // a flat 11-row list.
+  const groups = new Map<string, MetricBlock[]>();
+  for (const m of snapshot.metrics) {
+    const dot = m.key.indexOf('.');
+    const subsystem = dot >= 0 ? m.key.slice(0, dot) : 'other';
+    const arr = groups.get(subsystem) ?? [];
+    arr.push(m);
+    groups.set(subsystem, arr);
+  }
+  const generatedAgo = formatAgo(snapshot.generated_at);
+
+  return (
+    <div className="card" style={{ gridColumn: '1 / -1' }}>
+      <h3>System health</h3>
+      <div className="row">
+        <span className="label">Snapshot</span>
+        <span className="value">{generatedAgo}</span>
+      </div>
+      {[...groups.entries()].map(([subsystem, blocks]) => (
+        <div key={subsystem} style={{ marginTop: 8 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--muted, #888)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.4,
+              marginBottom: 4,
+            }}
+          >
+            {subsystem}
+          </div>
+          <div className="list">
+            {blocks.map((b) => (
+              <div className="item" key={b.key}>
+                <div>{b.key.slice(subsystem.length + 1) || b.key}</div>
+                <div className="meta">
+                  {formatMetricSummary(b)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function formatMetricSummary(b: MetricBlock): string {
+  const parts: string[] = [];
+  parts.push(`${b.count_1h}/h`);
+  if (b.count_24h !== b.count_1h) parts.push(`${b.count_24h}/24h`);
+  if (b.p95_1h !== null) parts.push(`p95 ${formatNumber(b.p95_1h)}`);
+  if (b.p50_1h !== null && b.p50_1h !== b.p95_1h) {
+    parts.push(`p50 ${formatNumber(b.p50_1h)}`);
+  }
+  if (b.avg_1h !== null && b.p95_1h === null) {
+    parts.push(`avg ${formatNumber(b.avg_1h)}`);
+  }
+  return parts.join(' · ');
+}
+
+function formatNumber(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  if (n >= 10) return n.toFixed(0);
+  return n.toFixed(1);
+}
+
+function formatAgo(iso: string): string {
+  const t = new Date(iso).getTime();
+  const diff = Date.now() - t;
+  const s = Math.round(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.round(s / 60)}m ago`;
+  return `${Math.round(s / 3600)}h ago`;
 }
 
 function ChecklistRow({

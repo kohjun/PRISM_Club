@@ -178,6 +178,24 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   return request<AnalyticsSummary>('/admin/analytics/summary');
 }
 
+export interface MetricBlock {
+  key: string;
+  count_1h: number;
+  count_24h: number;
+  p50_1h: number | null;
+  p95_1h: number | null;
+  avg_1h: number | null;
+}
+
+export interface SystemHealthSnapshot {
+  generated_at: string;
+  metrics: MetricBlock[];
+}
+
+export async function fetchSystemHealth(): Promise<SystemHealthSnapshot> {
+  return request<SystemHealthSnapshot>('/admin/system-health');
+}
+
 export interface HealthVersion {
   app_version: string;
   git_sha: string;
