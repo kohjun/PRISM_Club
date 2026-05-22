@@ -12,3 +12,9 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Firebase configuration — per-environment, fetched from the team secret
+# store at build time. Contains the FCM sender ID and the Crashlytics
+# mapping upload key; not a hard secret but Firebase recommends keeping
+# it out of public source control.
+app/google-services.json

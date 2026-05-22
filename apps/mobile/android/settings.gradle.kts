@@ -21,6 +21,12 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.11.1" apply false
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    // Firebase plugins (P1.2 FCM + P1.3 Crashlytics). Versions declared
+    // here apply=false so the classpath is available to app/build.gradle.kts;
+    // each plugin is applied in the app module when its consumer is ready
+    // (google-services with FCM wiring, crashlytics with the bootstrap PR).
+    id("com.google.gms.google-services") version "4.4.4" apply false
+    id("com.google.firebase.crashlytics") version "3.0.6" apply false
 }
 
 include(":app")
