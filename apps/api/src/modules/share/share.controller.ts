@@ -20,7 +20,7 @@ const VALID_TYPES = new Set<ShareTargetType>([
 ]);
 
 const DEFAULT_PLAY_STORE_URL =
-  'https://play.google.com/store/apps/details?id=com.prism.club';
+  'https://play.google.com/store/apps/details?id=club.prism.mobile';
 
 @Controller()
 export class ShareController {
