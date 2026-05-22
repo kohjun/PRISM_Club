@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import {
   SEARCH_TYPES,
   SearchEntityType,
@@ -50,6 +51,7 @@ export class SearchService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   // -- /v1/search ---------------------------------------------------------
@@ -82,7 +84,25 @@ export class SearchService {
       return { type, items };
     });
 
+    const startedAt = Date.now();
     const groups = await Promise.all(tasks);
+    const elapsedMs = Date.now() - startedAt;
+
+    // P2.5: capture query telemetry. q itself goes through the
+    // analytics payload scrubber (truncated to 120 chars; no PII keys),
+    // so storing the literal text is intentionally safe for a search
+    // query and useful for tracking zero-result terms.
+    const totalHits = groups.reduce((sum, g) => sum + g.items.length, 0);
+    this.analytics.record({
+      eventType: 'SEARCH_QUERY',
+      payload: {
+        query: q,
+        types_count: groups.length,
+        total_hits: totalHits,
+        zero_result: totalHits === 0,
+        ms_elapsed: elapsedMs,
+      },
+    });
 
     return { query: q, groups };
   }

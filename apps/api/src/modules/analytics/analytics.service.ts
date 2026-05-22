@@ -26,7 +26,8 @@ export type EventType =
   | 'NOTIFICATION_READ'
   | 'REPORT_CREATED'
   | 'MEDIA_UPLOADED'
-  | 'EVENT_DETAIL_VIEWED';
+  | 'EVENT_DETAIL_VIEWED'
+  | 'SEARCH_QUERY';
 
 export interface EventInput {
   actorId?: string | null;
