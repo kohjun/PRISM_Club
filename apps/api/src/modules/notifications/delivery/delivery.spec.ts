@@ -36,7 +36,11 @@ describe('NotificationDelivery providers', () => {
   beforeEach(() => {
     envSnapshot = { ...process.env };
     for (const k of Object.keys(process.env)) {
-      if (k.startsWith('EMAIL_') || k.startsWith('PUSH_')) {
+      if (
+        k.startsWith('EMAIL_') ||
+        k.startsWith('PUSH_') ||
+        k.startsWith('FIREBASE_')
+      ) {
         delete process.env[k];
       }
     }
