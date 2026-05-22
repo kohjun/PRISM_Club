@@ -267,4 +267,47 @@ export class UserProfileService {
       throw new BadRequestException(`Unsupported fields: ${extra.join(', ')}`);
     }
   }
+
+  /**
+   * P4.5 paginated post activity. Same access + recruitment-visibility
+   * rules as `getProfileBundle` so a planner-only or hidden post never
+   * leaks through cursor traversal. Cursor is the last post id from
+   * the previous page; orderBy is (createdAt desc, id desc) so the
+   * ordering is stable across writes.
+   */
+  async listPostsForUser(
+    userId: string,
+    viewer: Viewer & { id: string },
+    opts: { cursor?: string; limit?: number } = {},
+  ): Promise<{ items: any[]; next_cursor: string | null }> {
+    const exists = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException(`User not found: ${userId}`);
+
+    const allowed = this.access.accessPoliciesAllowedFor(viewer);
+    const isVerifiedPlanner = this.access.isVerifiedPlanner(viewer);
+    const postWhere = {
+      authorId: userId,
+      status: { notIn: ['DELETED', 'HIDDEN'] },
+      room: { category: { space: { accessPolicy: { in: allowed } } } },
+      ...(isVerifiedPlanner ? {} : { postType: { not: 'RECRUITMENT' } }),
+    };
+
+    const limit = Math.max(1, Math.min(opts.limit ?? 20, 50));
+    const rows = await this.prisma.post.findMany({
+      where: postWhere,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(opts.cursor
+        ? { cursor: { id: opts.cursor }, skip: 1 }
+        : {}),
+      include: POST_INCLUDE,
+    });
+    const hasMore = rows.length > limit;
+    const sliced = hasMore ? rows.slice(0, limit) : rows;
+    const items = await this.postService.postsToDTOs(sliced, viewer.id);
+    return { items, next_cursor: hasMore ? sliced[sliced.length - 1].id : null };
+  }
 }
