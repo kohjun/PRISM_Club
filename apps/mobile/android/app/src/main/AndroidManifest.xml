@@ -8,6 +8,15 @@
       java.net.UnknownHostException.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!--
+      POST_NOTIFICATIONS — runtime permission required on Android 13+
+      (API 33) for any app that wants to show notification posts.
+      firebase_messaging respects this gate; without it, the OS silently
+      drops every push at the system level even though FCM reports
+      success-from-server. We prompt at first launch via permission_handler
+      (see lib/core/push/fcm_bootstrap.dart).
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
         android:label="@string/app_name"
@@ -40,6 +49,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!--
+          Default channel firebase_messaging registers system-side. The
+          channel itself is also created from Dart for backwards-compat
+          (see fcm_bootstrap.dart); this meta-data lets FCM-direct
+          payloads (without a Dart-side handler) post into a sensible
+          channel instead of falling back to "Miscellaneous".
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="prism_default" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

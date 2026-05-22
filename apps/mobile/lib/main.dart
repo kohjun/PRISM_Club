@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'core/observability/crashlytics_bootstrap.dart';
+import 'core/push/fcm_bootstrap.dart';
 
 Future<void> main() async {
   // `runZonedGuarded` catches synchronous + asynchronous errors that
@@ -14,6 +15,9 @@ Future<void> main() async {
   await runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
     await CrashlyticsBootstrap.initialize();
+    // FCM after Firebase is ready. Server-side token registration
+    // crosses into auth and is wired in lib/features/notifications.
+    await FcmBootstrap.initialize();
     runApp(const ProviderScope(child: PrismClubApp()));
   }, (error, stack) {
     // Final safety net — anything thrown outside Flutter's own zones
