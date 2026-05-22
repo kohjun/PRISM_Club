@@ -58,6 +58,9 @@ model User {
   recruitmentApplications RecruitmentApplication[]
   eventReminderSends      EventReminderSend[]
   eventReviews            EventReview[]
+  savedCollections        SavedCollection[]
+  followRecommendations   FollowRecommendation[]   @relation("FollowRecOwner")
+  recommendedByOthers     FollowRecommendation[]   @relation("FollowRecCandidate")
 
   @@map("users")
 }
@@ -467,6 +470,8 @@ model Post {
   attachments PostAttachment[]
   replies     Reply[]
   recruitment RecruitmentPost?
+  quote       PostQuote?       @relation("QuotingPost")
+  quotedBy    PostQuote[]      @relation("QuotedPost")
 
   @@index([roomId, createdAt(sort: Desc)])
   @@map("posts")
@@ -823,17 +828,73 @@ model RoomFollow {
 
 // target_type: POST | REFERENCE | EVENT_CARD; target_id has no FK (resolved at read time).
 model SavedItem {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  targetType String   @map("target_type")
-  targetId   String   @map("target_id") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  targetType   String   @map("target_type")
+  targetId     String   @map("target_id") @db.Uuid
+  // P4.4: optional folder assignment. NULL = uncategorised, which the
+  // mobile renders under the "전체" tab.
+  collectionId String?  @map("collection_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collection SavedCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
 
   @@unique([userId, targetType, targetId])
-  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, collectionId, createdAt(sort: Desc)])
   @@map("saved_items")
+}
+
+// P4.4: per-user named folder for organising saved items. Each user
+// can have at most 20 collections; the service caps creates and
+// surfaces a clean error otherwise.
+model SavedCollection {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String   @db.VarChar(50)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedItems SavedItem[]
+
+  @@unique([userId, name])
+  @@map("saved_collections")
+}
+
+// P4.2: quote-share. UNIQUE on quoting_post_id keeps the quote a 1:1
+// from the quoting side; quoted_post is nullable so deleting the
+// original doesn't take the quoter's reply with it (FK = SET NULL).
+model PostQuote {
+  id            String   @id @default(uuid()) @db.Uuid
+  quotingPostId String   @unique @map("quoting_post_id") @db.Uuid
+  quotedPostId  String?  @map("quoted_post_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  quotingPost Post  @relation("QuotingPost", fields: [quotingPostId], references: [id], onDelete: Cascade)
+  quotedPost  Post? @relation("QuotedPost", fields: [quotedPostId], references: [id], onDelete: SetNull)
+
+  @@index([quotedPostId, createdAt(sort: Desc)])
+  @@map("post_quotes")
+}
+
+// P4.3: per-(user, recommended-user) follow recommendation cache.
+// `score` is the Jaccard overlap on the categories the two users
+// follow rooms in; recomputed nightly by the recommendations cron.
+model FollowRecommendation {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  recommendedUserId String   @map("recommended_user_id") @db.Uuid
+  score             Float
+  reason            Json
+  computedAt        DateTime @default(now()) @map("computed_at") @db.Timestamptz(6)
+
+  user            User @relation("FollowRecOwner", fields: [userId], references: [id], onDelete: Cascade)
+  recommendedUser User @relation("FollowRecCandidate", fields: [recommendedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recommendedUserId])
+  @@index([userId, score(sort: Desc)])
+  @@map("follow_recommendations")
 }
 
 // type: REPLY_ON_POST | NESTED_REPLY | NEW_POST_IN_FOLLOWED_ROOM |
@@ -884,16 +945,21 @@ model DeviceToken {
 // `pref_push_enabled` short-circuits PushDelivery; per-type bools gate
 // individual notification rows.
 model NotificationPreference {
-  userId                       String   @id @map("user_id") @db.Uuid
-  prefReplyOnPost              Boolean  @default(true) @map("pref_reply_on_post")
-  prefNestedReply              Boolean  @default(true) @map("pref_nested_reply")
-  prefNewPostInFollowedRoom    Boolean  @default(true) @map("pref_new_post_in_followed_room")
-  prefRecruitmentStatusChanged Boolean  @default(true) @map("pref_recruitment_status_changed")
-  prefContributionResolved     Boolean  @default(true) @map("pref_contribution_resolved")
-  prefPushEnabled              Boolean  @default(true) @map("pref_push_enabled")
-  prefEmailEnabled             Boolean  @default(true) @map("pref_email_enabled")
-  updatedAt                    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  createdAt                    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  userId                       String    @id @map("user_id") @db.Uuid
+  prefReplyOnPost              Boolean   @default(true) @map("pref_reply_on_post")
+  prefNestedReply              Boolean   @default(true) @map("pref_nested_reply")
+  prefNewPostInFollowedRoom    Boolean   @default(true) @map("pref_new_post_in_followed_room")
+  prefRecruitmentStatusChanged Boolean   @default(true) @map("pref_recruitment_status_changed")
+  prefContributionResolved     Boolean   @default(true) @map("pref_contribution_resolved")
+  prefPushEnabled              Boolean   @default(true) @map("pref_push_enabled")
+  prefEmailEnabled             Boolean   @default(true) @map("pref_email_enabled")
+  // P4.6 weekly digest opt-in. Default false — users explicitly opt
+  // in via the notification settings screen. `weeklyDigestLastSentAt`
+  // is the cron's idempotency anchor (skip if within 6 days).
+  weeklyDigestEnabled          Boolean   @default(false) @map("weekly_digest_enabled")
+  weeklyDigestLastSentAt       DateTime? @map("weekly_digest_last_sent_at") @db.Timestamptz(6)
+  updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
