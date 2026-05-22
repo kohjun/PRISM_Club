@@ -27,7 +27,11 @@ function buildPushDelivery(opts: {
         opts.tokens ?? [{ id: 't-1', provider: 'FCM', token: 'tok-xxxxxxxx' }],
       ),
   } as unknown as DeviceTokenService;
-  return new PushDelivery(prefs, deviceTokens);
+  const metrics = {
+    record: jest.fn(),
+    inc: jest.fn(),
+  } as unknown as import('../../../shared/metrics.service').MetricsService;
+  return new PushDelivery(prefs, deviceTokens, metrics);
 }
 
 describe('NotificationDelivery providers', () => {
