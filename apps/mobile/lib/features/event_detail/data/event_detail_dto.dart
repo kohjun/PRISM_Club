@@ -63,6 +63,39 @@ class RsvpStateDto {
   }
 }
 
+class EventReviewDto {
+  const EventReviewDto({
+    required this.id,
+    required this.userId,
+    required this.userNickname,
+    required this.rating,
+    required this.body,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String userId;
+  final String? userNickname;
+  final int rating;
+  final String body;
+  final String status;
+  final DateTime createdAt;
+
+  factory EventReviewDto.fromJson(Map<String, dynamic> j) {
+    final user = (j['user'] as Map).cast<String, dynamic>();
+    return EventReviewDto(
+      id: j['id'] as String,
+      userId: user['id'] as String,
+      userNickname: user['nickname'] as String?,
+      rating: j['rating'] as int,
+      body: j['body'] as String,
+      status: j['status'] as String? ?? 'VISIBLE',
+      createdAt: DateTime.parse(j['created_at'] as String),
+    );
+  }
+}
+
 class EventDetailBundleDto {
   const EventDetailBundleDto({
     required this.eventCard,
@@ -73,6 +106,9 @@ class EventDetailBundleDto {
     required this.postCount,
     required this.roomCount,
     required this.rsvp,
+    required this.verifiedReviews,
+    required this.reviewCount,
+    required this.reviewAverage,
   });
 
   final EventCardDto eventCard;
@@ -83,6 +119,9 @@ class EventDetailBundleDto {
   final int postCount;
   final int roomCount;
   final RsvpStateDto rsvp;
+  final List<EventReviewDto> verifiedReviews;
+  final int reviewCount;
+  final double? reviewAverage;
 
   factory EventDetailBundleDto.fromJson(Map<String, dynamic> json) {
     final card = EventCardDto.fromJson(
@@ -103,6 +142,11 @@ class EventDetailBundleDto {
     final rsvp = rsvpRaw is Map
         ? RsvpStateDto.fromJson(rsvpRaw.cast<String, dynamic>())
         : RsvpStateDto.empty;
+    final reviews = (json['verified_reviews'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(EventReviewDto.fromJson)
+        .toList(growable: false);
+    final avgRaw = counts['review_average'];
     return EventDetailBundleDto(
       eventCard: card,
       relatedRooms: rooms,
@@ -112,6 +156,9 @@ class EventDetailBundleDto {
       postCount: counts['post_count'] as int? ?? 0,
       roomCount: counts['room_count'] as int? ?? 0,
       rsvp: rsvp,
+      verifiedReviews: reviews,
+      reviewCount: counts['review_count'] as int? ?? 0,
+      reviewAverage: avgRaw is num ? avgRaw.toDouble() : null,
     );
   }
 }

@@ -11,8 +11,11 @@ import '../../../widgets/state_views.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../post/data/post_dto.dart';
 import '../../saves/data/saves_repository.dart';
-import 'widgets/rsvp_segment.dart';
 import '../data/event_detail_dto.dart';
+import 'event_review_compose_screen.dart';
+import 'widgets/event_recap_section.dart';
+import 'widgets/event_review_card.dart';
+import 'widgets/rsvp_segment.dart';
 import '../data/event_detail_repository.dart';
 import 'widgets/compose_room_picker.dart';
 
@@ -94,6 +97,36 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                     rsvp: b.rsvp,
                     eventStatus: b.eventCard.eventStatus,
                     startsAt: b.eventCard.startsAt,
+                  ),
+                ),
+                // P3.5: post-event recap. Self-hides when the event isn't
+                // COMPLETED or no posts/reviews landed.
+                SliverToBoxAdapter(
+                  child: EventRecapSection(
+                    eventCardId: b.eventCard.id,
+                    eventStatus: b.eventCard.eventStatus,
+                  ),
+                ),
+                // P3.3: top-N reviews + composer entry point. Composer is
+                // gated on ATTENDED RSVP server-side; the button surfaces
+                // only when the gate is satisfiable here.
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    PrismSpacing.xl,
+                    PrismSpacing.lg,
+                    PrismSpacing.xl,
+                    0,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: _ReviewSection(
+                      eventCardId: b.eventCard.id,
+                      reviews: b.verifiedReviews,
+                      reviewCount: b.reviewCount,
+                      reviewAverage: b.reviewAverage,
+                      canWrite:
+                          b.eventCard.eventStatus == 'COMPLETED' &&
+                          b.rsvp.myStatus == 'ATTENDED',
+                    ),
                   ),
                 ),
                 SliverPadding(
@@ -630,6 +663,81 @@ class _ComposeFab extends StatelessWidget {
         ),
         onPressed: _enabled ? () => _onPressed(context) : null,
       ),
+    );
+  }
+}
+
+class _ReviewSection extends StatelessWidget {
+  const _ReviewSection({
+    required this.eventCardId,
+    required this.reviews,
+    required this.reviewCount,
+    required this.reviewAverage,
+    required this.canWrite,
+  });
+
+  final String eventCardId;
+  final List<EventReviewDto> reviews;
+  final int reviewCount;
+  final double? reviewAverage;
+  final bool canWrite;
+
+  @override
+  Widget build(BuildContext context) {
+    if (reviews.isEmpty && !canWrite) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              '후기',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: PrismColors.ink1,
+              ),
+            ),
+            if (reviewAverage != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                '★ ${reviewAverage!.toStringAsFixed(1)} · $reviewCount개',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: PrismColors.muted,
+                ),
+              ),
+            ],
+            const Spacer(),
+            if (canWrite)
+              TextButton.icon(
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('후기 쓰기'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => EventReviewComposeScreen(
+                      eventCardId: eventCardId,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: PrismSpacing.md),
+        if (reviews.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: PrismSpacing.md),
+            child: Text(
+              '아직 후기가 없어요. 첫 후기를 남겨보세요.',
+              style: TextStyle(
+                fontSize: 13,
+                color: PrismColors.muted,
+              ),
+            ),
+          )
+        else
+          for (final r in reviews) EventReviewCard(review: r),
+      ],
     );
   }
 }
