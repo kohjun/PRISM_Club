@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../core/current_user.dart';
 import '../features/auth/ui/login_picker_screen.dart';
+import '../features/auth/ui/login_screen.dart';
+import '../features/auth/ui/signup_screen.dart';
 import '../features/category/ui/category_list_screen.dart';
 import '../features/event_detail/ui/event_detail_screen.dart';
 import '../features/knowledge/ui/contribution_composer_screen.dart';
@@ -37,16 +39,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (auth.isLoading) return null;
 
       final loggedIn = auth.valueOrNull != null;
-      final goingToLogin = state.matchedLocation == '/login';
+      final matched = state.matchedLocation;
+      final goingToAuthRoute = matched == '/login' ||
+          matched == '/signup' ||
+          matched == '/dev/login';
 
-      if (!loggedIn && !goingToLogin) return '/login';
-      if (loggedIn && goingToLogin) return '/home';
+      if (!loggedIn && !goingToAuthRoute) return '/login';
+      if (loggedIn && goingToAuthRoute) return '/home';
       return null;
     },
     refreshListenable: _RouterRefresh(ref),
     routes: [
       GoRoute(path: '/', redirect: (_, _) => '/home'),
-      GoRoute(path: '/login', builder: (_, _) => const LoginPickerScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/signup', builder: (_, _) => const SignupScreen()),
+      // Dev-only persona picker. Only compiled into the bundle when the
+      // `--dart-define=PRISM_DEV_LOGIN=true` flag is set; release builds
+      // omit the route entirely.
+      if (kPrismDevLoginEnabled)
+        GoRoute(
+          path: '/dev/login',
+          builder: (_, _) => const LoginPickerScreen(),
+        ),
       GoRoute(path: '/home', builder: (_, _) => const HomeShellScreen()),
       GoRoute(path: '/spaces', builder: (_, _) => const SpaceListScreen()),
       GoRoute(
