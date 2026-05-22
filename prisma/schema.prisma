@@ -385,14 +385,23 @@ model PostAttachment {
 }
 
 model MediaAsset {
-  id        String   @id @default(uuid()) @db.Uuid
-  ownerId   String   @map("owner_id") @db.Uuid
+  id        String @id @default(uuid()) @db.Uuid
+  ownerId   String @map("owner_id") @db.Uuid
   kind      String // IMAGE (only supported kind in M10)
   filename  String
-  mimeType  String   @map("mime_type")
-  sizeBytes Int      @map("size_bytes")
-  path      String // relative URL like /uploads/<uuid>.<ext>
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  mimeType  String @map("mime_type")
+  sizeBytes Int    @map("size_bytes")
+  path      String // legacy public URL — kept for backward compat
+  // P1.4 additions. `cdn_url` is the canonical client-facing URL (CDN-fronted
+  // when MEDIA_PUBLIC_BASE_URL points to one); `variants` holds derived
+  // renditions like { thumb: "...", md: "..." }; `storage_key` is the
+  // underlying object key (R2/S3) used by future reprocessing scripts.
+  cdnUrl     String?  @map("cdn_url")
+  variants   Json     @default("{}")
+  width      Int?
+  height     Int?
+  storageKey String?  @map("storage_key")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 

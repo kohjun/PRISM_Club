@@ -2,14 +2,17 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
+import sharp from 'sharp';
 import { PrismaService } from '../../shared/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import {
   IMediaStorage,
   MEDIA_STORAGE,
+  MediaUploadResult,
 } from './storage/media-storage.interface';
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -26,6 +29,11 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/gif': 'gif',
 };
 
+// Variant rendition widths. We always emit webp because it's universally
+// supported by modern mobile clients and ~30% smaller than equivalent jpeg.
+const VARIANT_WIDTHS = { thumb: 480, md: 1080 } as const;
+type VariantKey = keyof typeof VARIANT_WIDTHS;
+
 export interface MediaAssetDTO {
   id: string;
   kind: 'IMAGE';
@@ -33,11 +41,17 @@ export interface MediaAssetDTO {
   mime_type: string;
   size_bytes: number;
   url: string;
+  cdn_url: string | null;
+  variants: Record<string, string>;
+  width: number | null;
+  height: number | null;
   created_at: string;
 }
 
 @Injectable()
 export class MediaService {
+  private readonly log = new Logger(MediaService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(MEDIA_STORAGE) private readonly storage: IMediaStorage,
@@ -71,12 +85,19 @@ export class MediaService {
     const id = crypto.randomUUID();
     const ext = MIME_TO_EXT[file.mimetype];
 
+    // 1. Upload the original byte-for-byte.
     const stored = await this.storage.upload({
       id,
       ext,
       contentType: file.mimetype,
       body: file.buffer,
     });
+
+    // 2. Read dimensions + render variants. Failures here are non-fatal —
+    //    we still persist the original so the asset is usable; variants can
+    //    be reprocessed by a background script later.
+    const meta = await this.readImageMeta(file.buffer);
+    const variants = await this.renderVariants(id, file.buffer, file.mimetype);
 
     const row = await this.prisma.mediaAsset.create({
       data: {
@@ -87,6 +108,13 @@ export class MediaService {
         mimeType: file.mimetype,
         sizeBytes: file.size,
         path: stored.urlPath,
+        cdnUrl: stored.urlPath, // canonical client-facing URL (may equal path
+                                 // in local mode; becomes the CDN URL when S3
+                                 // / R2 is configured with MEDIA_PUBLIC_BASE_URL)
+        variants: variants as object,
+        width: meta?.width ?? null,
+        height: meta?.height ?? null,
+        storageKey: `${id}.${ext}`,
       },
     });
 
@@ -98,6 +126,7 @@ export class MediaService {
         mime_type: file.mimetype,
         size_bytes: file.size,
         storage_mode: this.storage.mode(),
+        variant_count: Object.keys(variants).length,
       },
     });
 
@@ -110,6 +139,61 @@ export class MediaService {
     return this.toDTO(row);
   }
 
+  private async readImageMeta(
+    body: Buffer,
+  ): Promise<{ width: number; height: number } | null> {
+    try {
+      const meta = await sharp(body).metadata();
+      if (!meta.width || !meta.height) return null;
+      return { width: meta.width, height: meta.height };
+    } catch (e) {
+      this.log.warn(
+        `media meta read failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Render webp variants and upload them alongside the original.
+   *
+   * Animated GIFs are skipped (sharp's resize loses animation by default
+   * and the typical upload is small enough not to need a thumbnail).
+   */
+  private async renderVariants(
+    id: string,
+    body: Buffer,
+    mime: string,
+  ): Promise<Record<string, string>> {
+    if (mime === 'image/gif') {
+      return {};
+    }
+    const out: Record<string, string> = {};
+    for (const [name, width] of Object.entries(VARIANT_WIDTHS) as Array<
+      [VariantKey, number]
+    >) {
+      try {
+        const buf = await sharp(body)
+          .resize({ width, withoutEnlargement: true })
+          .webp({ quality: 82 })
+          .toBuffer();
+        const result: MediaUploadResult = await this.storage.upload({
+          id: `${id}-${name}`,
+          ext: 'webp',
+          contentType: 'image/webp',
+          body: buf,
+        });
+        out[name] = result.urlPath;
+      } catch (e) {
+        this.log.warn(
+          `variant[${name}] render/upload failed for ${id}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+        // Continue with the other variants; partial success is acceptable.
+      }
+    }
+    return out;
+  }
+
   private toDTO(row: {
     id: string;
     kind: string;
@@ -117,6 +201,10 @@ export class MediaService {
     mimeType: string;
     sizeBytes: number;
     path: string;
+    cdnUrl: string | null;
+    variants: unknown;
+    width: number | null;
+    height: number | null;
     createdAt: Date;
   }): MediaAssetDTO {
     return {
@@ -126,6 +214,10 @@ export class MediaService {
       mime_type: row.mimeType,
       size_bytes: row.sizeBytes,
       url: row.path,
+      cdn_url: row.cdnUrl,
+      variants: (row.variants as Record<string, string>) ?? {},
+      width: row.width,
+      height: row.height,
       created_at: row.createdAt.toISOString(),
     };
   }
