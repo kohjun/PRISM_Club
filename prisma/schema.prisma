@@ -102,18 +102,22 @@ model OAuthState {
 }
 
 model Report {
-  id           String    @id @default(uuid()) @db.Uuid
-  reporterId   String    @map("reporter_id") @db.Uuid
-  targetType   String    @map("target_type")
-  targetId     String    @map("target_id") @db.Uuid
-  reason       String
-  details      String?
-  status       String    @default("OPEN")
-  resolution   String?
-  resolvedBy   String?   @map("resolved_by") @db.Uuid
-  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz(6)
-  resolverNote String?   @map("resolver_note")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                  String    @id @default(uuid()) @db.Uuid
+  reporterId          String    @map("reporter_id") @db.Uuid
+  targetType          String    @map("target_type")
+  targetId            String    @map("target_id") @db.Uuid
+  reason              String
+  details             String?
+  status              String    @default("OPEN")
+  resolution          String?
+  resolvedBy          String?   @map("resolved_by") @db.Uuid
+  resolvedAt          DateTime? @map("resolved_at") @db.Timestamptz(6)
+  resolverNote        String?   @map("resolver_note")
+  // P5.2 auto-dismiss reason. Non-null means a rule short-circuited
+  // the report instead of opening it for human review (e.g. report
+  // flood from this reporter).
+  autoDismissedReason String?   @map("auto_dismissed_reason")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   reporter User  @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
   resolver User? @relation("ReportResolver", fields: [resolvedBy], references: [id])
@@ -142,6 +146,29 @@ model ModerationAction {
   @@index([targetType, targetId, createdAt(sort: Desc)])
   @@index([batchId])
   @@map("moderation_actions")
+}
+
+// P5.2 auto-moderation rule catalog.
+//
+// `kind` is the rule type the service knows how to evaluate:
+//   - DUPLICATE_POST_HASH: hides a NEW/MEMBER's post that matches
+//     a normalized-body hash of their own posts in the last 24h.
+//   - REPORT_FLOOD: auto-dismisses reports from a user who already
+//     submitted N within the last hour.
+//   - RAPID_FIRE_POSTS: future — caps posts/minute from same user.
+// `params` jsonb carries rule-specific thresholds so admins can
+// tune without a schema migration.
+model AutoModerationRule {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  kind      String
+  params    Json
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([kind])
+  @@map("auto_moderation_rules")
 }
 
 model AnalyticsEvent {
@@ -455,20 +482,25 @@ model RoomPin {
 // ---------------------------------------------------------------------------
 
 model Post {
-  id                String   @id @default(uuid()) @db.Uuid
-  roomId            String   @map("room_id") @db.Uuid
-  authorId          String   @map("author_id") @db.Uuid
-  postType          String   @default("GENERAL") @map("post_type")
-  body              String
-  visibility        String   @default("PUBLIC")
-  status            String   @default("VISIBLE") // VISIBLE | HIDDEN | DELETED
-  spoiler           Boolean  @default(false)
-  replyCount        Int      @default(0) @map("reply_count")
-  likeCount         Int      @default(0) @map("like_count")
-  bookmarkCount     Int      @default(0) @map("bookmark_count")
-  recruitmentFields Json?    @map("recruitment_fields")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                   String    @id @default(uuid()) @db.Uuid
+  roomId               String    @map("room_id") @db.Uuid
+  authorId             String    @map("author_id") @db.Uuid
+  postType             String    @default("GENERAL") @map("post_type")
+  body                 String
+  visibility           String    @default("PUBLIC")
+  status               String    @default("VISIBLE") // VISIBLE | HIDDEN | DELETED
+  spoiler              Boolean   @default(false)
+  replyCount           Int       @default(0) @map("reply_count")
+  likeCount            Int       @default(0) @map("like_count")
+  bookmarkCount        Int       @default(0) @map("bookmark_count")
+  recruitmentFields    Json?     @map("recruitment_fields")
+  // P5.2 auto-moderation stamps. Non-null `autoModeratedAt` means the
+  // post was hidden by a rule rather than a human moderator; the
+  // admin queue surfaces these separately from manual reports.
+  autoModeratedAt      DateTime? @map("auto_moderated_at") @db.Timestamptz(6)
+  autoModerationReason String?   @map("auto_moderation_reason")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   room        Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
   author      User             @relation(fields: [authorId], references: [id])

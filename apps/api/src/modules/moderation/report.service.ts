@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { AutoModerationService } from './auto-moderation.service';
 import {
   CreateReportInput,
   ModerationActionDTO,
@@ -42,6 +43,7 @@ export class ReportService {
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
     private readonly analytics: AnalyticsService,
+    private readonly autoMod: AutoModerationService,
   ) {}
 
   isModerator(viewer: Viewer): boolean {
@@ -92,6 +94,13 @@ export class ReportService {
       );
     }
 
+    // P5.2 report-flood gate. Shadow mode: row is still created with
+    // status=OPEN; enforce mode: row is recorded with status=RESOLVED
+    // + auto_dismissed_reason so the admin queue can filter it out.
+    const floodDecision = await this.autoMod.evaluateReportBeforeCreate({
+      viewer,
+    });
+
     const row = await this.prisma.report.create({
       data: {
         reporterId: viewer.id,
@@ -99,6 +108,10 @@ export class ReportService {
         targetId: input.target_id,
         reason: input.reason.trim(),
         details: input.details?.trim() ?? null,
+        status: floodDecision.dismiss ? 'RESOLVED' : 'OPEN',
+        resolution: floodDecision.dismiss ? 'DISMISSED' : null,
+        resolvedAt: floodDecision.dismiss ? new Date() : null,
+        autoDismissedReason: floodDecision.reason,
       },
       include: { reporter: { include: { profile: true } } },
     });

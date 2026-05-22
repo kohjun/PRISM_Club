@@ -13,6 +13,7 @@ import { RequestUser } from '../../shared/decorators/current-user.decorator';
 import { RateLimitService } from '../../shared/rate-limit.service';
 import { RoomService } from '../community/room.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { AutoModerationService } from '../moderation/auto-moderation.service';
 import {
   PostAttachmentDTO,
   PostAuthorDTO,
@@ -62,6 +63,7 @@ export class PostService {
     private readonly rooms: RoomService,
     private readonly analytics: AnalyticsService,
     private readonly rateLimit: RateLimitService,
+    private readonly autoMod: AutoModerationService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
@@ -142,6 +144,15 @@ export class PostService {
       quotedPostId = quoted.id;
     }
 
+    // P5.2 auto-moderation evaluation (NEW/MEMBER only, shadow mode
+    // unless AUTO_MODERATION_ENFORCE=1). When triggered, the post is
+    // still persisted but with status=HIDDEN + auto_moderation_reason
+    // so the author sees a banner and the admin queue can review.
+    const autoModDecision = await this.autoMod.evaluatePostBeforeCreate({
+      viewer,
+      body: input.body,
+    });
+
     const post = await this.prisma.$transaction(async (tx) => {
       const created = await tx.post.create({
         data: {
@@ -149,6 +160,9 @@ export class PostService {
           authorId: viewer.id,
           body: input.body,
           postType,
+          status: autoModDecision.hide ? 'HIDDEN' : 'VISIBLE',
+          autoModeratedAt: autoModDecision.hide ? new Date() : null,
+          autoModerationReason: autoModDecision.reason,
           recruitmentFields:
             recruitmentFields === null
               ? Prisma.JsonNull
