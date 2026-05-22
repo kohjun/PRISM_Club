@@ -11,6 +11,7 @@ PostDto _post({
   int likeCount = 0,
   int replyCount = 0,
   bool likedByMe = false,
+  QuotedPostRefDto? quotedPost,
 }) =>
     PostDto(
       id: 'p1',
@@ -29,6 +30,7 @@ PostDto _post({
       likeCount: likeCount,
       replyCount: replyCount,
       likedByMe: likedByMe,
+      quotedPost: quotedPost,
     );
 
 void main() {
@@ -96,5 +98,52 @@ void main() {
     ));
     expect(find.byIcon(Icons.favorite), findsOneWidget);
     expect(find.byIcon(Icons.favorite_border), findsNothing);
+  });
+
+  testWidgets(
+      'PostCardWidget renders QuotedBlock with preview and author handle',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: PostCardWidget(
+          post: _post(
+            body: '내 의견은',
+            quotedPost: const QuotedPostRefDto(
+              id: 'orig-1',
+              bodyPreview: '원본 게시글 일부 미리보기',
+              authorNickname: '하늘',
+              roomSlug: 'dating-event-reviews',
+              available: true,
+            ),
+          ),
+        ),
+      ),
+    ));
+    expect(find.text('원본 게시글 일부 미리보기'), findsOneWidget);
+    expect(find.textContaining('@하늘'), findsOneWidget);
+    expect(find.textContaining('#dating-event-reviews'), findsOneWidget);
+    // Deleted-sentinel copy should NOT appear in the available case.
+    expect(find.text('삭제된 글입니다'), findsNothing);
+  });
+
+  testWidgets(
+      'PostCardWidget renders deleted-sentinel when quotedPost.available=false',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: PostCardWidget(
+          post: _post(
+            quotedPost: const QuotedPostRefDto(
+              id: '',
+              bodyPreview: '',
+              authorNickname: '',
+              roomSlug: '',
+              available: false,
+            ),
+          ),
+        ),
+      ),
+    ));
+    expect(find.text('삭제된 글입니다'), findsOneWidget);
   });
 }

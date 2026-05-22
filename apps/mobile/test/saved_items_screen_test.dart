@@ -131,6 +131,49 @@ void main() {
     expect(find.text('레퍼런스 ref-1'), findsNothing);
   });
 
+  testWidgets('renders collection chips and filters by tapped chip',
+      (tester) async {
+    final collection = const SavedCollectionDto(
+      id: 'col-1',
+      name: '북마크',
+      sortOrder: 0,
+      itemCount: 1,
+    );
+    await tester.pumpWidget(_wrap([
+      savedCollectionsProvider.overrideWith((_) async => [collection]),
+      filteredSavedItemsProvider(const SavedItemsFilter())
+          .overrideWith((_) async => _mixedList()),
+      filteredSavedItemsProvider(const SavedItemsFilter(collectionId: 'col-1'))
+          .overrideWith((_) async => _postOnlyList()),
+      filteredSavedItemsProvider(const SavedItemsFilter(type: 'POST'))
+          .overrideWith((_) async => _postOnlyList()),
+      filteredSavedItemsProvider(const SavedItemsFilter(type: 'REFERENCE'))
+          .overrideWith((_) async => SavedItemListDto(items: const [])),
+      filteredSavedItemsProvider(const SavedItemsFilter(type: 'EVENT_CARD'))
+          .overrideWith((_) async => SavedItemListDto(items: const [])),
+      savedItemsProvider(null)
+          .overrideWith((_) async => SavedItemListDto(items: const [])),
+    ]));
+    await tester.pump();
+    await tester.pump();
+
+    // Default state: both '모든 폴더' and the named collection are visible.
+    expect(find.text('모든 폴더'), findsOneWidget);
+    expect(find.text('폴더 없음'), findsOneWidget);
+    expect(find.textContaining('북마크'), findsOneWidget);
+
+    // Both items show initially (no collection filter).
+    expect(find.textContaining('테스트 게시글 post-1'), findsOneWidget);
+    expect(find.text('레퍼런스 ref-1'), findsOneWidget);
+
+    // Tap the collection chip → only the POST in that collection remains.
+    await tester.tap(find.textContaining('북마크'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('테스트 게시글 post-1'), findsOneWidget);
+    expect(find.text('레퍼런스 ref-1'), findsNothing);
+  });
+
   testWidgets('unsave button tap fires toggleSave via repository',
       (tester) async {
     String? togglePath;
