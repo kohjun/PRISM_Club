@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -171,6 +172,7 @@ export class ReportService {
     reportId: string,
     input: ResolveReportInput,
     viewer: Viewer & { id: string },
+    opts: { batchId?: string } = {},
   ): Promise<ReportDetailDTO> {
     if (!this.isModerator(viewer)) {
       throw new ForbiddenException('Moderator access required');
@@ -242,6 +244,9 @@ export class ReportService {
           targetId: report.targetId,
           reportId: report.id,
           note: noteTrim ?? null,
+          // P5.3: stamp the bulk batch id when this resolve runs as
+          // part of a bulkResolve operation.
+          batchId: opts.batchId ?? null,
         },
       });
 
@@ -435,5 +440,51 @@ export class ReportService {
       note: row.note,
       created_at: row.createdAt.toISOString(),
     };
+  }
+
+  /**
+   * P5.3 bulk resolve. Caps at 50 ids per call; runs each resolve
+   * sequentially (don't `Promise.all` — keeps DB pressure bounded)
+   * and tags every emitted ModerationAction row with the shared
+   * batch_id so admins can group the actions in audit-log later.
+   */
+  async bulkResolve(
+    reportIds: string[],
+    input: ResolveReportInput,
+    viewer: Viewer & { id: string },
+  ): Promise<{
+    batch_id: string;
+    results: Array<{ id: string; status: 'OK' | 'SKIPPED' | 'FAILED'; error?: string }>;
+  }> {
+    if (!this.isModerator(viewer)) {
+      throw new ForbiddenException('Moderator access required');
+    }
+    if (!Array.isArray(reportIds) || reportIds.length === 0) {
+      throw new BadRequestException('report_ids must be a non-empty array');
+    }
+    const ids = reportIds.slice(0, 50);
+    const batchId = randomUUID();
+    const results: Array<{
+      id: string;
+      status: 'OK' | 'SKIPPED' | 'FAILED';
+      error?: string;
+    }> = [];
+    for (const id of ids) {
+      try {
+        await this.resolve(id, input, viewer, { batchId });
+        results.push({ id, status: 'OK' });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Most common case: "Report is already resolved" — surface
+        // as SKIPPED, not FAILED, so the UI can show a green-amber-red
+        // breakdown.
+        if (/already resolved/i.test(msg)) {
+          results.push({ id, status: 'SKIPPED', error: msg });
+        } else {
+          results.push({ id, status: 'FAILED', error: msg });
+        }
+      }
+    }
+    return { batch_id: batchId, results };
   }
 }

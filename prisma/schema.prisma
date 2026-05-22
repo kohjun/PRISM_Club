@@ -131,11 +131,16 @@ model ModerationAction {
   targetId   String   @map("target_id") @db.Uuid
   reportId   String?  @map("report_id") @db.Uuid
   note       String?
+  // P5.3: bulk-resolve batch identifier. All ModerationAction rows
+  // produced by a single bulk operation share the same batch_id so
+  // the audit log can group them.
+  batchId    String?  @map("batch_id") @db.Uuid
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   actor User @relation(fields: [actorId], references: [id])
 
   @@index([targetType, targetId, createdAt(sort: Desc)])
+  @@index([batchId])
   @@map("moderation_actions")
 }
 

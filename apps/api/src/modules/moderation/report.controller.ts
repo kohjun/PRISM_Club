@@ -51,4 +51,21 @@ export class ReportController {
   ) {
     return this.svc.resolve(id, body, user);
   }
+
+  /**
+   * P5.3 bulk resolve. Caps at 50 ids per call; returns a per-id
+   * status array plus the shared `batch_id` for audit-log grouping.
+   */
+  @Post('admin/reports/bulk-resolve')
+  bulkResolve(
+    @CurrentUser() user: RequestUser,
+    @Body()
+    body: { report_ids?: string[]; action?: string; note?: string },
+  ) {
+    return this.svc.bulkResolve(
+      body?.report_ids ?? [],
+      { action: body?.action ?? '', note: body?.note },
+      user,
+    );
+  }
 }
