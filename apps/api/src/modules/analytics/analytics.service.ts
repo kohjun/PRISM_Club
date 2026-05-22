@@ -34,7 +34,8 @@ export type EventType =
   | 'EVENT_REVIEW_CREATED'
   | 'AUTO_MODERATION_TRIGGERED'
   | 'SEARCH_QUERY'
-  | 'PROFILE_SHARED';
+  | 'PROFILE_SHARED'
+  | 'USER_MENTIONED';
 
 export interface EventInput {
   actorId?: string | null;

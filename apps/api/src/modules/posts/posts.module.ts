@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CommunityModule } from '../community/community.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { PostService } from './post.service';
 import { ReplyService } from './reply.service';
 import { ReactionService } from './reaction.service';
@@ -10,7 +11,7 @@ import { RecruitmentService } from './recruitment.service';
 import { RecruitmentController } from './recruitment.controller';
 
 @Module({
-  imports: [CommunityModule],
+  imports: [CommunityModule, NotificationsModule],
   controllers: [
     PostController,
     ReplyController,

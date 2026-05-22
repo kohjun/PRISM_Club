@@ -61,6 +61,8 @@ model User {
   savedCollections        SavedCollection[]
   followRecommendations   FollowRecommendation[]   @relation("FollowRecOwner")
   recommendedByOthers     FollowRecommendation[]   @relation("FollowRecCandidate")
+  mentions                Mention[]                @relation("MentionedUser")
+  authoredMentions        Mention[]                @relation("MentionActor")
 
   @@map("users")
 }
@@ -951,6 +953,30 @@ model Notification {
 
   @@index([userId, isRead, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+// P6.1 — single row per (sourceType, sourceId, mentionedUserId). Lets the
+// "내 멘션 함" feed query by mentionedUserId + recency without re-parsing
+// the post body, and lets PostService.delete() cascade-clean the rows.
+//
+// `actorId` is who wrote the mention (the post / reply author) so the
+// notification copy can read "민서님이 회원님을 언급했어요" without a
+// separate Post → author lookup.
+model Mention {
+  id              String   @id @default(uuid()) @db.Uuid
+  sourceType      String   @map("source_type") // POST | REPLY
+  sourceId        String   @map("source_id") @db.Uuid
+  mentionedUserId String   @map("mentioned_user_id") @db.Uuid
+  actorId         String   @map("actor_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  mentionedUser User @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  actor         User @relation("MentionActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, sourceId, mentionedUserId], map: "mentions_source_user_unique")
+  @@index([mentionedUserId, createdAt(sort: Desc)], map: "mentions_mentioned_user_idx")
+  @@index([sourceType, sourceId], map: "mentions_source_idx")
+  @@map("mentions")
 }
 
 // Device-bound push tokens (P1.2). Unique on (provider, token) so a fresh

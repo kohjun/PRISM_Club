@@ -14,6 +14,7 @@ import { RateLimitService } from '../../shared/rate-limit.service';
 import { RoomService } from '../community/room.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { AutoModerationService } from '../moderation/auto-moderation.service';
+import { MentionService } from '../notifications/mention.service';
 import {
   PostAttachmentDTO,
   PostAuthorDTO,
@@ -65,6 +66,7 @@ export class PostService {
     private readonly analytics: AnalyticsService,
     private readonly rateLimit: RateLimitService,
     private readonly autoMod: AutoModerationService,
+    private readonly mentions: MentionService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
@@ -212,13 +214,14 @@ export class PostService {
     });
 
     // Notify room followers of new post (post-tx, non-blocking)
+    const spaceRow = await this.prisma.room.findUnique({
+      where: { id: room.id },
+      include: { category: { include: { space: true } } },
+    });
+    const spaceAccessPolicy = spaceRow?.category?.space?.accessPolicy ?? 'PUBLIC';
+
     const followers = await this.prisma.roomFollow.findMany({ where: { roomId: room.id } });
     if (followers.length > 0) {
-      const spaceRow = await this.prisma.room.findUnique({
-        where: { id: room.id },
-        include: { category: { include: { space: true } } },
-      });
-      const spaceAccessPolicy = spaceRow?.category?.space?.accessPolicy ?? 'PUBLIC';
       const bodyPreview = input.body.slice(0, 80);
       const notifs = followers
         .filter((f) => f.userId !== viewer.id)
@@ -234,6 +237,20 @@ export class PostService {
         await this.prisma.notification.createMany({ data: notifs });
       }
     }
+
+    // P6.1: mention fanout. Fire-and-forget; the underlying post is
+    // committed regardless of mention recording success.
+    void this.mentions.recordMentions({
+      sourceType: 'POST',
+      sourceId: post.id,
+      authorId: viewer.id,
+      body: input.body,
+      spaceAccessPolicy,
+      notificationPayloadExtras: {
+        postId: post.id,
+        roomSlug: room.slug,
+      },
+    });
 
     this.analytics.record({
       actorId: viewer.id,
@@ -386,6 +403,9 @@ export class PostService {
       throw new ForbiddenException('Only the author can delete this post');
     }
     await this.prisma.post.update({ where: { id: postId }, data: { status: 'DELETED' } });
+    // P6.1: drop mention rows so the recipient's "@me" feed stops
+    // surfacing a now-deleted source.
+    await this.mentions.clearForSource('POST', postId);
   }
 
   // -- helpers -------------------------------------------------------------

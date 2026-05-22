@@ -286,6 +286,16 @@ function notificationCopyFor(
         title: '지식 기여 검수 결과',
         body: `${actor} 큐레이터가 내 제안을 검토했어요.`,
       };
+    case 'MENTIONED_IN_POST':
+      return {
+        title: '회원님이 언급됐어요',
+        body: `${actor}님이 글에서 회원님을 언급했어요.`,
+      };
+    case 'MENTIONED_IN_REPLY':
+      return {
+        title: '회원님이 언급됐어요',
+        body: `${actor}님이 댓글에서 회원님을 언급했어요.`,
+      };
     default:
       return { title: 'PRISM Club', body: '새 알림이 있어요.' };
   }

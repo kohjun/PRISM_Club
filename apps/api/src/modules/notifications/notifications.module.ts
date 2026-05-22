@@ -12,6 +12,7 @@ import { NOTIFICATION_DELIVERY } from './delivery/notification-delivery.interfac
 import { WeeklyDigestService } from './weekly-digest.service';
 import { WeeklyDigestCron } from './weekly-digest.cron';
 import { WeeklyDigestOpsController } from './weekly-digest-ops.controller';
+import { MentionService } from './mention.service';
 
 const moduleLog = new Logger('NotificationsModule');
 
@@ -44,12 +45,14 @@ function selectDelivery():
     { provide: NOTIFICATION_DELIVERY, useClass: selectDelivery() },
     WeeklyDigestService,
     WeeklyDigestCron,
+    MentionService,
   ],
   exports: [
     NotificationService,
     NotificationPreferencesService,
     DeviceTokenService,
     WeeklyDigestService,
+    MentionService,
   ],
 })
 export class NotificationsModule {}

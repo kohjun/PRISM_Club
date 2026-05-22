@@ -3,6 +3,7 @@ import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService } from '../../shared/access-control.service';
 import { RequestUser } from '../../shared/decorators/current-user.decorator';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { MentionService } from '../notifications/mention.service';
 import { PostAuthorDTO, ReplyDTO } from './dto/post.dto';
 
 export interface CreateReplyInput {
@@ -16,6 +17,7 @@ export class ReplyService {
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
     private readonly analytics: AnalyticsService,
+    private readonly mentions: MentionService,
   ) {}
 
   async create(postId: string, input: CreateReplyInput, viewer: RequestUser): Promise<ReplyDTO> {
@@ -106,6 +108,21 @@ export class ReplyService {
       },
     });
 
+    // P6.1: mention fanout — fire-and-forget. Deep-link payload sends
+    // the recipient back to the source post (replies live inside it).
+    void this.mentions.recordMentions({
+      sourceType: 'REPLY',
+      sourceId: created.id,
+      authorId: viewer.id,
+      body: input.body,
+      spaceAccessPolicy,
+      notificationPayloadExtras: {
+        postId,
+        replyId: created.id,
+        roomSlug: post.room.slug,
+      },
+    });
+
     return this.toDTO(created, viewer.id);
   }
 
@@ -159,6 +176,8 @@ export class ReplyService {
         data: { replyCount: { decrement: 1 } },
       });
     });
+    // P6.1: drop mention rows on hard delete.
+    await this.mentions.clearForSource('REPLY', replyId);
   }
 
   private toDTO(
