@@ -105,9 +105,17 @@ class PostCardWidget extends ConsumerWidget {
                 myReaction: post.myReaction,
                 boostCount: post.boostCount,
                 boostedByMe: post.boostedByMe,
-                onLikePressed: onLikePressed,
+                // F16: when the parent screen wires `onLikePressed`
+                // (e.g. post_detail handles its own snackbar / refresh),
+                // we forward to it. Otherwise the card itself toggles
+                // HEART via the reaction repo so home / timeline /
+                // saves / profile / search / event-detail all share the
+                // same "tap heart" behaviour.
+                onLikePressed:
+                    onLikePressed ?? () => _onLikeTap(context, ref),
                 onReactionPick: (type) => _onPick(context, ref, type),
                 onBoostPressed: () => _onBoost(context, ref),
+                onRepostMenu: () => _onRepostMenu(context, ref),
               ),
             ],
           ),
@@ -168,6 +176,65 @@ class PostCardWidget extends ConsumerWidget {
       await ref.read(boostRepositoryProvider).toggle(post.id);
     } catch (_) {
       // Silent.
+    }
+  }
+
+  /// F16: default heart-tap when the parent screen doesn't wire its
+  /// own `onLikePressed`. Toggles HEART via the reaction repo. The
+  /// next provider read (pull-to-refresh, navigation back) surfaces
+  /// the updated count.
+  Future<void> _onLikeTap(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref
+          .read(reactionRepositoryProvider)
+          .toggle('POST', post.id, reactionType: 'HEART');
+    } catch (_) {
+      // Silent.
+    }
+  }
+
+  /// F17: long-press the repeat icon to open the retweet menu — choose
+  /// between a comment-less boost (P6.6) or "인용하여 게시" which
+  /// pushes the composer prefilled with this post (P4.2 quote path).
+  Future<void> _onRepostMenu(BuildContext context, WidgetRef ref) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                Icons.repeat,
+                color: post.boostedByMe ? PrismColors.pp700 : PrismColors.ink2,
+              ),
+              title: Text(post.boostedByMe ? '부스트 취소' : '부스트'),
+              subtitle: const Text('코멘트 없이 팔로워에게 공유'),
+              onTap: () => Navigator.of(ctx).pop('BOOST'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.format_quote, color: PrismColors.ink2),
+              title: const Text('인용하여 게시'),
+              subtitle: const Text('내 코멘트와 함께 새 글로 게시'),
+              onTap: () => Navigator.of(ctx).pop('QUOTE'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    if (choice == 'BOOST') {
+      await _onBoost(context, ref);
+    } else if (choice == 'QUOTE') {
+      if (!context.mounted) return;
+      final preview = post.body.length > 140
+          ? '${post.body.substring(0, 140)}…'
+          : post.body;
+      final encodedPreview = Uri.encodeQueryComponent(preview);
+      context.push(
+        '/rooms/${post.roomSlug}/compose?quoted_post_id=${post.id}&quoted_preview=$encodedPreview',
+      );
     }
   }
 }
@@ -327,6 +394,7 @@ class _ActionRow extends StatelessWidget {
     this.onLikePressed,
     this.onReactionPick,
     this.onBoostPressed,
+    this.onRepostMenu,
   });
 
   final int likeCount;
@@ -338,6 +406,7 @@ class _ActionRow extends StatelessWidget {
   final VoidCallback? onLikePressed;
   final void Function(String type)? onReactionPick;
   final VoidCallback? onBoostPressed;
+  final VoidCallback? onRepostMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -428,6 +497,7 @@ class _ActionRow extends StatelessWidget {
           label: boostedByMe ? '부스트 취소' : '부스트',
           child: InkWell(
             onTap: onBoostPressed,
+            onLongPress: onRepostMenu,
             borderRadius: BorderRadius.circular(PrismRadius.sm),
             child: Container(
               constraints:

@@ -44,6 +44,8 @@ class ProfileScreen extends ConsumerWidget {
                       context,
                       userId: userId,
                       initialProfile: b.profile,
+                      initialNickname: b.user.nickname ?? '',
+                      initialAvatarUrl: b.user.avatarUrl,
                     ),
                   )
                 : _OtherUserMenu(userId: userId),

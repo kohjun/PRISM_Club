@@ -141,17 +141,33 @@ class UserProfileBundleDto {
 }
 
 class UpdateProfileInput {
-  const UpdateProfileInput({this.bio, this.region, this.interests});
+  const UpdateProfileInput({
+    this.bio,
+    this.region,
+    this.interests,
+    this.nickname,
+    this.avatarUrl,
+    this.clearAvatar = false,
+  });
 
   final String? bio;
   final String? region;
   final List<String>? interests;
+  final String? nickname;
+  final String? avatarUrl;
+  final bool clearAvatar;
 
   Map<String, dynamic> toJson() {
     final m = <String, dynamic>{};
     if (bio != null) m['bio'] = bio;
     if (region != null) m['region'] = region;
     if (interests != null) m['interests'] = interests;
+    if (nickname != null) m['nickname'] = nickname;
+    if (clearAvatar) {
+      m['avatar_url'] = null;
+    } else if (avatarUrl != null) {
+      m['avatar_url'] = avatarUrl;
+    }
     return m;
   }
 }

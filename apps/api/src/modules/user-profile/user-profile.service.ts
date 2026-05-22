@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,6 +18,11 @@ const BIO_MAX = 500;
 const REGION_MAX = 50;
 const INTEREST_MAX = 30;
 const INTERESTS_MAX_COUNT = 10;
+// P-F15 nickname rules. Mirrors the @mention regex (P6.1) so a renamed
+// user is mention-compatible immediately after save.
+const NICKNAME_MIN = 2;
+const NICKNAME_MAX = 20;
+const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9_]{2,20}$/;
 
 const POST_INCLUDE = {
   room: true,
@@ -182,7 +188,47 @@ export class UserProfileService {
       bio?: string | null;
       region?: string | null;
       interests?: string[];
+      nickname?: string;
+      avatarUrl?: string | null;
     } = {};
+
+    if (input.nickname !== undefined) {
+      const trimmed = input.nickname.trim();
+      if (
+        trimmed.length < NICKNAME_MIN ||
+        trimmed.length > NICKNAME_MAX ||
+        !NICKNAME_REGEX.test(trimmed)
+      ) {
+        throw new BadRequestException(
+          `nickname must be ${NICKNAME_MIN}..${NICKNAME_MAX} chars (한글/영문/숫자/_)`,
+        );
+      }
+      // Reject collision with another user's nickname.
+      const collision = await this.prisma.profile.findUnique({
+        where: { nickname: trimmed },
+        select: { userId: true },
+      });
+      if (collision && collision.userId !== viewerId) {
+        throw new ConflictException('이미 사용 중인 닉네임이에요.');
+      }
+      updateData.nickname = trimmed;
+    }
+
+    if (input.avatar_url !== undefined) {
+      if (input.avatar_url === null) {
+        updateData.avatarUrl = null;
+      } else {
+        if (
+          typeof input.avatar_url !== 'string' ||
+          input.avatar_url.length === 0
+        ) {
+          throw new BadRequestException('avatar_url must be a non-empty string');
+        }
+        // Accept any URL; we trust media-upload to have produced it.
+        // No length cap — CDN URLs can be long.
+        updateData.avatarUrl = input.avatar_url;
+      }
+    }
 
     if (input.bio !== undefined) {
       if (input.bio === null) {
@@ -257,11 +303,19 @@ export class UserProfileService {
       interests: Array.isArray(profile.interests)
         ? (profile.interests as string[])
         : [],
+      nickname: profile.nickname,
+      avatar_url: profile.avatarUrl,
     };
   }
 
   private assertAllowedKeys(input: UpdateProfileInput): void {
-    const allowed = new Set(['bio', 'region', 'interests']);
+    const allowed = new Set([
+      'bio',
+      'region',
+      'interests',
+      'nickname',
+      'avatar_url',
+    ]);
     const extra = Object.keys(input).filter((k) => !allowed.has(k));
     if (extra.length > 0) {
       throw new BadRequestException(`Unsupported fields: ${extra.join(', ')}`);

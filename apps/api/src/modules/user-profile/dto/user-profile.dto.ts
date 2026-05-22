@@ -40,12 +40,18 @@ export interface UpdateProfileInput {
   bio?: string | null;
   region?: string | null;
   interests?: string[];
+  /** P-F15: rename. Unique across all users; 2..20 chars Korean/Latin/digit. */
+  nickname?: string;
+  /** P-F15: profile avatar. Null clears the current avatar. */
+  avatar_url?: string | null;
 }
 
 export interface ProfileSubDTO {
   bio: string | null;
   region: string | null;
   interests: string[];
+  nickname: string;
+  avatar_url: string | null;
 }
 
 export interface FollowStateDTO {
