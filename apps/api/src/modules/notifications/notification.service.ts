@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import { BlockMuteService } from '../../shared/block-mute.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import {
   DeliveryAttempt,
@@ -33,6 +34,7 @@ export class NotificationService {
     @Inject(NOTIFICATION_DELIVERY)
     private readonly delivery: INotificationDeliverer,
     private readonly analytics: AnalyticsService,
+    private readonly blockMute: BlockMuteService,
   ) {}
 
   deliveryMode(): string {
@@ -89,11 +91,33 @@ export class NotificationService {
       ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     });
 
-    // Filter notifications whose spaceAccessPolicy is not allowed for viewer.
-    const visible = rows.filter((n) => {
+    // First pass: drop notifications whose spaceAccessPolicy is no
+    // longer allowed for viewer.
+    const policyFiltered = rows.filter((n) => {
       const p = n.payload as Record<string, unknown>;
       const policy = p['spaceAccessPolicy'] as string | undefined;
       return !policy || allowed.includes(policy);
+    });
+
+    // P6.2: drop notifications whose actor (payload.actorId, populated
+    // by mention / reply / quote / boost paths) is in a block or mute
+    // relationship with viewer. We resolve actor ids in one bulk call
+    // so the per-row check stays O(1).
+    const actorIds = Array.from(
+      new Set(
+        policyFiltered
+          .map((n) => (n.payload as Record<string, unknown>)['actorId'])
+          .filter((v): v is string => typeof v === 'string'),
+      ),
+    );
+    const [blockedSet, mutedSet] = await Promise.all([
+      this.blockMute.blockedSetFor(userId, actorIds),
+      this.blockMute.mutedSetFor(userId, actorIds),
+    ]);
+    const visible = policyFiltered.filter((n) => {
+      const actorId = (n.payload as Record<string, unknown>)['actorId'];
+      if (typeof actorId !== 'string') return true;
+      return !blockedSet.has(actorId) && !mutedSet.has(actorId);
     });
 
     const hasMore = visible.length > limit;

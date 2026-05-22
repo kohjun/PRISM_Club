@@ -3,6 +3,10 @@ import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService } from '../../shared/access-control.service';
 import { RequestUser } from '../../shared/decorators/current-user.decorator';
 import { AnalyticsService } from '../analytics/analytics.service';
+import {
+  BlockMuteService,
+  assertNotBlocked,
+} from '../../shared/block-mute.service';
 import { MentionService } from '../notifications/mention.service';
 import { PostAuthorDTO, ReplyDTO } from './dto/post.dto';
 
@@ -18,6 +22,7 @@ export class ReplyService {
     private readonly access: AccessControlService,
     private readonly analytics: AnalyticsService,
     private readonly mentions: MentionService,
+    private readonly blockMute: BlockMuteService,
   ) {}
 
   async create(postId: string, input: CreateReplyInput, viewer: RequestUser): Promise<ReplyDTO> {
@@ -29,6 +34,13 @@ export class ReplyService {
       throw new NotFoundException(`Post not found: ${postId}`);
     }
     await this.access.assertCanReadRoomBySlug(post.room.slug, viewer);
+    // P6.2: block check vs post author. Replying to someone we're
+    // blocked-either-way with is rejected with a friendly conflict
+    // (not 403 — the reader is allowed to read the post, just not
+    // engage with the author).
+    if (post.authorId !== viewer.id) {
+      await assertNotBlocked(this.blockMute, viewer.id, post.authorId);
+    }
     const spaceAccessPolicy = post.room.category?.space?.accessPolicy ?? 'PUBLIC';
 
     // Depth check: parent_reply_id may only reference a top-level reply.

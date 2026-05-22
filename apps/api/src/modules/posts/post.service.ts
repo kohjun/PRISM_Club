@@ -16,6 +16,10 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import { AutoModerationService } from '../moderation/auto-moderation.service';
 import { MentionService } from '../notifications/mention.service';
 import {
+  BlockMuteService,
+  assertNotBlocked,
+} from '../../shared/block-mute.service';
+import {
   PostAttachmentDTO,
   PostAuthorDTO,
   PostDTO,
@@ -67,6 +71,7 @@ export class PostService {
     private readonly rateLimit: RateLimitService,
     private readonly autoMod: AutoModerationService,
     private readonly mentions: MentionService,
+    private readonly blockMute: BlockMuteService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
@@ -143,6 +148,10 @@ export class PostService {
         throw new NotFoundException(
           `Quoted post not found: ${input.quoted_post_id}`,
         );
+      }
+      // P6.2: don't let a blocked-pair amplify each other via quote.
+      if (quoted.authorId !== viewer.id) {
+        await assertNotBlocked(this.blockMute, viewer.id, quoted.authorId);
       }
       quotedPostId = quoted.id;
     }

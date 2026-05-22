@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { BlockMuteService } from '../../shared/block-mute.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 
 /**
@@ -43,6 +44,7 @@ export class MentionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly analytics: AnalyticsService,
+    private readonly blockMute: BlockMuteService,
   ) {}
 
   /**
@@ -82,14 +84,21 @@ export class MentionService {
         where: { nickname: { in: nicks } },
         select: { userId: true, nickname: true },
       });
-      const recipients = profiles
+      const candidateRecipients = profiles
         .map((p) => ({ id: p.userId, nickname: p.nickname }))
         .filter((p) => p.id !== input.authorId);
-      if (recipients.length === 0) return 0;
+      if (candidateRecipients.length === 0) return 0;
 
-      // P6.2 will plug a Block / Mute filter in here. Until that lands
-      // we mention freely; the access-policy gate below is the only
-      // visibility guard.
+      // P6.2: filter out recipients who are in a block relationship
+      // with the author (either direction). A muted recipient still
+      // gets the mention row — mute is a viewer-side preference, not a
+      // sender-side gate.
+      const blockedSet = await this.blockMute.blockedSetFor(
+        input.authorId,
+        candidateRecipients.map((r) => r.id),
+      );
+      const recipients = candidateRecipients.filter((r) => !blockedSet.has(r.id));
+      if (recipients.length === 0) return 0;
 
       // Insert mention rows. Use createMany with skipDuplicates so a
       // re-save of the same body (edit → re-save) is idempotent.

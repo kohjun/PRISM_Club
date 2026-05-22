@@ -7,6 +7,7 @@ describe('MentionService.extractNicknames', () => {
   const svc = new MentionService(
     null as never,
     null as never,
+    null as never,
   );
 
   test('returns Korean + Latin nicknames in order, deduped', () => {

@@ -8,6 +8,7 @@ import { AccessControlModule } from './shared/access-control.module';
 import { MetricsModule } from './shared/metrics.service';
 import { TrustScoreModule } from './shared/trust-score.service';
 import { RateLimitModule } from './shared/rate-limit.service';
+import { BlockMuteModule } from './shared/block-mute.service';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
@@ -50,6 +51,9 @@ import { ShareModule } from './modules/share/share.module';
     TrustScoreModule,
     // P5.1: in-process sliding-window rate limit (shadow mode by default).
     RateLimitModule,
+    // P6.2: viewer-managed block + mute, consumed by post/reply/follow/
+    // mention/notification read+write paths.
+    BlockMuteModule,
     AuthModule,
     AccessControlModule,
     HealthModule,

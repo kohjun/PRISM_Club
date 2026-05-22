@@ -4,11 +4,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import {
+  BlockMuteService,
+  assertNotBlocked,
+} from '../../shared/block-mute.service';
 import { FollowStateDTO } from './dto/user-profile.dto';
 
 @Injectable()
 export class UserFollowService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly blockMute: BlockMuteService,
+  ) {}
 
   async toggle(targetUserId: string, viewerId: string): Promise<FollowStateDTO> {
     if (targetUserId === viewerId) {
@@ -21,6 +28,10 @@ export class UserFollowService {
     if (!target) {
       throw new NotFoundException(`User not found: ${targetUserId}`);
     }
+    // P6.2: a follow can't form across a block in either direction.
+    // Unblock first; UserFollow rows linked to a previous follow are
+    // already cleared inside BlockMuteService.block().
+    await assertNotBlocked(this.blockMute, viewerId, targetUserId);
     const existing = await this.prisma.userFollow.findUnique({
       where: {
         followerId_followedId: {

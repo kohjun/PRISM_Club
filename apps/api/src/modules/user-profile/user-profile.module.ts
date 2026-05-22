@@ -9,6 +9,7 @@ import { UserProfileController } from './user-profile.controller';
 import { UserFollowController } from './user-follow.controller';
 import { ProfileShareService } from './profile-share.service';
 import { ProfileShareController } from './profile-share.controller';
+import { BlockMuteController } from './block-mute.controller';
 
 @Module({
   imports: [PrismaModule, AccessControlModule, PostsModule, KnowledgeModule],
@@ -16,6 +17,7 @@ import { ProfileShareController } from './profile-share.controller';
     UserProfileController,
     UserFollowController,
     ProfileShareController,
+    BlockMuteController,
   ],
   providers: [UserProfileService, UserFollowService, ProfileShareService],
 })

@@ -63,6 +63,10 @@ model User {
   recommendedByOthers     FollowRecommendation[]   @relation("FollowRecCandidate")
   mentions                Mention[]                @relation("MentionedUser")
   authoredMentions        Mention[]                @relation("MentionActor")
+  blocking                UserBlock[]              @relation("Blocker")
+  blockedBy               UserBlock[]              @relation("Blocked")
+  muting                  UserMute[]               @relation("Muter")
+  mutedBy                 UserMute[]               @relation("Muted")
 
   @@map("users")
 }
@@ -953,6 +957,39 @@ model Notification {
 
   @@index([userId, isRead, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+// P6.2 — user-level block. Bidirectional in effect: blocker no longer
+// sees blocked's content; blocked cannot reply / quote / mention /
+// follow the blocker. Read-time filter is centralised in
+// VisibilityFilter so a missing call site is the source of any
+// regression.
+model UserBlock {
+  blockerId String   @map("blocker_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId], map: "user_blocks_blocked_idx")
+  @@map("user_blocks")
+}
+
+// P6.2 — user-level mute. One-way: muter hides muted's content from
+// feeds / notifications without informing them. Mute is strictly
+// softer than block — no write-side guard, just read-time filter.
+model UserMute {
+  muterId   String   @map("muter_id") @db.Uuid
+  mutedId   String   @map("muted_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  muter User @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
+  @@map("user_mutes")
 }
 
 // P6.1 — single row per (sourceType, sourceId, mentionedUserId). Lets the
