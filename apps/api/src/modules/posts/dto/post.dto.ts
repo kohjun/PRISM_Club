@@ -101,12 +101,14 @@ export interface PostDTO {
   created_at: string;
   updated_at: string;
   attachments: PostAttachmentDTO[];
-  counts: { reply_count: number; like_count: number };
+  counts: { reply_count: number; like_count: number; boost_count: number };
   /**
    * Backwards-compatible flag: true when viewer reacted with ANY
    * emoji on this target. Old UI keeps working unchanged.
    */
   liked_by_me: boolean;
+  /** P6.6: true when viewer has boosted this post. */
+  boosted_by_me: boolean;
   /**
    * P6.4: the specific emoji the viewer chose, or null when the
    * viewer has not reacted. Used by the reaction palette to

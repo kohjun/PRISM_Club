@@ -170,6 +170,8 @@ class PostDto {
     this.quotedPost,
     this.poll,
     this.replyPolicy = 'ANYONE',
+    this.boostCount = 0,
+    this.boostedByMe = false,
   });
 
   final String id;
@@ -195,6 +197,10 @@ class PostDto {
   final PollDto? poll;
   /// P6.7: ANYONE / FOLLOWERS / MENTIONED_ONLY / DISABLED.
   final String replyPolicy;
+  /// P6.6: total boosts (server-side counter).
+  final int boostCount;
+  /// P6.6: viewer has boosted this post.
+  final bool boostedByMe;
 
   bool get isRecruitment => postType == 'RECRUITMENT';
 
@@ -263,6 +269,8 @@ class PostDto {
             )
           : null,
       replyPolicy: json['reply_policy'] as String? ?? 'ANYONE',
+      boostCount: (counts['boost_count'] as int?) ?? 0,
+      boostedByMe: json['boosted_by_me'] as bool? ?? false,
     );
   }
 }

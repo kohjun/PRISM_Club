@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 import { EventDigestService } from './event-digest.service';
+import { EventLiveService } from './event-live.service';
 
 /**
  * Event reminder + status-refresh cron (P3.2).
@@ -22,6 +23,7 @@ import { EventDigestService } from './event-digest.service';
  */
 const ADVISORY_LOCK_REMINDER = 854_301;
 const ADVISORY_LOCK_STATUS_REFRESH = 854_302;
+const ADVISORY_LOCK_LIVE_ARCHIVE = 854_303;
 
 const D1_WINDOW_MIN = 30;
 const H1_WINDOW_MIN = 5;
@@ -35,6 +37,7 @@ export class EventReminderCron {
   constructor(
     private readonly prisma: PrismaService,
     private readonly digest: EventDigestService,
+    private readonly live: EventLiveService,
   ) {}
 
   // ---- Schedule wrappers (single instance via advisory lock) ----------
@@ -68,6 +71,31 @@ export class EventReminderCron {
       );
     } finally {
       await this._unlock(ADVISORY_LOCK_STATUS_REFRESH);
+    }
+  }
+
+  /**
+   * P6.8 archive sweep — twice a day is enough granularity given the
+   * 48h horizon. Lazily mutates `archived_at` on event_live_posts whose
+   * event passed `starts_at + 48h`. Archived rows still exist for
+   * audit; they just disappear from the read API.
+   */
+  @Cron('0 30 */12 * * *')
+  async liveArchive(): Promise<void> {
+    if (process.env.EVENT_REMINDER_ENABLED === '0') return;
+    const got = await this._tryLock(ADVISORY_LOCK_LIVE_ARCHIVE);
+    if (!got) return;
+    try {
+      const { archived } = await this.live.archiveExpired();
+      if (archived > 0) {
+        this.log.log(`event live archive: marked ${archived} rows`);
+      }
+    } catch (e) {
+      this.log.warn(
+        `live archive failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      await this._unlock(ADVISORY_LOCK_LIVE_ARCHIVE);
     }
   }
 

@@ -17,6 +17,7 @@ import { AutoModerationService } from '../moderation/auto-moderation.service';
 import { MentionService } from '../notifications/mention.service';
 import { NotificationService } from '../notifications/notification.service';
 import { PollService, CreatePollInput } from './poll.service';
+import { BoostService } from './boost.service';
 import {
   BlockMuteService,
   assertNotBlocked,
@@ -90,6 +91,7 @@ export class PostService {
     private readonly blockMute: BlockMuteService,
     private readonly notifications: NotificationService,
     private readonly polls: PollService,
+    private readonly boosts: BoostService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
@@ -506,9 +508,10 @@ export class PostService {
     viewerId: string,
   ): Promise<PostDTO[]> {
     const ids = rows.map((r) => r.id);
-    const [quoteMap, pollMap] = await Promise.all([
+    const [quoteMap, pollMap, boostedSet] = await Promise.all([
       this.fetchQuoteRefs(ids),
       this.polls.summarizeForPosts(ids, viewerId),
+      this.boosts.boostedSetFor(viewerId, ids),
     ]);
     return Promise.all(
       rows.map((p) =>
@@ -517,6 +520,7 @@ export class PostService {
           viewerId,
           quoteMap.get(p.id) ?? null,
           pollMap.get(p.id) ?? null,
+          boostedSet.has(p.id),
         ),
       ),
     );
@@ -529,6 +533,7 @@ export class PostService {
     viewerId: string,
     quotedPost?: QuotedPostRefDTO | null,
     poll?: PollDTO | null,
+    boostedByMe?: boolean,
   ): Promise<PostDTO> {
     const attachments = await this.resolveAttachments(post.attachments);
     const myReaction = await this.myReactionFor(viewerId, 'POST', post.id);
@@ -540,6 +545,10 @@ export class PostService {
       poll === undefined
         ? (await this.polls.summarizeForPosts([post.id], viewerId)).get(post.id) ?? null
         : poll;
+    const boosted =
+      boostedByMe === undefined
+        ? (await this.boosts.boostedSetFor(viewerId, [post.id])).has(post.id)
+        : boostedByMe;
 
     return {
       id: post.id,
@@ -552,9 +561,14 @@ export class PostService {
       created_at: post.createdAt.toISOString(),
       updated_at: post.updatedAt.toISOString(),
       attachments,
-      counts: { reply_count: post.replyCount, like_count: post.likeCount },
+      counts: {
+        reply_count: post.replyCount,
+        like_count: post.likeCount,
+        boost_count: post.boostCount,
+      },
       // Backwards-compat boolean derived from the new reaction lookup.
       liked_by_me: myReaction !== null,
+      boosted_by_me: boosted,
       my_reaction:
         (myReaction as PostDTO['my_reaction'] | null) ?? null,
       quoted_post: quote,

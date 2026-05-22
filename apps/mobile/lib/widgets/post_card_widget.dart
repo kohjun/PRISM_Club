@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app/design_tokens.dart';
+import '../features/post/data/boost_repository.dart';
 import '../features/post/data/post_dto.dart';
 import '../features/post/data/reaction_repository.dart';
 import '../features/user_profile/data/user_search_repository.dart';
@@ -102,8 +103,11 @@ class PostCardWidget extends ConsumerWidget {
                 replyCount: post.replyCount,
                 likedByMe: post.likedByMe,
                 myReaction: post.myReaction,
+                boostCount: post.boostCount,
+                boostedByMe: post.boostedByMe,
                 onLikePressed: onLikePressed,
                 onReactionPick: (type) => _onPick(context, ref, type),
+                onBoostPressed: () => _onBoost(context, ref),
               ),
             ],
           ),
@@ -153,6 +157,17 @@ class PostCardWidget extends ConsumerWidget {
           .toggle('POST', post.id, reactionType: type);
     } catch (_) {
       // Silent — palette interaction shouldn't break the surface.
+    }
+  }
+
+  /// P6.6: amplify-without-comment toggle. Same fire-and-forget pattern
+  /// as the reaction pick — the parent screen's pull-to-refresh
+  /// surfaces the new count.
+  Future<void> _onBoost(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(boostRepositoryProvider).toggle(post.id);
+    } catch (_) {
+      // Silent.
     }
   }
 }
@@ -307,16 +322,22 @@ class _ActionRow extends StatelessWidget {
     required this.replyCount,
     required this.likedByMe,
     this.myReaction,
+    this.boostCount = 0,
+    this.boostedByMe = false,
     this.onLikePressed,
     this.onReactionPick,
+    this.onBoostPressed,
   });
 
   final int likeCount;
   final int replyCount;
   final bool likedByMe;
   final String? myReaction;
+  final int boostCount;
+  final bool boostedByMe;
   final VoidCallback? onLikePressed;
   final void Function(String type)? onReactionPick;
+  final VoidCallback? onBoostPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +418,43 @@ class _ActionRow extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+        const SizedBox(width: PrismSpacing.sm),
+        Semantics(
+          button: true,
+          toggled: boostedByMe,
+          label: boostedByMe ? '부스트 취소' : '부스트',
+          child: InkWell(
+            onTap: onBoostPressed,
+            borderRadius: BorderRadius.circular(PrismRadius.sm),
+            child: Container(
+              constraints:
+                  const BoxConstraints(minHeight: 44, minWidth: 44),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.repeat,
+                    size: 20,
+                    color:
+                        boostedByMe ? PrismColors.pp700 : PrismColors.ink4,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$boostCount',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          boostedByMe ? PrismColors.pp700 : PrismColors.ink3,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

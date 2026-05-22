@@ -5,10 +5,12 @@ import { PostService } from './post.service';
 import { ReplyService } from './reply.service';
 import { ReactionService } from './reaction.service';
 import { PollService } from './poll.service';
+import { BoostService } from './boost.service';
 import { PostController } from './post.controller';
 import { ReplyController } from './reply.controller';
 import { ReactionController } from './reaction.controller';
 import { PollController } from './poll.controller';
+import { BoostController } from './boost.controller';
 import { RecruitmentService } from './recruitment.service';
 import { RecruitmentController } from './recruitment.controller';
 
@@ -19,6 +21,7 @@ import { RecruitmentController } from './recruitment.controller';
     ReplyController,
     ReactionController,
     PollController,
+    BoostController,
     RecruitmentController,
   ],
   providers: [
@@ -26,6 +29,7 @@ import { RecruitmentController } from './recruitment.controller';
     ReplyService,
     ReactionService,
     PollService,
+    BoostService,
     RecruitmentService,
   ],
   exports: [
@@ -33,6 +37,7 @@ import { RecruitmentController } from './recruitment.controller';
     ReplyService,
     ReactionService,
     PollService,
+    BoostService,
     RecruitmentService,
   ],
 })

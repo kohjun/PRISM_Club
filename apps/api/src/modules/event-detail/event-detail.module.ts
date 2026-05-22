@@ -11,6 +11,8 @@ import { EventReminderOpsController } from './event-reminder-ops.controller';
 import { EventReviewService } from './event-review.service';
 import { EventReviewController } from './event-review.controller';
 import { EventDigestService } from './event-digest.service';
+import { EventLiveService } from './event-live.service';
+import { EventLiveController } from './event-live.controller';
 
 @Module({
   imports: [CommunityModule, PostsModule],
@@ -19,6 +21,7 @@ import { EventDigestService } from './event-digest.service';
     EventRsvpController,
     EventReminderOpsController,
     EventReviewController,
+    EventLiveController,
   ],
   providers: [
     EventDetailService,
@@ -27,6 +30,7 @@ import { EventDigestService } from './event-digest.service';
     EventReminderCron,
     EventReviewService,
     EventDigestService,
+    EventLiveService,
   ],
   exports: [
     EventDetailService,
@@ -35,6 +39,7 @@ import { EventDigestService } from './event-digest.service';
     EventReminderCron,
     EventReviewService,
     EventDigestService,
+    EventLiveService,
   ],
 })
 export class EventDetailModule {}
