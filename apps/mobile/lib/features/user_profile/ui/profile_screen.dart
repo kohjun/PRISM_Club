@@ -8,6 +8,7 @@ import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/prism_avatar.dart';
 import '../../../widgets/role_badge.dart';
 import '../../../widgets/state_views.dart';
+import '../data/reputation_repository.dart';
 import '../data/user_follow_repository.dart';
 import '../data/user_profile_dto.dart';
 import '../data/user_profile_repository.dart';
@@ -324,6 +325,10 @@ class _HeroBlock extends ConsumerWidget {
             const SizedBox(height: PrismSpacing.md),
             RoleBadgeRow(roles: bundle.roles),
           ],
+          // P2.2: contribution reputation. Hidden when the user has no
+          // resolved contributions yet so a fresh profile doesn't show
+          // a "0점" bar that adds noise.
+          _ReputationLine(userId: userId),
           if (bundle.profile.bio != null &&
               bundle.profile.bio!.isNotEmpty) ...[
             const SizedBox(height: PrismSpacing.md),
@@ -470,6 +475,66 @@ class _CountRow extends StatelessWidget {
           _cell('팔로잉', counts.followingCount),
         ],
       ),
+    );
+  }
+}
+
+class _ReputationLine extends ConsumerWidget {
+  const _ReputationLine({required this.userId});
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(userReputationProvider(userId));
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (rep) {
+        if (!rep.hasActivity) return const SizedBox.shrink();
+        final score = rep.weightedScore;
+        final scoreText = score == score.roundToDouble()
+            ? score.toInt().toString()
+            : score.toStringAsFixed(1);
+        return Padding(
+          padding: const EdgeInsets.only(top: PrismSpacing.md),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: PrismSpacing.md,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: PrismColors.pp50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.workspace_premium_outlined,
+                  size: 18,
+                  color: PrismColors.pp700,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '기여 점수 $scoreText점',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: PrismColors.pp700,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '승인 ${rep.approvedCount}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: PrismColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
