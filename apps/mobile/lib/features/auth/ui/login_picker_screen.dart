@@ -206,6 +206,7 @@ class _UserTileState extends ConsumerState<_UserTile> {
               id: result.userId,
               nickname: result.nickname,
               accessToken: result.accessToken,
+              refreshToken: result.refreshToken,
             ),
           );
       if (mounted) context.go(path);

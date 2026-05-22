@@ -5,17 +5,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// A persisted login session. Only what the API absolutely needs to
 /// re-authenticate on app start.
+///
+/// `refreshToken` is nullable because pre-P1.1 sessions (and the dev
+/// login path when ALLOW_DEV_LOGIN=1) may still hand back a session
+/// without a refresh token. Email + Kakao logins ALWAYS include one.
 @immutable
 class StoredSession {
   const StoredSession({
     required this.id,
     required this.nickname,
     required this.accessToken,
+    this.refreshToken,
   });
 
   final String id;
   final String nickname;
   final String accessToken;
+  final String? refreshToken;
 }
 
 /// Storage boundary for the JWT + user snapshot.
@@ -42,6 +48,7 @@ class SharedPrefsSessionStorage implements SessionStorage {
   static const _kUserId = 'currentUser.id';
   static const _kNickname = 'currentUser.nickname';
   static const _kAccessToken = 'currentUser.accessToken';
+  static const _kRefreshToken = 'currentUser.refreshToken';
 
   @override
   Future<StoredSession?> load() async {
@@ -50,7 +57,12 @@ class SharedPrefsSessionStorage implements SessionStorage {
     final nickname = prefs.getString(_kNickname);
     final token = prefs.getString(_kAccessToken);
     if (id == null || nickname == null || token == null) return null;
-    return StoredSession(id: id, nickname: nickname, accessToken: token);
+    return StoredSession(
+      id: id,
+      nickname: nickname,
+      accessToken: token,
+      refreshToken: prefs.getString(_kRefreshToken),
+    );
   }
 
   @override
@@ -59,6 +71,12 @@ class SharedPrefsSessionStorage implements SessionStorage {
     await prefs.setString(_kUserId, session.id);
     await prefs.setString(_kNickname, session.nickname);
     await prefs.setString(_kAccessToken, session.accessToken);
+    final refresh = session.refreshToken;
+    if (refresh != null && refresh.isNotEmpty) {
+      await prefs.setString(_kRefreshToken, refresh);
+    } else {
+      await prefs.remove(_kRefreshToken);
+    }
   }
 
   @override
@@ -67,6 +85,7 @@ class SharedPrefsSessionStorage implements SessionStorage {
     await prefs.remove(_kUserId);
     await prefs.remove(_kNickname);
     await prefs.remove(_kAccessToken);
+    await prefs.remove(_kRefreshToken);
   }
 }
 
@@ -85,6 +104,7 @@ class SecureSessionStorage implements SessionStorage {
   static const _kUserId = 'currentUser.id';
   static const _kNickname = 'currentUser.nickname';
   static const _kAccessToken = 'currentUser.accessToken';
+  static const _kRefreshToken = 'currentUser.refreshToken';
 
   @override
   Future<StoredSession?> load() async {
@@ -92,7 +112,12 @@ class SecureSessionStorage implements SessionStorage {
     final nickname = await _storage.read(key: _kNickname);
     final token = await _storage.read(key: _kAccessToken);
     if (id == null || nickname == null || token == null) return null;
-    return StoredSession(id: id, nickname: nickname, accessToken: token);
+    return StoredSession(
+      id: id,
+      nickname: nickname,
+      accessToken: token,
+      refreshToken: await _storage.read(key: _kRefreshToken),
+    );
   }
 
   @override
@@ -100,6 +125,12 @@ class SecureSessionStorage implements SessionStorage {
     await _storage.write(key: _kUserId, value: session.id);
     await _storage.write(key: _kNickname, value: session.nickname);
     await _storage.write(key: _kAccessToken, value: session.accessToken);
+    final refresh = session.refreshToken;
+    if (refresh != null && refresh.isNotEmpty) {
+      await _storage.write(key: _kRefreshToken, value: refresh);
+    } else {
+      await _storage.delete(key: _kRefreshToken);
+    }
   }
 
   @override
@@ -107,6 +138,7 @@ class SecureSessionStorage implements SessionStorage {
     await _storage.delete(key: _kUserId);
     await _storage.delete(key: _kNickname);
     await _storage.delete(key: _kAccessToken);
+    await _storage.delete(key: _kRefreshToken);
   }
 }
 

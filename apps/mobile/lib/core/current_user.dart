@@ -12,11 +12,22 @@ class CurrentUser {
     required this.id,
     required this.nickname,
     required this.accessToken,
+    this.refreshToken,
   });
 
   final String id;
   final String nickname;
   final String accessToken;
+  final String? refreshToken;
+
+  CurrentUser copyWithAccessToken(String newAccessToken) {
+    return CurrentUser(
+      id: id,
+      nickname: nickname,
+      accessToken: newAccessToken,
+      refreshToken: refreshToken,
+    );
+  }
 }
 
 /// Persists the session via [SessionStorage] so storage is platform-
@@ -32,6 +43,7 @@ class CurrentUserNotifier extends AsyncNotifier<CurrentUser?> {
       id: stored.id,
       nickname: stored.nickname,
       accessToken: stored.accessToken,
+      refreshToken: stored.refreshToken,
     );
   }
 
@@ -41,8 +53,25 @@ class CurrentUserNotifier extends AsyncNotifier<CurrentUser?> {
       id: user.id,
       nickname: user.nickname,
       accessToken: user.accessToken,
+      refreshToken: user.refreshToken,
     ));
     state = AsyncData(user);
+  }
+
+  /// Update the access token only — preserves refresh token + identity.
+  /// Used by the Dio 401 interceptor after a successful /auth/refresh.
+  Future<void> updateAccessToken(String newAccessToken) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final updated = current.copyWithAccessToken(newAccessToken);
+    final storage = ref.read(sessionStorageProvider);
+    await storage.save(StoredSession(
+      id: updated.id,
+      nickname: updated.nickname,
+      accessToken: updated.accessToken,
+      refreshToken: updated.refreshToken,
+    ));
+    state = AsyncData(updated);
   }
 
   Future<void> signOut() async {
