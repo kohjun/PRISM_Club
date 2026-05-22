@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
+import '../../../core/observability/crashlytics_bootstrap.dart';
 import '../../../widgets/state_views.dart';
 import '../data/ops_dto.dart';
 import '../data/ops_repository.dart';
@@ -30,6 +31,36 @@ class OpsDashboardScreen extends ConsumerWidget {
           SnackBar(content: Text('시그널 새로고침 실패: $e')),
         );
       }
+    }
+  }
+
+  /// Confirm-then-throw test exception. Used to verify the Crashlytics
+  /// pipeline reaches the Firebase console (~5 minute delivery SLA).
+  /// Surfaced only on the admin/curator/moderator-gated ops dashboard.
+  Future<void> _throwTestCrash(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Crashlytics 테스트 예외'),
+        content: Text(
+          '앱이 즉시 종료됩니다. 다시 열면 보고가 Firebase 콘솔로 전송돼요.'
+          '\n\n'
+          'collection: ${CrashlyticsBootstrap.collectionEnabled ? "ON" : "OFF (debug 빌드)"}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('예외 발생'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      CrashlyticsBootstrap.throwTestException();
     }
   }
 
@@ -95,6 +126,16 @@ class OpsDashboardScreen extends ConsumerWidget {
                   subtitle: p.roomSlug,
                   onTap: () => context.go('/posts/${p.id}'),
                 ),
+              const SizedBox(height: PrismSpacing.xl2),
+              const _Section(title: 'QA / 진단'),
+              _OpsTile(
+                icon: Icons.bug_report_outlined,
+                title: 'Crashlytics 테스트 예외 발생',
+                subtitle: CrashlyticsBootstrap.collectionEnabled
+                    ? '확인 → 즉시 종료 → 재실행 시 Firebase 콘솔로 전송'
+                    : 'collection OFF — debug 빌드에선 콘솔에 도달하지 않음',
+                onTap: () => _throwTestCrash(context),
+              ),
               const SizedBox(height: PrismSpacing.xl3),
             ],
           ),

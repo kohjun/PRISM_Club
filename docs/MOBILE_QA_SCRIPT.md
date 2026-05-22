@@ -336,6 +336,22 @@ If the device is signed in as **coral** (CURATOR + MODERATOR):
 - [ ] `/curate` → APPROVE pending contribution → block content
       updates.
 
+### Crashlytics pipeline (release / staging APK only)
+
+The test trigger lives at the bottom of `/admin/ops` under **QA / 진단**.
+Skip on debug builds — `CrashlyticsBootstrap.collectionEnabled` is OFF
+so the report never leaves the device.
+
+- [ ] **운영 대시보드** scroll to bottom → tap **Crashlytics 테스트 예외 발생**.
+- [ ] Confirmation dialog shows `collection: ON` on a release build.
+- [ ] Tap **예외 발생** → app terminates immediately.
+- [ ] Relaunch the app from the launcher. (No additional action needed.)
+- [ ] Open Firebase Console → Crashlytics → confirm the test crash
+      appears within ~5 minutes (event: `StateError: PRISM Crashlytics
+      test exception`).
+- [ ] Stack frame is symbolicated (file paths + line numbers visible),
+      not raw R8 obfuscated names.
+
 If signed in as a plain member, **none of those surfaces are reachable**:
 
 - [ ] SpaceList banners are absent.
