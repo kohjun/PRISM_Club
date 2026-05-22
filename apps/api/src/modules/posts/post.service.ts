@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,6 +10,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService } from '../../shared/access-control.service';
 import { RequestUser } from '../../shared/decorators/current-user.decorator';
+import { RateLimitService } from '../../shared/rate-limit.service';
 import { RoomService } from '../community/room.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import {
@@ -58,9 +61,29 @@ export class PostService {
     private readonly access: AccessControlService,
     private readonly rooms: RoomService,
     private readonly analytics: AnalyticsService,
+    private readonly rateLimit: RateLimitService,
   ) {}
 
   async create(roomSlug: string, input: CreatePostInput, viewer: RequestUser): Promise<PostDTO> {
+    // P5.1: tier-aware rate limit. Shadow mode (default) records the
+    // hit but lets the request through; enforce mode (RATE_LIMIT_ENABLED=1)
+    // returns 429 with Retry-After.
+    const decision = this.rateLimit.consume({
+      scope: 'post.create',
+      viewer,
+    });
+    if (!decision.allowed) {
+      throw new HttpException(
+        {
+          error: {
+            code: 'RATE_LIMITED',
+            message: '잠시 후 다시 시도해주세요.',
+            retry_after_seconds: Math.ceil(decision.ttl_ms / 1000),
+          },
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
     await this.access.assertCanReadRoomBySlug(roomSlug, viewer);
     const room = await this.rooms.getRoomBySlug(roomSlug);
     await this.validateAttachmentTargets(input.attachments ?? []);

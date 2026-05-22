@@ -7,6 +7,7 @@ import { PrismaModule } from './shared/prisma.module';
 import { AccessControlModule } from './shared/access-control.module';
 import { MetricsModule } from './shared/metrics.service';
 import { TrustScoreModule } from './shared/trust-score.service';
+import { RateLimitModule } from './shared/rate-limit.service';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
@@ -47,6 +48,8 @@ import { ShareModule } from './modules/share/share.module';
     MetricsModule,
     // P5.1/P5.2: single source-of-truth user trust tier.
     TrustScoreModule,
+    // P5.1: in-process sliding-window rate limit (shadow mode by default).
+    RateLimitModule,
     AuthModule,
     AccessControlModule,
     HealthModule,
