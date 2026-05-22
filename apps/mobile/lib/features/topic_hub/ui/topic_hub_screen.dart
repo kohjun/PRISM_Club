@@ -13,6 +13,7 @@ import '../../room/data/room_summary_dto.dart';
 import '../../search/data/search_repository.dart';
 import '../data/topic_hub_dto.dart';
 import '../data/topic_hub_repository.dart';
+import 'widgets/weekly_digest_section.dart';
 
 class TopicHubScreen extends ConsumerWidget {
   const TopicHubScreen({
@@ -138,6 +139,12 @@ class TopicHubScreen extends ConsumerWidget {
           child: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: _Hero(bundle: b)),
+              // P2.4: "이번 주 변화" rollup. Self-hides when the API
+              // returns null (empty week), so the card doesn't appear
+              // on brand-new hubs.
+              SliverToBoxAdapter(
+                child: WeeklyDigestSection(categorySlug: categorySlug),
+              ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
                   PrismSpacing.xl,

@@ -9,6 +9,8 @@ import { KnowledgeRevisionService } from './knowledge-revision.service';
 import { KnowledgeRevisionController } from './knowledge-revision.controller';
 import { ContributionReputationService } from './contribution-reputation.service';
 import { ContributionReputationController } from './contribution-reputation.controller';
+import { DigestService } from './digest.service';
+import { DigestOpsController } from './digest-ops.controller';
 
 @Module({
   imports: [CommunityModule],
@@ -17,6 +19,7 @@ import { ContributionReputationController } from './contribution-reputation.cont
     KnowledgeContributionService,
     KnowledgeRevisionService,
     ContributionReputationService,
+    DigestService,
   ],
   controllers: [
     TopicHubController,
@@ -24,12 +27,14 @@ import { ContributionReputationController } from './contribution-reputation.cont
     AdminKnowledgeContributionController,
     KnowledgeRevisionController,
     ContributionReputationController,
+    DigestOpsController,
   ],
   exports: [
     KnowledgeService,
     KnowledgeContributionService,
     KnowledgeRevisionService,
     ContributionReputationService,
+    DigestService,
   ],
 })
 export class KnowledgeModule {}
