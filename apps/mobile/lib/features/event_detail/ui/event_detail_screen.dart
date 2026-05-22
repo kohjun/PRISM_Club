@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
+import '../../../core/config.dart';
 import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/state_views.dart';
 import '../../event_card/data/event_card_dto.dart';
@@ -189,6 +191,17 @@ class _EventAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
         actions: [
+          // P3.4: hand the public ICS URL to the OS so the user's
+          // calendar app picks it up. No auth needed (Public endpoint),
+          // url_launcher is already in pubspec.
+          IconButton(
+            icon: Icon(Icons.calendar_month_outlined, color: iconColor),
+            tooltip: '캘린더에 추가',
+            onPressed: () async {
+              final uri = Uri.parse('$apiBaseUrl/event-cards/$cardId/ics');
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+          ),
           Consumer(
             builder: (ctx, ref, _) {
               final saveKey = 'EVENT_CARD:$cardId';
