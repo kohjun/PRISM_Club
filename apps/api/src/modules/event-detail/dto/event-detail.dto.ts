@@ -1,5 +1,6 @@
 import { PostDTO } from '../../posts/dto/post.dto';
 import { EventCardDTO } from '../../community/dto/room.dto';
+import { EventReviewDTO } from './review.dto';
 
 export interface RelatedRoomDTO {
   id: string;
@@ -21,10 +22,16 @@ export interface EventDetailBundleDTO {
   related_rooms: RelatedRoomDTO[];
   related_posts: RelatedPostsPageDTO;
   default_compose_room_slug: string | null;
-  verified_reviews: PostDTO[]; // reserved, empty in M5
+  /**
+   * P3.3: top-N reviews surfaced inline. Empty array when the event
+   * isn't COMPLETED yet or no one has reviewed.
+   */
+  verified_reviews: EventReviewDTO[];
   counts: {
     post_count: number;
     room_count: number;
+    review_count: number;
+    review_average: number | null;
   };
   /** P3.1 RSVP state for the calling viewer. */
   rsvp: {

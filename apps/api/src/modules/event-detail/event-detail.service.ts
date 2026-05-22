@@ -10,6 +10,7 @@ import { RoomService } from '../community/room.service';
 import { PostService } from '../posts/post.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { EventRsvpService } from './event-rsvp.service';
+import { EventReviewService } from './event-review.service';
 import {
   EventDetailBundleDTO,
   RelatedRoomDTO,
@@ -41,6 +42,7 @@ export class EventDetailService {
     private readonly posts: PostService,
     private readonly analytics: AnalyticsService,
     private readonly rsvps: EventRsvpService,
+    private readonly reviews: EventReviewService,
   ) {}
 
   async getBundle(
@@ -147,6 +149,12 @@ export class EventDetailService {
     });
 
     const rsvpState = await this.rsvps.getState(cardId, viewer.id);
+    const topReviews = await this.reviews.topForEvent(cardId, 3);
+    const reviewAgg = await this.prisma.eventReview.aggregate({
+      where: { eventCardId: cardId, status: 'VISIBLE' },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
 
     return {
       event_card: this.rooms.toEventCardDTO(card),
@@ -158,10 +166,12 @@ export class EventDetailService {
           : null,
       },
       default_compose_room_slug: defaultComposeRoomSlug,
-      verified_reviews: [],
+      verified_reviews: topReviews,
       counts: {
         post_count: postCount,
         room_count: relatedRooms.length,
+        review_count: reviewAgg._count._all ?? 0,
+        review_average: reviewAgg._avg.rating ?? null,
       },
       rsvp: rsvpState,
     };

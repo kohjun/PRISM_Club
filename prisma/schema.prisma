@@ -57,6 +57,7 @@ model User {
   eventRsvps              EventRsvp[]
   recruitmentApplications RecruitmentApplication[]
   eventReminderSends      EventReminderSend[]
+  eventReviews            EventReview[]
 
   @@map("users")
 }
@@ -607,6 +608,7 @@ model EventCard {
   topicHubLinks TopicHubEventLink[]
   rsvps         EventRsvp[]
   reminderSends EventReminderSend[]
+  reviews       EventReview[]
 
   @@map("event_cards")
 }
@@ -627,6 +629,29 @@ model EventReminderSend {
   @@unique([eventCardId, userId, reminderKind])
   @@index([eventCardId, reminderKind])
   @@map("event_reminder_sends")
+}
+
+// Per-user review per completed event (P3.3). One row per
+// (event_card, user) so a single attendee can revise their review
+// instead of stacking duplicates. Rating is 1..5; status carries
+// through the standard VISIBLE / HIDDEN / DELETED moderation cycle
+// (Report.targetType='EVENT_REVIEW').
+model EventReview {
+  id          String   @id @default(uuid()) @db.Uuid
+  eventCardId String   @map("event_card_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  rating      Int
+  body        String
+  status      String   @default("VISIBLE")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  eventCard EventCard @relation(fields: [eventCardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventCardId, userId])
+  @@index([eventCardId, createdAt(sort: Desc)])
+  @@map("event_reviews")
 }
 
 // Per-user RSVP per event card (P3.1). Status state machine:

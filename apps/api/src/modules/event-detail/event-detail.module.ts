@@ -8,6 +8,8 @@ import { EventRsvpController } from './event-rsvp.controller';
 import { EventIcsService } from './event-ics.service';
 import { EventReminderCron } from './event-reminder.cron';
 import { EventReminderOpsController } from './event-reminder-ops.controller';
+import { EventReviewService } from './event-review.service';
+import { EventReviewController } from './event-review.controller';
 
 @Module({
   imports: [CommunityModule, PostsModule],
@@ -15,18 +17,21 @@ import { EventReminderOpsController } from './event-reminder-ops.controller';
     EventDetailController,
     EventRsvpController,
     EventReminderOpsController,
+    EventReviewController,
   ],
   providers: [
     EventDetailService,
     EventRsvpService,
     EventIcsService,
     EventReminderCron,
+    EventReviewService,
   ],
   exports: [
     EventDetailService,
     EventRsvpService,
     EventIcsService,
     EventReminderCron,
+    EventReviewService,
   ],
 })
 export class EventDetailModule {}

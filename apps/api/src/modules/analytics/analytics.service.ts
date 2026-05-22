@@ -31,6 +31,7 @@ export type EventType =
   | 'EVENT_UPDATED_NOTIFY'
   | 'RECRUITMENT_APPLIED'
   | 'RECRUITMENT_DECISION_MADE'
+  | 'EVENT_REVIEW_CREATED'
   | 'SEARCH_QUERY';
 
 export interface EventInput {
