@@ -1,0 +1,21 @@
+flowchart LR
+    Tap["❤️ tap<br/>(short)"]
+    LongPress["❤️ long-press"]
+    BoostShort["🔁 tap"]
+    BoostLong["🔁 long-press"]
+
+    Tap --> ReactSvc["ReactionService.toggle<br/>(default HEART)"]
+    LongPress --> Palette["6-emoji palette<br/>HEART/THUMBS_UP/FIRE<br/>THINK/IDEA/LAUGH"]
+    Palette --> ReactSvc
+
+    BoostShort --> BoostSvc["BoostService.toggle"]
+    BoostLong --> Sheet["Retweet sheet<br/>(F17)"]
+    Sheet --> BoostSvc
+    Sheet --> Quote["Composer<br/>?quoted_post_id=…"]
+
+    ReactSvc --> Reactions[("reactions<br/>UNIQUE(user, target_type, target_id)")]
+    BoostSvc --> Boosts[("post_boosts<br/>UNIQUE(post, booster)")]
+
+    Reactions --> PostDTO["PostDTO<br/>my_reaction / liked_by_me<br/>reaction_counts"]
+    Boosts --> PostDTO
+    PostDTO --> Card["PostCardWidget<br/>action row"]

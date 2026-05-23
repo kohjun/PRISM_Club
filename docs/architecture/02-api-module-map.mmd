@@ -1,0 +1,72 @@
+flowchart TB
+    subgraph Cross["Cross-cutting shared (global)"]
+        Prisma["PrismaModule"]
+        Auth["AuthGuard + RolesGuard<br/>(JWT + X-User-Id fallback)"]
+        Access["AccessControlService<br/>(space accessPolicy)"]
+        Trust["TrustScoreService<br/>(P5.1/P5.2)"]
+        RateLimit["RateLimitService<br/>(P5.1 sliding window)"]
+        BlockMute["BlockMuteService<br/>(P6.2 viewer mutual block)"]
+        Metrics["MetricsService<br/>(P5.6 in-memory ring)"]
+    end
+
+    subgraph Identity
+        AuthMod["AuthModule<br/>P1.1 Kakao + email + refresh"]
+        Users["UsersModule<br/>+ /users/search"]
+        Profile["UserProfileModule<br/>+ follow + share-card<br/>+ block/mute + F15 edit"]
+    end
+
+    subgraph Knowledge["Knowledge & content"]
+        Community["CommunityModule"]
+        KnowledgeM["KnowledgeModule<br/>P2.1 revisions / P2.2 reputation<br/>P2.4 digests"]
+        Reference["ReferenceModule<br/>P2.3 source-tier rules"]
+        Posts["PostsModule<br/>post / reply / reactions (P6.4)<br/>poll (P6.5) / boost (P6.6)<br/>recruitment (P3.6)"]
+    end
+
+    subgraph Events
+        EvtLink["EventLinkModule<br/>M15/M20 PrismEventsClient"]
+        EvtDetail["EventDetailModule<br/>P3.1 RSVP / P3.3 review<br/>P3.4 ICS / P3.5 digest<br/>P6.8 live + cron"]
+    end
+
+    subgraph Discovery
+        Search["SearchModule<br/>P2.5 pg_trgm"]
+        Home["HomeModule<br/>(M7 deterministic ranking)"]
+        Follows["FollowsModule<br/>+ P4.3 recommendations"]
+        Saves["SavesModule<br/>+ P4.4 collections"]
+        Share["ShareModule<br/>P1.5 + P4.1 OG card"]
+    end
+
+    subgraph Notifications
+        Notif["NotificationsModule<br/>P1.2 device_tokens + prefs<br/>P6.1 mention / P6.3 grouping"]
+        Delivery["LocalNoop / Email / Push<br/>(env-selected at boot)"]
+        Digest["WeeklyDigestService<br/>+ cron (P4.6)"]
+    end
+
+    subgraph OpsSafety["Ops & safety"]
+        Moderation["ModerationModule<br/>P5.2 auto-mod<br/>P5.3 bulk actions"]
+        Ops["OpsModule<br/>summary + audit-log (P5.4)<br/>system-health (P5.6/F9)"]
+        Media["MediaModule<br/>P1.4 IMediaStorage"]
+        Signals["SignalsModule"]
+        Analytics["AnalyticsModule<br/>(M19 event ledger)"]
+        Health["HealthModule"]
+    end
+
+    Auth -.guards.-> AuthMod
+    Auth -.guards.-> Profile
+    Auth -.guards.-> Posts
+    Auth -.guards.-> Notif
+    Access -.assertCanReadRoom.-> Posts
+    Access -.assertCanReadRoom.-> Search
+    Access -.assertCanReadRoom.-> Home
+    Access -.assertCanReadRoom.-> EvtDetail
+    BlockMute -.write guard.-> Posts
+    BlockMute -.read filter.-> Notif
+    Trust -.tierFor.-> RateLimit
+    Trust -.tierFor.-> Moderation
+    RateLimit -.consume.-> Posts
+    Metrics -.record.-> Posts
+    Metrics -.record.-> Search
+    Metrics -.record.-> Notif
+    Posts --> Notif
+    Posts --> Moderation
+    EvtDetail --> Notif
+    KnowledgeM --> Notif

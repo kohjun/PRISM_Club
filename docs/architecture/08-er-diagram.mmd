@@ -1,0 +1,39 @@
+erDiagram
+    USERS ||--o{ PROFILE : "1:1"
+    USERS ||--o{ USER_ROLES : ""
+    USERS ||--o{ POSTS : authors
+    USERS ||--o{ REACTIONS : "P6.4"
+    USERS ||--o{ POST_BOOSTS : "P6.6"
+    USERS ||--o{ MENTIONS : "P6.1 actor"
+    USERS ||--o{ USER_BLOCKS : "P6.2 either side"
+    USERS ||--o{ USER_MUTES : "P6.2 muter"
+    USERS ||--o{ POLL_VOTES : "P6.5"
+    USERS ||--o{ EVENT_RSVPS : ""
+    USERS ||--o{ EVENT_LIVE_POSTS : "P6.8"
+    USERS ||--o{ NOTIFICATIONS : "recipient"
+
+    SPACES ||--o{ CATEGORIES : ""
+    CATEGORIES ||--o{ TOPIC_HUBS : ""
+    CATEGORIES ||--o{ ROOMS : ""
+    TOPIC_HUBS ||--o{ KNOWLEDGE_BLOCKS : ""
+    KNOWLEDGE_BLOCKS ||--o{ KNOWLEDGE_BLOCK_REVISIONS : "P2.1"
+
+    ROOMS ||--o{ POSTS : ""
+    POSTS ||--o{ REPLIES : "depth 2"
+    POSTS ||--o{ POST_ATTACHMENTS : ""
+    POSTS ||--o{ POST_QUOTES : "P4.2"
+    POSTS ||--o| POLLS : "1:1 P6.5"
+    POSTS ||--o{ POST_BOOSTS : "P6.6"
+    POSTS ||--o| RECRUITMENT_POSTS : "P3.6"
+
+    POLLS ||--o{ POLL_OPTIONS : ""
+    POLL_OPTIONS ||--o{ POLL_VOTES : ""
+
+    EVENT_CARDS ||--o{ EVENT_RSVPS : ""
+    EVENT_CARDS ||--o{ EVENT_REVIEWS : "P3.3"
+    EVENT_CARDS ||--o{ EVENT_LIVE_POSTS : "P6.8"
+    EVENT_CARDS ||--o{ EVENT_CARD_DIGESTS : "P3.5"
+
+    NOTIFICATIONS }o--|| USERS : "group_key (P6.3)"
+    REPORTS }o--|| USERS : "reporter"
+    MODERATION_ACTIONS }o--|| USERS : "actor"

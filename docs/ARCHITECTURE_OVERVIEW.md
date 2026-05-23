@@ -1,11 +1,20 @@
 # PRISM Club — Architecture Overview (Phase 1–6 + F-series)
 
+> **Canonical current-state architecture document.** Other architecture
+> texts in this folder are scoped or historical:
+>
+> - `03_ARCHITECTURE_AND_DATA.md` — original spec (M0-era).
+> - `docs/architecture/01..08-*.mmd` + `.png` — the rendered Mermaid
+>   sources for the diagrams below; treat them as part of this doc.
+> - When current-state and the M0 spec disagree, this doc wins.
+>
+> Render note: all diagrams below are Mermaid blocks. GitHub, VSCode (with
+> the Mermaid extension), and most modern markdown viewers render them
+> inline. PNG renders live next to the sources in `docs/architecture/`.
+
 Current-state architecture as of the Phase 6 (Sprint A–D) + F-series follow-ups
 landing. This doc supplements `03_ARCHITECTURE_AND_DATA.md` (original spec) with
 what actually shipped after Beta-prep + the Phase 6 "SNS 경쟁력 보완" iteration.
-
-> Render note: all diagrams below are Mermaid blocks. GitHub, VSCode (with the
-> Mermaid extension), and most modern markdown viewers render them inline.
 
 ---
 

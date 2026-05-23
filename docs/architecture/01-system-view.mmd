@@ -1,0 +1,36 @@
+flowchart LR
+    subgraph Clients
+        Mobile["📱 Flutter mobile<br/>(apps/mobile)"]
+        Admin["🖥 React admin console<br/>(apps/admin)<br/>desktop only, ops/curator"]
+    end
+
+    subgraph "API tier (NestJS — apps/api)"
+        API["NestJS HTTP API<br/>/v1/* + /admin/*"]
+        Cron["@nestjs/schedule cron<br/>(advisory-lock gated)"]
+    end
+
+    subgraph "Data plane"
+        PG["(Postgres 16<br/>prism_postgres_data)"]
+        Uploads["apps/api/uploads/*<br/>(local FS fallback)"]
+    end
+
+    subgraph "External (env-driven)"
+        FCM["Firebase Cloud Messaging<br/>(P1.2)"]
+        Crash["Firebase Crashlytics<br/>(P1.3, mobile only)"]
+        R2["Cloudflare R2 + CDN<br/>(P1.4, MEDIA_STORAGE_MODE=s3)"]
+        Kakao["Kakao OAuth<br/>(P1.1)"]
+        PrismEvt["PRISM Event API<br/>(M15/M20)"]
+    end
+
+    Mobile -- "HTTPS<br/>Authorization: Bearer JWT" --> API
+    Admin -- "HTTPS<br/>Bearer JWT" --> API
+    API -- "Prisma 5" --> PG
+    API -- "local mode" --> Uploads
+    API -- "S3 SDK<br/>MEDIA_STORAGE_MODE=s3" --> R2
+    API -- "firebase-admin<br/>NOTIFICATION_DELIVERY_MODE=push" --> FCM
+    Mobile -- "firebase_messaging + crashlytics<br/>flutter_secure_storage" --> FCM
+    Mobile -- "release builds only" --> Crash
+    Mobile -- "flutter_web_auth_2" --> Kakao
+    API -- "PrismEventsClient<br/>EVENTS_CLIENT_MODE=prism" --> PrismEvt
+    Cron -- "in-process" --> API
+    Cron -- "advisory lock<br/>(854_301..854_401)" --> PG

@@ -1,0 +1,25 @@
+flowchart LR
+    subgraph Crons["@Cron handlers"]
+        D1["EventReminderCron.hourlyTick<br/>D-1 / H-1 reminder fanout<br/>+ REVIEW_PROMPT (P3.3)<br/>+ recap (P3.5)"]
+        D2["EventReminderCron.statusRefresh<br/>UPCOMING → COMPLETED"]
+        D3["EventReminderCron.liveArchive<br/>(P6.8, every 12h)"]
+        D4["WeeklyDigestCron<br/>(P4.6, Sun 18 KST)"]
+        D5["FollowRecommendationCron<br/>(P4.3, daily 03 KST)"]
+        D6["AnalyticsRetentionCron<br/>(P5.5, daily 180d horizon)"]
+    end
+
+    subgraph Locks["Advisory lock IDs"]
+        L1["854_301 reminder"]
+        L2["854_302 status refresh"]
+        L3["854_303 live archive"]
+        L4["854_400 weekly digest"]
+        L5["854_401 follow recs"]
+        L6["854_402 analytics retention"]
+    end
+
+    D1 --- L1
+    D2 --- L2
+    D3 --- L3
+    D4 --- L4
+    D5 --- L5
+    D6 --- L6

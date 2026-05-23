@@ -307,42 +307,79 @@ runtime broadcasts inject.
 
 ## 9. Auth / session
 
-- [ ] Login picker shows the seeded persona list **only in dev / test
-      builds**. Production builds replace it with the real
-      `/v1/auth/login` form once that lands
-      ([NEXT_BACKLOG.md](NEXT_BACKLOG.md) §1).
+P1.1 landed the real signup/login/refresh stack — see
+[MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §1.1 for the
+shipped surfaces.
+
+- [x] Real `/v1/auth/signup` + `/v1/auth/login/email` + `/v1/auth/refresh`
+      endpoints landed (argon2 hash, refresh family revoke on reuse,
+      AuthGuard `typ:'access'` claim). Mobile screens at
+      `features/auth/ui/login_screen.dart` + `signup_screen.dart`.
+- [ ] Production build mounts the real login route as `/login` and
+      keeps the dev persona picker only under `/dev/login` (gated by
+      `--dart-define=PRISM_DEV_LOGIN=1`). The screens exist; the
+      release-build route mounting decision is the only thing left.
 - [ ] `flutter_secure_storage`-backed `SessionStorage` confirmed on
       the device:
   - Login → app force-close → app reopen → still logged in.
-  - Sign out → app reopen → login picker shown.
-- [ ] JWT expiry (7 days, HS256) — when the API returns 401 the app
-      drops the token and shows the login picker. No silent retry
-      loop.
-- [ ] No JWT logged to console / Sentry / crash reporter (current
+  - Sign out → app reopen → login screen shown.
+- [x] Access JWT expiry is now 15 min (`JWT_ACCESS_TTL_SECONDS=900`,
+      HS256). Refresh token is 30d. The Dio 401 interceptor calls
+      `/v1/auth/refresh` once before bouncing the user back to login.
+- [x] Refresh rotation is server-side: on each `/auth/refresh` the old
+      token is revoked; reuse of a revoked token revokes the whole
+      family. Verified in `auth.service.ts::rotateRefreshToken`.
+- [ ] Kakao OAuth is wired end-to-end in code
+      ([MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §2) but
+      stays disabled until KCP biz app + REST/native keys land. Set
+      `KAKAO_REST_API_KEY` / `KAKAO_CLIENT_SECRET` /
+      `KAKAO_REDIRECT_URI` to enable.
+- [x] No JWT logged to console / Sentry / crash reporter (current
       code has no such loggers — keep it that way).
+- [x] `X-User-Id` fallback is production-OFF by default
+      (`ALLOW_X_USER_ID=1` only enables it on dev / staging /
+      smoke). Production deploys without setting the flag — verified
+      in `auth.guard.ts`.
 
 ---
 
-## 10. Push notifications — decision
+## 10. Push notifications — wiring + decision
 
-**Decision for first Beta:** **defer**. Reasons:
+**Current state (P1.2 + P1.3 landed):** Code is in place on both
+sides; runtime stays in stub/noop until the operator wires Firebase.
 
-- Server-side `INotificationDeliverer` boundary exists (M17) but
-  `push` mode is a stub.
-- No Firebase project, no APNs cert, no `firebase_messaging`
-  dependency in `pubspec.yaml`.
-- In-app notifications fully work — users see them on next app
-  open.
-- Adding push is gated on the server-side provider work
-  ([NEXT_BACKLOG.md](NEXT_BACKLOG.md) §2).
+- [x] Server `push` mode wired: `firebase-admin` import +
+      `PushDelivery.sendEachForMulticast` + automatic token revoke on
+      `NotRegistered` / `InvalidRegistration`. Mode selected by env
+      (`NOTIFICATION_DELIVERY_MODE`).
+- [x] `device_tokens` + `notification_preferences` tables landed
+      ([MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §1.1).
+- [x] Mobile `firebase_messaging` + `firebase_core` integrated; token
+      registration round-trip + `onTokenRefresh` + foreground +
+      background + `onMessageOpenedApp` handlers wired via
+      `core/push/fcm_bootstrap.dart`.
+- [x] Notification preference UI shipped
+      (`/me/notifications/settings`).
+- [x] Crashlytics (P1.3) is integrated and gated on the same Firebase
+      project as P1.2.
+- [x] `POST_NOTIFICATIONS` permission declared (Android 13+);
+      `default_notification_channel_id=prism_default` meta-data set.
 
-When push is required (post-Beta): file the Firebase project setup,
-add `firebase_messaging`, wire `<service>` in `AndroidManifest.xml`,
-add `UIBackgroundModes = remote-notification` in iOS `Info.plist`,
-implement `PushDelivery` on the API.
+**Operator-owned before push goes live:**
 
-- [ ] **CONFIRM** push is deferred for this release in the release
-      ticket; mark the post-Beta follow-up.
+- [ ] Firebase project created (shared between FCM + Crashlytics);
+      service account JSON + `google-services.json` provisioned.
+- [ ] `FIREBASE_SERVICE_ACCOUNT_JSON` (staging raw) or
+      `FIREBASE_SERVICE_ACCOUNT_PATH` (prod GCP secret) env populated.
+- [ ] `NOTIFICATION_DELIVERY_MODE=push` flipped from default `noop` in
+      staging, then production.
+- [ ] iOS APNs cert (after iOS scaffold lands) — out of scope for
+      Play Internal.
+
+**Decision for the first Internal upload:** push can ship with the
+first AAB *if* the operator has Firebase ready, or stay in noop mode
+otherwise (in-app notifications continue to work — users see them on
+next app open). Mark the operator status in the release ticket.
 
 ---
 
@@ -490,7 +527,9 @@ iOS
 Configuration
   API_BASE_URL         : <staging | production URL>
   Session storage      : flutter_secure_storage (mobile)
-  Push                 : deferred
+  Push                 : <noop | push (FCM wired) — see release §10>
+  Crashlytics          : <off | on — see release §10 operator status>
+  Media storage        : <local | s3 (R2 wired) — see env MEDIA_STORAGE_MODE>
 
 QA
   Android (physical)   : <PASS / FAIL — device model>

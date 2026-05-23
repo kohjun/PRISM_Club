@@ -41,6 +41,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Claude Code session-local state (personal, not shared)
+.claude/
+
 # Flutter / Dart
 .appdata/
 **/.dart_tool/

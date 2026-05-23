@@ -1,0 +1,13 @@
+stateDiagram-v2
+    [*] --> UPCOMING: PrismEvent ingest<br/>(M15 PrismEventsClient)
+    UPCOMING --> GOING_set: user RSVP (P3.1)
+    UPCOMING --> D1_push: cron hourly tick (P3.2)
+    UPCOMING --> H1_push: cron hourly tick (P3.2)
+    UPCOMING --> IN_PROGRESS: starts_at reached
+    IN_PROGRESS --> ATTENDED: user marks attended
+    IN_PROGRESS --> Live_write: P6.8 (RSVP=ATTENDED only,<br/>within +4h window)
+    IN_PROGRESS --> COMPLETED: starts_at + 4h<br/>statusRefresh cron
+    COMPLETED --> EventReview: user posts review (P3.3)<br/>(RSVP=ATTENDED only)
+    COMPLETED --> REVIEW_PROMPT: cron D+1
+    COMPLETED --> EventCardDigest: cron D+1 (P3.5)
+    COMPLETED --> Live_archived: cron starts_at+48h (P6.8)

@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    participant User as Viewer (mobile)
+    participant Ctrl as PostController
+    participant Rate as RateLimitService
+    participant AutoMod as AutoModerationService<br/>(P5.2)
+    participant Block as BlockMuteService<br/>(P6.2)
+    participant TX as $transaction
+    participant Mention as MentionService<br/>(P6.1)
+    participant Notif as NotificationService<br/>(P6.3 grouping)
+    participant Poll as PollService<br/>(P6.5)
+    participant Quote as PostQuote
+    participant Analytics as AnalyticsService
+
+    User->>Ctrl: POST /rooms/:slug/posts
+    Ctrl->>Rate: consume('post.create', viewer.tier)
+    Rate-->>Ctrl: allowed / 429
+    Ctrl->>AutoMod: evaluatePostBeforeCreate()
+    AutoMod-->>Ctrl: {hide?, reason?}
+    Ctrl->>Block: assertNotBlocked(viewer, quotedAuthor?)
+    Ctrl->>TX: BEGIN
+    Note over TX: insert post +<br/>auto-mod stamps +<br/>reply_policy (P6.7)
+    Ctrl->>Quote: insert PostQuote row (P4.2)
+    Ctrl->>Poll: createForPost(tx, postId, pollInput)
+    TX-->>Ctrl: COMMIT
+    par fire-and-forget
+        Ctrl->>Mention: recordMentions(POST, body)
+        Mention->>Block: blockedSetFor(author, recipients)
+        Mention->>Notif: createOrGroup × N
+    and
+        Ctrl->>Notif: NEW_POST_IN_FOLLOWED_ROOM<br/>(grouped per room)
+    and
+        Ctrl->>Analytics: POST_CREATED
+    end
+    Ctrl-->>User: 201 PostDTO

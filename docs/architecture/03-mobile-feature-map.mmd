@@ -1,0 +1,49 @@
+flowchart LR
+    subgraph core["lib/core/"]
+        DioPro["dio_provider<br/>(JWT + 401 refresh)"]
+        Push["push/fcm_bootstrap"]
+        CurUser["current_user<br/>(secure_storage)"]
+        Crash["crashlytics_bootstrap"]
+        Cfg["config<br/>(API_BASE_URL)"]
+    end
+
+    subgraph features["lib/features/"]
+        Auth["auth/<br/>login + signup + dev"]
+        Home["home/<br/>HomeShellScreen + tabs"]
+        Space["space/<br/>list + curator banner"]
+        Category["category/"]
+        Topic["topic_hub/<br/>+ weekly digest"]
+        Room["room/<br/>timeline + creator"]
+        Post["post/<br/>detail + composer<br/>+ recruitment"]
+        EventCard["event_card/<br/>+ event_detail/<br/>RSVP + review + ICS<br/>+ 현장 라이브"]
+        KnowledgeF["knowledge/<br/>contribution composer<br/>+ curation + revisions"]
+        Search["search/"]
+        Saves["saves/<br/>+ collections"]
+        Notif["notifications/<br/>list + settings"]
+        Profile["user_profile/<br/>profile + activity<br/>+ share-card + edit<br/>+ block/mute"]
+        Moderation["moderation/<br/>queue + detail"]
+        Ops["ops/"]
+        Reference["reference/"]
+        Media["media/<br/>uploader"]
+    end
+
+    subgraph widgets["lib/widgets/"]
+        PostCard["post_card_widget<br/>+ mention_text<br/>+ poll_widget<br/>+ reaction_palette<br/>+ retweet sheet"]
+        Mention["mention_autocomplete"]
+        EvtCardW["event_card_widget"]
+        RoleBadge["role_badge"]
+    end
+
+    Auth --> CurUser
+    Auth --> DioPro
+    DioPro -.401 retry.-> Auth
+    Push --> CurUser
+    Post --> PostCard
+    Home --> PostCard
+    Room --> PostCard
+    Profile --> PostCard
+    Saves --> PostCard
+    EventCard --> PostCard
+    Post --> Mention
+    PostCard --> Mention
+    EventCard --> EvtCardW
