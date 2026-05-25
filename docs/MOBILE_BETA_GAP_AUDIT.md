@@ -84,10 +84,10 @@ that landed it; refer to the commit log for surrounding context.
 |---|---|
 | Profile share card (P4.1) | `/v1/profiles/:userId/share-card` + `/v1/og/profile/:userId.png` (resvg-js), 60s in-memory cache. |
 | Post quote (P4.2) | `post_quotes` UNIQUE(quoting_post_id), DTO `quoted_post: PostQuoteRefDTO`, depth-1 quote block render. |
-| Follow recommendations (P4.3) | `follow_recommendations` table, Jaccard scorer, daily 03 KST cron on advisory lock 854_401, recommended-people strip. |
+| Follow recommendations (P4.3) | `follow_recommendations` table, Jaccard scorer, daily 03 KST cron on advisory lock 854_311 (moved from 854_303 in the Phase 7 pre-PR hotfix to avoid a clash with event-live-archive), recommended-people strip. |
 | Saved collections (P4.4) | `saved_collections` table (max 20/user, name 1–50), folder tab in saves screen, move/edit. |
 | Profile activity pagination (P4.5) | `getActivityFeed` with discriminated `ActivityItemDTO`, cursor base64 `{type,id,created_at}`, filter chips. |
-| Weekly digest (P4.6) | `WeeklyDigestService`, opt-in flag in `notification_preferences`, Sun 18:00 KST cron on advisory lock 854_400. |
+| Weekly digest (P4.6) | `WeeklyDigestService`, opt-in flag in `notification_preferences`, Sun 18:00 KST cron on advisory lock 854_304. |
 
 ### 1.5 Phase 5 — Ops & trust
 
@@ -97,7 +97,7 @@ that landed it; refer to the commit log for surrounding context.
 | Spam auto-moderation (P5.2) | DUPLICATE_POST_HASH / REPORT_FLOOD / RAPID_FIRE_POSTS rules, SYSTEM sentinel actor, viewer sees `auto_moderation_reason` banner on own hidden post. |
 | Moderation bulk actions (P5.3) | `report.service.ts::bulkResolve`, shared `batch_id`, admin multi-select + sticky action bar. |
 | Audit log viewer (P5.4) | `GET /admin/audit-log` + CSV stream, admin filter form. |
-| Analytics retention (P5.5) | Daily cron on advisory lock 854_402, 180d horizon, streamed CSV/JSONL export. |
+| Analytics retention (P5.5) | Daily cron on advisory lock 854_401, 180d horizon, streamed CSV/JSONL export. |
 | System health (P5.6) | In-memory ring metrics, `GET /admin/system-health`, admin dashboard sparkline card. |
 
 ### 1.6 Phase 6 — SNS competitiveness

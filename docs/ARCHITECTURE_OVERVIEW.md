@@ -338,9 +338,9 @@ flowchart LR
         L1["854_301 reminder"]
         L2["854_302 status refresh"]
         L3["854_303 live archive"]
-        L4["854_400 weekly digest"]
-        L5["854_401 follow recs"]
-        L6["854_402 analytics retention"]
+        L4["854_304 weekly digest"]
+        L5["854_311 follow recs"]
+        L6["854_401 analytics retention"]
     end
 
     D1 --- L1

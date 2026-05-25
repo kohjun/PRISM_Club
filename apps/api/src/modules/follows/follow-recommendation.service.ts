@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 
-const ADVISORY_LOCK_ID = 854_303;
+// 854_311 because 854_303 is owned by event-reminder.cron.ts (live
+// archive). Each cron handler must have its own lock id so neither
+// silently skips when the windows overlap.
+const ADVISORY_LOCK_ID = 854_311;
 const TOP_N_PER_USER = 20;
 const MIN_SHARED_HUBS = 1;
 const ACTIVE_USER_FLOOR_HOURS = 90 * 24; // recompute only for users active within 90d
@@ -30,7 +33,7 @@ export interface FollowRecommendationDTO {
  *   3. Jaccard score = |hubs(U) ∩ hubs(V)| / |hubs(U) ∪ hubs(V)|.
  *   4. Persist top 20.
  *
- * Multi-replica safe via `pg_try_advisory_lock(854303)`. Daily 03:00 KST.
+ * Multi-replica safe via `pg_try_advisory_lock(854311)`. Daily 03:00 KST.
  */
 @Injectable()
 export class FollowRecommendationService {
