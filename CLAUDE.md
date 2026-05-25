@@ -379,6 +379,54 @@ Verified:
 Notes:
 - ...
 
+### Rules for the `Completed:` section
+
+Each `Completed:` bullet must describe a finished piece of work in **at
+least three lines**. One-liners are not acceptable — they hide the
+actual change and force the reader to open the diff to understand
+what happened.
+
+A good bullet covers, in order:
+
+1. **What** concretely changed (which file / endpoint / table / screen
+   / config), with enough specificity that the reader can find it
+   without grep.
+2. **Why** that change was needed — the user-visible problem it
+   solves, or the gap in the previous state it closes.
+3. **Impact** — what now works differently, what's safe to assume
+   going forward, and any follow-up the change implies (e.g. "the
+   next deploy needs `X` env populated", "covered by the new spec
+   `Y`", "operator still owns `Z`").
+
+Examples:
+
+Good:
+```
+Completed:
+- Email signup + login endpoints (P1.1 backend). Added
+  `POST /v1/auth/signup` and `POST /v1/auth/login/email` to
+  `auth.controller.ts`, backed by argon2 hashing in
+  `auth.service.ts::signupWithEmail`. Previously the only login
+  path was the passwordless `user_id` dev shortcut, which made
+  real signup impossible. After this change a fresh user can
+  register with email + password, receive a 15-min access JWT +
+  30-day refresh, and round-trip through `/v1/auth/refresh` —
+  the dev path stays available behind `ALLOW_DEV_LOGIN=1` for
+  seed-driven tests.
+```
+
+Bad (one-liner):
+```
+Completed:
+- Added email signup + login.
+```
+
+The same three-line minimum applies to every list-style report,
+including the `Stopped:` / `Completed:` / `Reason:` /
+`Safest next action:` sections of the early-stop format below.
+Short headers in `Changed files:`, `Verified:`, and `Notes:` are
+fine — those are pointers, not descriptions.
+
 If stopped early:
 
 Stopped:
