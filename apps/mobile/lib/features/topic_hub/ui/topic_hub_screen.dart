@@ -11,6 +11,7 @@ import '../../../widgets/state_views.dart';
 import '../../../widgets/topic_block.dart';
 import '../../room/data/room_summary_dto.dart';
 import '../../search/data/search_repository.dart';
+import '../../knowledge/ui/widgets/validation_badge.dart';
 import '../data/topic_hub_dto.dart';
 import '../data/topic_hub_repository.dart';
 import 'widgets/similar_topic_hub_strip.dart';
@@ -442,6 +443,11 @@ class _KnowledgeBlockCard extends StatelessWidget {
                   color: PrismColors.pp700,
                 ),
               ),
+              const SizedBox(width: 8),
+              // P7.2: validation strength chip. Self-hides while the
+              // score is loading or on error so a slow network never
+              // parks a half-rendered chip on the card.
+              ValidationBadge(blockId: block.id),
               const Spacer(),
               if (onPropose != null)
                 IconButton(

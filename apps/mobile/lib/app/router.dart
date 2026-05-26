@@ -8,6 +8,7 @@ import '../features/auth/ui/login_screen.dart';
 import '../features/auth/ui/signup_screen.dart';
 import '../features/category/ui/category_list_screen.dart';
 import '../features/event_detail/ui/event_detail_screen.dart';
+import '../features/knowledge/ui/block_chain_timeline_screen.dart';
 import '../features/knowledge/ui/block_revision_history_screen.dart';
 import '../features/knowledge/ui/contribution_composer_screen.dart';
 import '../features/knowledge/ui/curation_detail_screen.dart';
@@ -160,6 +161,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/knowledge-blocks/:blockId/revisions',
         builder: (_, st) => BlockRevisionHistoryScreen(
+          blockId: st.pathParameters['blockId']!,
+        ),
+      ),
+      // P7.2: person-centric contribution chain timeline. Sibling to
+      // the revision history above — same data source, different lens.
+      GoRoute(
+        path: '/knowledge-blocks/:blockId/chain',
+        builder: (_, st) => BlockChainTimelineScreen(
           blockId: st.pathParameters['blockId']!,
         ),
       ),
