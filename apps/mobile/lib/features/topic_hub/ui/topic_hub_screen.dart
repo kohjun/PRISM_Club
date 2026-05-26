@@ -13,6 +13,7 @@ import '../../room/data/room_summary_dto.dart';
 import '../../search/data/search_repository.dart';
 import '../data/topic_hub_dto.dart';
 import '../data/topic_hub_repository.dart';
+import 'widgets/similar_topic_hub_strip.dart';
 import 'widgets/weekly_digest_section.dart';
 
 class TopicHubScreen extends ConsumerWidget {
@@ -242,6 +243,12 @@ class TopicHubScreen extends ConsumerWidget {
                   onCreateRoom: () =>
                       context.push(_composerRoute('rooms/new')),
                 ),
+              ),
+              // P7.1: hub→hub similarity strip. Self-hides on empty
+              // responses so a fresh hub (no similars computed) doesn't
+              // show a placeholder.
+              SliverToBoxAdapter(
+                child: SimilarTopicHubStrip(hubSlug: categorySlug),
               ),
               const SliverPadding(
                 padding: EdgeInsets.only(bottom: PrismSpacing.xl4),
