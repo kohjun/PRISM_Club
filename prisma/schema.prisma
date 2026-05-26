@@ -287,8 +287,36 @@ model TopicHub {
   refLinks      TopicHubReferenceLink[]
   contributions KnowledgeContribution[]
   digests       TopicHubDigest[]
+  similarFrom   TopicHubSimilarity[]    @relation("TopicHubSimilarityHub")
+  similarTo     TopicHubSimilarity[]    @relation("TopicHubSimilaritySimilar")
 
   @@map("topic_hubs")
+}
+
+// P7.1 persisted hub→hub similarity scores. One row per
+// (topicHubId, similarHubId) directed edge — the cron persists both
+// (A→B) and (B→A) so the GET endpoint can look up either side in O(log
+// N). `score` ∈ (0, 1]; rows with score < threshold are not persisted.
+// `reason` jsonb shape (schemaVersion=1):
+//   {
+//     schemaVersion: 1,
+//     shared_contributor_count: int,
+//     shared_room_count: int
+//   }
+model TopicHubSimilarity {
+  id           String   @id @default(uuid()) @db.Uuid
+  topicHubId   String   @map("topic_hub_id") @db.Uuid
+  similarHubId String   @map("similar_hub_id") @db.Uuid
+  score        Float    @db.DoublePrecision
+  reason       Json
+  computedAt   DateTime @default(now()) @map("computed_at") @db.Timestamptz(6)
+
+  hub        TopicHub @relation("TopicHubSimilarityHub", fields: [topicHubId], references: [id], onDelete: Cascade)
+  similarHub TopicHub @relation("TopicHubSimilaritySimilar", fields: [similarHubId], references: [id], onDelete: Cascade)
+
+  @@unique([topicHubId, similarHubId])
+  @@index([topicHubId, score(sort: Desc)])
+  @@map("topic_hub_similarity")
 }
 
 // Block types: OVERVIEW | POPULAR_FORMAT | RECOMMENDED_PARTY_SIZE | MOOD_TIPS |

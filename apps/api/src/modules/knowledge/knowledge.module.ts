@@ -11,6 +11,9 @@ import { ContributionReputationService } from './contribution-reputation.service
 import { ContributionReputationController } from './contribution-reputation.controller';
 import { DigestService } from './digest.service';
 import { DigestOpsController } from './digest-ops.controller';
+import { TopicHubSimilarityService } from './topic-hub-similarity.service';
+import { TopicHubSimilarityController } from './topic-hub-similarity.controller';
+import { TopicHubSimilarityCron } from './topic-hub-similarity.cron';
 
 @Module({
   imports: [CommunityModule],
@@ -20,6 +23,8 @@ import { DigestOpsController } from './digest-ops.controller';
     KnowledgeRevisionService,
     ContributionReputationService,
     DigestService,
+    TopicHubSimilarityService,
+    TopicHubSimilarityCron,
   ],
   controllers: [
     TopicHubController,
@@ -28,6 +33,7 @@ import { DigestOpsController } from './digest-ops.controller';
     KnowledgeRevisionController,
     ContributionReputationController,
     DigestOpsController,
+    TopicHubSimilarityController,
   ],
   exports: [
     KnowledgeService,
@@ -35,6 +41,7 @@ import { DigestOpsController } from './digest-ops.controller';
     KnowledgeRevisionService,
     ContributionReputationService,
     DigestService,
+    TopicHubSimilarityService,
   ],
 })
 export class KnowledgeModule {}
