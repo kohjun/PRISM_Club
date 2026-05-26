@@ -14,6 +14,7 @@ import '../../saves/data/saves_repository.dart';
 import '../data/event_detail_dto.dart';
 import 'event_review_compose_screen.dart';
 import 'widgets/event_recap_section.dart';
+import 'widgets/recap_draft_cta.dart';
 import 'widgets/event_review_card.dart';
 import 'widgets/rsvp_segment.dart';
 import '../data/event_detail_repository.dart';
@@ -103,6 +104,15 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 // COMPLETED or no posts/reviews landed.
                 SliverToBoxAdapter(
                   child: EventRecapSection(
+                    eventCardId: b.eventCard.id,
+                    eventStatus: b.eventCard.eventStatus,
+                  ),
+                ),
+                // P7.3: organizer call-to-action that pulls a recap
+                // draft into the composer. Self-hides for non-COMPLETED
+                // events; backend gates eligibility on tap.
+                SliverToBoxAdapter(
+                  child: RecapDraftCallToAction(
                     eventCardId: b.eventCard.id,
                     eventStatus: b.eventCard.eventStatus,
                   ),

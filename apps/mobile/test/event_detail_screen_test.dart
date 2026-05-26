@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/event_card/data/event_card_dto.dart';
 import 'package:mobile/features/event_detail/data/event_detail_dto.dart';
 import 'package:mobile/features/event_detail/data/event_detail_repository.dart';
+import 'package:mobile/features/event_detail/data/event_digest_repository.dart'
+    show eventRecapProvider;
 import 'package:mobile/features/event_detail/ui/event_detail_screen.dart';
 import 'package:mobile/features/saves/data/saved_item_dto.dart';
 import 'package:mobile/features/saves/data/saves_repository.dart' show savedItemsProvider;
@@ -53,16 +55,32 @@ Widget _wrap(Widget child, {required EventDetailBundleDto bundle}) =>
     ProviderScope(
       overrides: [
         eventDetailProvider('card-1').overrideWith((_) async => bundle),
-        // Prevent real Dio calls from the save state watcher
+        // Prevent real Dio calls from the save state watcher.
         savedItemsProvider('EVENT_CARD').overrideWith(
             (_) async => const SavedItemListDto(items: [])),
+        // The recap section watches eventRecapProvider via real Dio.
+        // Short-circuit so its pending timer doesn't fail teardown.
+        eventRecapProvider('card-1').overrideWith((_) async => null),
       ],
       child: MaterialApp(home: child),
     );
 
+// The full event-detail screen renders ~8 sliver sections that together
+// exceed the default 800×600 test viewport once the P7.3 recap CTA
+// landed between the recap and review sections. Bumping the surface
+// size for these widget tests keeps the existing label-based assertions
+// readable without rewriting them to scroll-and-find.
+Future<void> _useTallSurface(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(800, 1600));
+  addTearDown(() async {
+    await tester.binding.setSurfaceSize(null);
+  });
+}
+
 void main() {
   testWidgets('renders title, hero card, room tile, and empty-state copy',
       (tester) async {
+    await _useTallSurface(tester);
     await tester.pumpWidget(_wrap(
       const EventDetailScreen(cardId: 'card-1'),
       bundle: _bundle(
@@ -97,6 +115,7 @@ void main() {
 
   testWidgets('CTA is disabled when no related rooms AND no default slug',
       (tester) async {
+    await _useTallSurface(tester);
     await tester.pumpWidget(_wrap(
       const EventDetailScreen(cardId: 'card-1'),
       bundle: _bundle(),
@@ -112,6 +131,7 @@ void main() {
 
   testWidgets('CTA is enabled when default slug exists (fallback) even with zero rooms',
       (tester) async {
+    await _useTallSurface(tester);
     await tester.pumpWidget(_wrap(
       const EventDetailScreen(cardId: 'card-1'),
       bundle: _bundle(defaultSlug: 'dating-event-reviews'),

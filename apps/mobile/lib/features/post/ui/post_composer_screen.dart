@@ -18,6 +18,30 @@ import '../../reference/data/reference_dto.dart';
 import '../../reference/ui/reference_form_modal.dart';
 import '../data/post_repository.dart';
 
+/// Carrier for non-URL composer args passed via `go_router` `extra`.
+///
+/// Use this when the caller has a payload that would be awkward in a
+/// query string (e.g., a multi-line recap body with Korean text — the
+/// URL encoding cost makes the route URL unusable for logs/back-button
+/// state). The router passes the object through to the screen, which
+/// reads `initialBody` on first build.
+class PostComposerArgs {
+  const PostComposerArgs({
+    this.initialBody,
+    this.initialEventCardId,
+  });
+
+  /// Pre-filled into the body `TextField` on first build. The user can
+  /// edit freely — there is no server-side draft state to reconcile.
+  final String? initialBody;
+
+  /// Same semantics as `PostComposerScreen.initialEventCardId` — when
+  /// non-null the composer fetches this EventCard and pre-attaches it.
+  /// Promoted to `PostComposerArgs` so the recap CTA can pass body +
+  /// event-card pin in one object.
+  final String? initialEventCardId;
+}
+
 class PostComposerScreen extends ConsumerStatefulWidget {
   const PostComposerScreen({
     super.key,
@@ -25,6 +49,7 @@ class PostComposerScreen extends ConsumerStatefulWidget {
     this.initialEventCardId,
     this.quotedPostId,
     this.quotedPreview,
+    this.initialBody,
   });
   final String roomSlug;
 
@@ -39,6 +64,12 @@ class PostComposerScreen extends ConsumerStatefulWidget {
   /// quoting (and remove it).
   final String? quotedPostId;
   final String? quotedPreview;
+
+  /// P7.3: pre-filled into the body `TextField` on first build. Used by
+  /// the event-recap CTA to drop the organizer into the composer with
+  /// the suggested markdown already wired up; the user edits before
+  /// publishing as a normal post.
+  final String? initialBody;
 
   @override
   ConsumerState<PostComposerScreen> createState() => _PostComposerScreenState();
@@ -64,6 +95,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     }
     _quotedPostId = widget.quotedPostId;
     _quotedPreview = widget.quotedPreview;
+    final body = widget.initialBody;
+    if (body != null && body.isNotEmpty) {
+      _body.text = body;
+    }
   }
 
   Future<void> _prefetchInitialEvent(String id) async {

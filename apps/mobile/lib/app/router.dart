@@ -98,13 +98,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/rooms/:roomSlug/compose',
-        builder: (_, st) => PostComposerScreen(
-          roomSlug: st.pathParameters['roomSlug']!,
-          initialEventCardId:
-              st.uri.queryParameters['attach_event_card_id'],
-          quotedPostId: st.uri.queryParameters['quoted_post_id'],
-          quotedPreview: st.uri.queryParameters['quoted_preview'],
-        ),
+        builder: (_, st) {
+          // P7.3: callers with a non-URL-friendly payload (multi-line
+          // body, etc.) pass a typed `PostComposerArgs` via `extra`.
+          // Query params still work for the simple cases (attach event,
+          // quote post) so existing entry points stay unchanged.
+          final extra = st.extra;
+          final args = extra is PostComposerArgs ? extra : null;
+          return PostComposerScreen(
+            roomSlug: st.pathParameters['roomSlug']!,
+            initialEventCardId: args?.initialEventCardId ??
+                st.uri.queryParameters['attach_event_card_id'],
+            quotedPostId: st.uri.queryParameters['quoted_post_id'],
+            quotedPreview: st.uri.queryParameters['quoted_preview'],
+            initialBody: args?.initialBody,
+          );
+        },
       ),
       GoRoute(
         path: '/rooms/:roomSlug/compose-recruitment',
