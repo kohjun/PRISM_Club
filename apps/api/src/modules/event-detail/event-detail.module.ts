@@ -13,6 +13,8 @@ import { EventReviewController } from './event-review.controller';
 import { EventDigestService } from './event-digest.service';
 import { EventLiveService } from './event-live.service';
 import { EventLiveController } from './event-live.controller';
+import { EventRecapSuggestService } from './event-recap-suggest.service';
+import { EventRecapSuggestController } from './event-recap-suggest.controller';
 
 @Module({
   imports: [CommunityModule, PostsModule],
@@ -22,6 +24,7 @@ import { EventLiveController } from './event-live.controller';
     EventReminderOpsController,
     EventReviewController,
     EventLiveController,
+    EventRecapSuggestController,
   ],
   providers: [
     EventDetailService,
@@ -31,6 +34,7 @@ import { EventLiveController } from './event-live.controller';
     EventReviewService,
     EventDigestService,
     EventLiveService,
+    EventRecapSuggestService,
   ],
   exports: [
     EventDetailService,
@@ -40,6 +44,7 @@ import { EventLiveController } from './event-live.controller';
     EventReviewService,
     EventDigestService,
     EventLiveService,
+    EventRecapSuggestService,
   ],
 })
 export class EventDetailModule {}
