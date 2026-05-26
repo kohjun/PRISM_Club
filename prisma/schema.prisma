@@ -983,6 +983,9 @@ model KnowledgeContribution {
 
   @@index([topicHubId, status, createdAt(sort: Desc)])
   @@index([contributorId, createdAt(sort: Desc)])
+  // P7.2: powers the validation-strength score's "approved
+  // contributions for this block" count without a sequential scan.
+  @@index([targetBlockId, status], map: "knowledge_contributions_target_status_idx")
   @@map("knowledge_contributions")
 }
 
