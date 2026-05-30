@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma.service';
+import { CronLockService, CRON_LOCK_IDS } from '../../shared/cron-lock.service';
 import { EventDigestService } from './event-digest.service';
 import { EventLiveService } from './event-live.service';
 
@@ -18,13 +19,9 @@ import { EventLiveService } from './event-live.service';
  *      gate (and P3.3 review prompt) becomes available.
  *
  * Multi-instance safety is enforced via a postgres advisory lock —
- * only the holder runs the body; everyone else short-circuits. Lock
- * IDs are arbitrary constants below 2^31.
+ * only the holder runs the body; everyone else short-circuits. The
+ * lock ids live in the canonical `CRON_LOCK_IDS` registry.
  */
-const ADVISORY_LOCK_REMINDER = 854_301;
-const ADVISORY_LOCK_STATUS_REFRESH = 854_302;
-const ADVISORY_LOCK_LIVE_ARCHIVE = 854_303;
-
 const D1_WINDOW_MIN = 30;
 const H1_WINDOW_MIN = 5;
 const STATUS_COMPLETE_AFTER_HOURS = 4;
@@ -38,6 +35,7 @@ export class EventReminderCron {
     private readonly prisma: PrismaService,
     private readonly digest: EventDigestService,
     private readonly live: EventLiveService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   // ---- Schedule wrappers (single instance via advisory lock) ----------
@@ -45,7 +43,7 @@ export class EventReminderCron {
   @Cron(CronExpression.EVERY_HOUR)
   async hourlyTick(): Promise<void> {
     if (process.env.EVENT_REMINDER_ENABLED === '0') return;
-    const got = await this._tryLock(ADVISORY_LOCK_REMINDER);
+    const got = await this.cronLock.tryLock(CRON_LOCK_IDS.EVENT_REMINDER);
     if (!got) return;
     try {
       await this.runReminderTick(new Date());
@@ -54,14 +52,16 @@ export class EventReminderCron {
         `reminder tick failed: ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
-      await this._unlock(ADVISORY_LOCK_REMINDER);
+      await this.cronLock.unlock(CRON_LOCK_IDS.EVENT_REMINDER);
     }
   }
 
   @Cron('0 0 */6 * * *') // every 6 hours, on the hour
   async statusRefresh(): Promise<void> {
     if (process.env.EVENT_REMINDER_ENABLED === '0') return;
-    const got = await this._tryLock(ADVISORY_LOCK_STATUS_REFRESH);
+    const got = await this.cronLock.tryLock(
+      CRON_LOCK_IDS.EVENT_STATUS_REFRESH,
+    );
     if (!got) return;
     try {
       await this.runStatusRefresh(new Date());
@@ -70,7 +70,7 @@ export class EventReminderCron {
         `status refresh failed: ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
-      await this._unlock(ADVISORY_LOCK_STATUS_REFRESH);
+      await this.cronLock.unlock(CRON_LOCK_IDS.EVENT_STATUS_REFRESH);
     }
   }
 
@@ -83,7 +83,7 @@ export class EventReminderCron {
   @Cron('0 30 */12 * * *')
   async liveArchive(): Promise<void> {
     if (process.env.EVENT_REMINDER_ENABLED === '0') return;
-    const got = await this._tryLock(ADVISORY_LOCK_LIVE_ARCHIVE);
+    const got = await this.cronLock.tryLock(CRON_LOCK_IDS.EVENT_LIVE_ARCHIVE);
     if (!got) return;
     try {
       const { archived } = await this.live.archiveExpired();
@@ -95,7 +95,7 @@ export class EventReminderCron {
         `live archive failed: ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
-      await this._unlock(ADVISORY_LOCK_LIVE_ARCHIVE);
+      await this.cronLock.unlock(CRON_LOCK_IDS.EVENT_LIVE_ARCHIVE);
     }
   }
 
@@ -279,18 +279,5 @@ export class EventReminderCron {
       }
       throw e;
     }
-  }
-
-  private async _tryLock(lockId: number): Promise<boolean> {
-    const rows = await this.prisma.$queryRaw<{ locked: boolean }[]>`
-      SELECT pg_try_advisory_lock(${lockId}::bigint) AS locked
-    `;
-    return rows[0]?.locked === true;
-  }
-
-  private async _unlock(lockId: number): Promise<void> {
-    await this.prisma.$queryRaw`
-      SELECT pg_advisory_unlock(${lockId}::bigint)
-    `;
   }
 }

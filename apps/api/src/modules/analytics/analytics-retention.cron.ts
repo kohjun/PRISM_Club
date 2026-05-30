@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../shared/prisma.service';
+import { CronLockService, CRON_LOCK_IDS } from '../../shared/cron-lock.service';
 
-const ADVISORY_LOCK_ID = 854_401;
 const DEFAULT_RETENTION_DAYS = 180;
 const BATCH_SIZE = 10_000;
 
@@ -19,12 +19,15 @@ const BATCH_SIZE = 10_000;
 export class AnalyticsRetentionCron {
   private readonly log = new Logger(AnalyticsRetentionCron.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cronLock: CronLockService,
+  ) {}
 
   @Cron('0 0 19 * * *') // 04:00 KST = 19:00 UTC previous day
   async dailyTick(): Promise<void> {
     if (process.env.ANALYTICS_RETENTION_CRON_ENABLED === '0') return;
-    const got = await this._tryLock();
+    const got = await this.cronLock.tryLock(CRON_LOCK_IDS.ANALYTICS_RETENTION);
     if (!got) return;
     try {
       await this.run();
@@ -33,7 +36,7 @@ export class AnalyticsRetentionCron {
         `retention tick failed: ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
-      await this._unlock();
+      await this.cronLock.unlock(CRON_LOCK_IDS.ANALYTICS_RETENTION);
     }
   }
 
@@ -83,16 +86,4 @@ export class AnalyticsRetentionCron {
     return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_RETENTION_DAYS;
   }
 
-  private async _tryLock(): Promise<boolean> {
-    const rows = await this.prisma.$queryRaw<{ locked: boolean }[]>`
-      SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}::bigint) AS locked
-    `;
-    return rows[0]?.locked === true;
-  }
-
-  private async _unlock(): Promise<void> {
-    await this.prisma.$queryRaw`
-      SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID}::bigint)
-    `;
-  }
 }

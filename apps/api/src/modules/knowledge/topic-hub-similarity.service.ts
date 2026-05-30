@@ -4,8 +4,8 @@ import {
   AccessControlService,
   Viewer,
 } from '../../shared/access-control.service';
+import { CronLockService, CRON_LOCK_IDS } from '../../shared/cron-lock.service';
 
-const ADVISORY_LOCK_ID = 854_305;
 const TOP_N_PER_HUB = 10;
 const MIN_SCORE = 0.05;
 // Weights are intentionally hard-coded (not env-tunable) — they encode
@@ -61,6 +61,7 @@ export class TopicHubSimilarityService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   // ---- Read --------------------------------------------------------
@@ -112,7 +113,9 @@ export class TopicHubSimilarityService {
   // ---- Recompute ---------------------------------------------------
 
   async recomputeAll(): Promise<{ hubs_scanned: number; rows_written: number }> {
-    const got = await this._tryLock();
+    const got = await this.cronLock.tryLock(
+      CRON_LOCK_IDS.TOPIC_HUB_SIMILARITY,
+    );
     if (!got) {
       this.log.log('topic-hub similarity skipped — lock held elsewhere');
       return { hubs_scanned: 0, rows_written: 0 };
@@ -120,7 +123,7 @@ export class TopicHubSimilarityService {
     try {
       return await this._runRecompute();
     } finally {
-      await this._unlock();
+      await this.cronLock.unlock(CRON_LOCK_IDS.TOPIC_HUB_SIMILARITY);
     }
   }
 
@@ -226,21 +229,6 @@ export class TopicHubSimilarityService {
     }
     scored.sort((a, b) => b.score - a.score);
     return scored.slice(0, TOP_N_PER_HUB);
-  }
-
-  // ---- Lock --------------------------------------------------------
-
-  private async _tryLock(): Promise<boolean> {
-    const rows = await this.prisma.$queryRaw<{ locked: boolean }[]>`
-      SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}::bigint) AS locked
-    `;
-    return rows[0]?.locked === true;
-  }
-
-  private async _unlock(): Promise<void> {
-    await this.prisma.$queryRaw`
-      SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID}::bigint)
-    `;
   }
 
   // ---- DTO ---------------------------------------------------------

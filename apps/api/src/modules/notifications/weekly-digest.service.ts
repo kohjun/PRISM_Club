@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
+import { CronLockService, CRON_LOCK_IDS } from '../../shared/cron-lock.service';
 import { NotificationService } from './notification.service';
 
-const ADVISORY_LOCK_ID = 854_304;
 const COOLDOWN_DAYS = 6;
 const BATCH_SIZE = 200;
 const SECTIONS_CAP = 8;
@@ -45,6 +45,7 @@ export class WeeklyDigestService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   async run(now: Date = new Date()): Promise<{
@@ -53,12 +54,12 @@ export class WeeklyDigestService {
     skipped_empty: number;
     skipped_cooldown: number;
   }> {
-    const got = await this._tryLock();
+    const got = await this.cronLock.tryLock(CRON_LOCK_IDS.WEEKLY_DIGEST);
     if (!got) return { candidates: 0, sent: 0, skipped_empty: 0, skipped_cooldown: 0 };
     try {
       return await this._runBody(now);
     } finally {
-      await this._unlock();
+      await this.cronLock.unlock(CRON_LOCK_IDS.WEEKLY_DIGEST);
     }
   }
 
@@ -238,18 +239,5 @@ export class WeeklyDigestService {
       });
     }
     return sections.slice(0, SECTIONS_CAP);
-  }
-
-  private async _tryLock(): Promise<boolean> {
-    const rows = await this.prisma.$queryRaw<{ locked: boolean }[]>`
-      SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}::bigint) AS locked
-    `;
-    return rows[0]?.locked === true;
-  }
-
-  private async _unlock(): Promise<void> {
-    await this.prisma.$queryRaw`
-      SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID}::bigint)
-    `;
   }
 }

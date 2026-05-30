@@ -9,6 +9,7 @@ import { MetricsModule } from './shared/metrics.service';
 import { TrustScoreModule } from './shared/trust-score.service';
 import { RateLimitModule } from './shared/rate-limit.service';
 import { BlockMuteModule } from './shared/block-mute.service';
+import { CronLockModule } from './shared/cron-lock.service';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AllExceptionsFilter } from './shared/filters/http-exception.filter';
@@ -54,6 +55,9 @@ import { ShareModule } from './modules/share/share.module';
     // P6.2: viewer-managed block + mute, consumed by post/reply/follow/
     // mention/notification read+write paths.
     BlockMuteModule,
+    // Refactor B: shared advisory-lock wrapper + canonical lock-id
+    // registry, consumed by every @Cron handler.
+    CronLockModule,
     AuthModule,
     AccessControlModule,
     HealthModule,

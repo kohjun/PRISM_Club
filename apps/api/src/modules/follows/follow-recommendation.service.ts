@@ -1,11 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
+import { CronLockService, CRON_LOCK_IDS } from '../../shared/cron-lock.service';
 
-// 854_311 because 854_303 is owned by event-reminder.cron.ts (live
-// archive). Each cron handler must have its own lock id so neither
-// silently skips when the windows overlap.
-const ADVISORY_LOCK_ID = 854_311;
 const TOP_N_PER_USER = 20;
 const MIN_SHARED_HUBS = 1;
 const ACTIVE_USER_FLOOR_HOURS = 90 * 24; // recompute only for users active within 90d
@@ -42,6 +39,7 @@ export class FollowRecommendationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: AccessControlService,
+    private readonly cronLock: CronLockService,
   ) {}
 
   // -- Read ----------------------------------------------------------
@@ -112,7 +110,9 @@ export class FollowRecommendationService {
    * who have followed at least one room ever — pruning ghost accounts).
    */
   async recomputeAll(): Promise<{ users_scanned: number; rows_written: number }> {
-    const got = await this._tryLock();
+    const got = await this.cronLock.tryLock(
+      CRON_LOCK_IDS.FOLLOW_RECOMMENDATIONS,
+    );
     if (!got) {
       this.log.log('recompute skipped — lock held by another instance');
       return { users_scanned: 0, rows_written: 0 };
@@ -120,7 +120,7 @@ export class FollowRecommendationService {
     try {
       return await this._runRecompute();
     } finally {
-      await this._unlock();
+      await this.cronLock.unlock(CRON_LOCK_IDS.FOLLOW_RECOMMENDATIONS);
     }
   }
 
@@ -286,18 +286,5 @@ export class FollowRecommendationService {
     return cats
       .filter((c) => allowed.includes(c.space.accessPolicy))
       .map((c) => c.slug);
-  }
-
-  private async _tryLock(): Promise<boolean> {
-    const rows = await this.prisma.$queryRaw<{ locked: boolean }[]>`
-      SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID}::bigint) AS locked
-    `;
-    return rows[0]?.locked === true;
-  }
-
-  private async _unlock(): Promise<void> {
-    await this.prisma.$queryRaw`
-      SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID}::bigint)
-    `;
   }
 }
