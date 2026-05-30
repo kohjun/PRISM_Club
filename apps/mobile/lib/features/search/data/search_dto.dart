@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 /// Type discriminators that mirror the server's `SearchEntityType`. Keeping
 /// these as plain strings simplifies forward-compat — unknown values
 /// fall through gracefully at render time.
@@ -64,9 +66,9 @@ class SearchHitDto {
   factory SearchHitDto.fromJson(Map<String, dynamic> json) => SearchHitDto(
         type: json['type'] as String,
         id: json['id'] as String,
-        title: json['title'] as String? ?? '',
-        snippet: json['snippet'] as String? ?? '',
-        context: ((json['context'] as Map?) ?? const {}).cast<String, dynamic>(),
+        title: asString(json, 'title'),
+        snippet: asString(json, 'snippet'),
+        context: asMap(json, 'context') ?? const {},
       );
 }
 
@@ -77,10 +79,7 @@ class SearchGroupDto {
 
   factory SearchGroupDto.fromJson(Map<String, dynamic> json) => SearchGroupDto(
         type: json['type'] as String,
-        items: ((json['items'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(SearchHitDto.fromJson)
-            .toList(growable: false),
+        items: asObjectList(json, 'items', SearchHitDto.fromJson),
       );
 }
 
@@ -92,10 +91,7 @@ class SearchResponseDto {
   int get totalHits => groups.fold(0, (sum, g) => sum + g.items.length);
 
   factory SearchResponseDto.fromJson(Map<String, dynamic> json) => SearchResponseDto(
-        query: json['query'] as String? ?? '',
-        groups: ((json['groups'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(SearchGroupDto.fromJson)
-            .toList(growable: false),
+        query: asString(json, 'query'),
+        groups: asObjectList(json, 'groups', SearchGroupDto.fromJson),
       );
 }

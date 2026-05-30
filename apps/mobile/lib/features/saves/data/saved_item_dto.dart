@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../post/data/post_dto.dart';
 import '../../reference/data/reference_dto.dart';
@@ -53,7 +54,7 @@ class SavedItemDto {
       targetType: type,
       targetId: json['target_id'] as String,
       savedAt: DateTime.parse(json['saved_at'] as String),
-      collectionId: json['collection_id'] as String?,
+      collectionId: asStringOrNull(json, 'collection_id'),
       postTarget: postTarget,
       referenceTarget: referenceTarget,
       eventCardTarget: eventCardTarget,
@@ -78,8 +79,8 @@ class SavedCollectionDto {
       SavedCollectionDto(
         id: json['id'] as String,
         name: json['name'] as String,
-        sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
-        itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
+        sortOrder: asInt(json, 'sort_order'),
+        itemCount: asInt(json, 'item_count'),
       );
 }
 
@@ -100,5 +101,5 @@ class ToggleSaveResultDto {
   final bool saved;
 
   factory ToggleSaveResultDto.fromJson(Map<String, dynamic> json) =>
-      ToggleSaveResultDto(saved: json['saved'] as bool? ?? false);
+      ToggleSaveResultDto(saved: asBool(json, 'saved'));
 }

@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class DigestRevisionDto {
   const DigestRevisionDto({
     required this.blockId,
@@ -21,7 +23,7 @@ class DigestRevisionDto {
         version: j['version'] as int,
         blockType: j['block_type'] as String,
         title: j['title'] as String,
-        contributorNickname: j['contributor_nickname'] as String?,
+        contributorNickname: asStringOrNull(j, 'contributor_nickname'),
         changedAt: DateTime.parse(j['changed_at'] as String),
       );
 }
@@ -45,8 +47,8 @@ class DigestReferenceDto {
       DigestReferenceDto(
         id: j['id'] as String,
         title: j['title'] as String,
-        sourceTier: j['source_tier'] as String? ?? 'UNKNOWN',
-        sourceName: j['source_name'] as String?,
+        sourceTier: asString(j, 'source_tier', fallback: 'UNKNOWN'),
+        sourceName: asStringOrNull(j, 'source_name'),
         url: j['url'] as String,
       );
 }
@@ -74,7 +76,7 @@ class DigestEventDto {
         venueName: j['venue_name'] as String,
         region: j['region'] as String,
         startsAt: DateTime.parse(j['starts_at'] as String),
-        thumbnailUrl: j['thumbnail_url'] as String?,
+        thumbnailUrl: asStringOrNull(j, 'thumbnail_url'),
       );
 }
 
@@ -95,10 +97,10 @@ class DigestPostDto {
 
   factory DigestPostDto.fromJson(Map<String, dynamic> j) => DigestPostDto(
         id: j['id'] as String,
-        snippet: j['snippet'] as String? ?? '',
+        snippet: asString(j, 'snippet'),
         roomSlug: j['room_slug'] as String,
-        likeCount: j['like_count'] as int? ?? 0,
-        replyCount: j['reply_count'] as int? ?? 0,
+        likeCount: asInt(j, 'like_count'),
+        replyCount: asInt(j, 'reply_count'),
       );
 }
 
@@ -123,22 +125,11 @@ class DigestPayloadDto {
 
   factory DigestPayloadDto.fromJson(Map<String, dynamic> j) =>
       DigestPayloadDto(
-        revisions: (j['revisions'] as List? ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(DigestRevisionDto.fromJson)
-            .toList(growable: false),
-        newReferences: (j['newReferences'] as List? ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(DigestReferenceDto.fromJson)
-            .toList(growable: false),
-        newEvents: (j['newEvents'] as List? ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(DigestEventDto.fromJson)
-            .toList(growable: false),
-        popularPosts: (j['popularPosts'] as List? ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(DigestPostDto.fromJson)
-            .toList(growable: false),
+        revisions: asObjectList(j, 'revisions', DigestRevisionDto.fromJson),
+        newReferences:
+            asObjectList(j, 'newReferences', DigestReferenceDto.fromJson),
+        newEvents: asObjectList(j, 'newEvents', DigestEventDto.fromJson),
+        popularPosts: asObjectList(j, 'popularPosts', DigestPostDto.fromJson),
       );
 }
 

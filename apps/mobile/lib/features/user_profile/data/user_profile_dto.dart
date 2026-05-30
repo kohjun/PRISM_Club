@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import '../../post/data/post_dto.dart';
 import '../../room/data/room_summary_dto.dart';
 
@@ -18,9 +19,9 @@ class ProfileUserDto {
 
   factory ProfileUserDto.fromJson(Map<String, dynamic> json) => ProfileUserDto(
         id: json['id'] as String,
-        nickname: json['nickname'] as String?,
-        avatarUrl: json['avatar_url'] as String?,
-        status: json['status'] as String? ?? 'ACTIVE',
+        nickname: asStringOrNull(json, 'nickname'),
+        avatarUrl: asStringOrNull(json, 'avatar_url'),
+        status: asString(json, 'status', fallback: 'ACTIVE'),
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 }
@@ -37,11 +38,9 @@ class ProfileSubDto {
   final List<String> interests;
 
   factory ProfileSubDto.fromJson(Map<String, dynamic> json) => ProfileSubDto(
-        bio: json['bio'] as String?,
-        region: json['region'] as String?,
-        interests: ((json['interests'] as List?) ?? const [])
-            .whereType<String>()
-            .toList(growable: false),
+        bio: asStringOrNull(json, 'bio'),
+        region: asStringOrNull(json, 'region'),
+        interests: asStringList(json, 'interests'),
       );
 }
 
@@ -59,10 +58,10 @@ class ProfileCountsDto {
   final int followingCount;
 
   factory ProfileCountsDto.fromJson(Map<String, dynamic> json) => ProfileCountsDto(
-        postCount: json['post_count'] as int? ?? 0,
-        roomCount: json['room_count'] as int? ?? 0,
-        followerCount: json['follower_count'] as int? ?? 0,
-        followingCount: json['following_count'] as int? ?? 0,
+        postCount: asInt(json, 'post_count'),
+        roomCount: asInt(json, 'room_count'),
+        followerCount: asInt(json, 'follower_count'),
+        followingCount: asInt(json, 'following_count'),
       );
 }
 
@@ -82,8 +81,8 @@ class ApprovedContributionDto {
   factory ApprovedContributionDto.fromJson(Map<String, dynamic> json) =>
       ApprovedContributionDto(
         id: json['id'] as String,
-        topicHubTitle: json['topic_hub_title'] as String? ?? '',
-        categorySlug: json['category_slug'] as String? ?? '',
+        topicHubTitle: asString(json, 'topic_hub_title'),
+        categorySlug: asString(json, 'category_slug'),
         resolvedAt: DateTime.parse(json['resolved_at'] as String),
       );
 }
@@ -117,26 +116,15 @@ class UserProfileBundleDto {
             (json['user'] as Map).cast<String, dynamic>()),
         profile: ProfileSubDto.fromJson(
             (json['profile'] as Map).cast<String, dynamic>()),
-        roles: ((json['roles'] as List?) ?? const [])
-            .whereType<String>()
-            .toList(growable: false),
+        roles: asStringList(json, 'roles'),
         counts: ProfileCountsDto.fromJson(
             (json['counts'] as Map).cast<String, dynamic>()),
-        recentPosts: ((json['recent_posts'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(PostDto.fromJson)
-            .toList(growable: false),
-        userRooms: ((json['user_rooms'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(RoomSummaryDto.fromJson)
-            .toList(growable: false),
-        approvedContributions:
-            ((json['approved_contributions'] as List?) ?? const [])
-                .whereType<Map<String, dynamic>>()
-                .map(ApprovedContributionDto.fromJson)
-                .toList(growable: false),
-        isSelf: json['is_self'] as bool? ?? false,
-        isFollowing: json['is_following'] as bool? ?? false,
+        recentPosts: asObjectList(json, 'recent_posts', PostDto.fromJson),
+        userRooms: asObjectList(json, 'user_rooms', RoomSummaryDto.fromJson),
+        approvedContributions: asObjectList(
+            json, 'approved_contributions', ApprovedContributionDto.fromJson),
+        isSelf: asBool(json, 'is_self'),
+        isFollowing: asBool(json, 'is_following'),
       );
 }
 
@@ -180,7 +168,7 @@ class UserFollowStateDto {
 
   factory UserFollowStateDto.fromJson(Map<String, dynamic> json) =>
       UserFollowStateDto(
-        followed: json['followed'] as bool? ?? false,
-        followerCount: json['follower_count'] as int? ?? 0,
+        followed: asBool(json, 'followed'),
+        followerCount: asInt(json, 'follower_count'),
       );
 }

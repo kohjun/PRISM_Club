@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class RevisionDto {
   const RevisionDto({
     required this.id,
@@ -46,11 +48,11 @@ class RevisionDto {
       blockType: json['block_type'] as String,
       title: json['title'] as String,
       body: json['body'] as String,
-      source: json['source'] as String? ?? 'CONTRIBUTION',
+      source: asString(json, 'source', fallback: 'CONTRIBUTION'),
       changedById: authorId,
       changedByNickname: authorNick,
       changedAt: DateTime.parse(json['changed_at'] as String),
-      contributionId: json['contribution_id'] as String?,
+      contributionId: asStringOrNull(json, 'contribution_id'),
     );
   }
 }
@@ -66,10 +68,12 @@ class RevisionListDto {
 
   factory RevisionListDto.fromJson(Map<String, dynamic> json) =>
       RevisionListDto(
+        // `items` stays a required cast (throws if absent) — not
+        // asObjectList, which would silently tolerate a missing list.
         items: (json['items'] as List<dynamic>)
             .whereType<Map<String, dynamic>>()
             .map(RevisionDto.fromJson)
             .toList(growable: false),
-        nextCursor: json['next_cursor'] as String?,
+        nextCursor: asStringOrNull(json, 'next_cursor'),
       );
 }

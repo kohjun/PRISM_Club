@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class MediaAssetDto {
   const MediaAssetDto({
     required this.id,
@@ -25,10 +27,10 @@ class MediaAssetDto {
   factory MediaAssetDto.fromJson(Map<String, dynamic> json) => MediaAssetDto(
         id: json['id'] as String,
         kind: json['kind'] as String,
-        filename: json['filename'] as String? ?? '',
-        mimeType: json['mime_type'] as String? ?? 'image/jpeg',
-        sizeBytes: json['size_bytes'] as int? ?? 0,
+        filename: asString(json, 'filename'),
+        mimeType: asString(json, 'mime_type', fallback: 'image/jpeg'),
+        sizeBytes: asInt(json, 'size_bytes'),
         url: json['url'] as String,
-        cdnUrl: json['cdn_url'] as String?,
+        cdnUrl: asStringOrNull(json, 'cdn_url'),
       );
 }

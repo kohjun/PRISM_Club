@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import 'post_dto.dart';
 
 class ReplyDto {
@@ -51,15 +52,15 @@ class ReplyDto {
   factory ReplyDto.fromJson(Map<String, dynamic> json) => ReplyDto(
         id: json['id'] as String,
         postId: json['post_id'] as String,
-        parentReplyId: json['parent_reply_id'] as String?,
+        parentReplyId: asStringOrNull(json, 'parent_reply_id'),
         author: PostAuthorDto.fromJson(
             (json['author'] as Map).cast<String, dynamic>()),
         body: json['body'] as String,
-        status: json['status'] as String? ?? 'VISIBLE',
+        status: asString(json, 'status', fallback: 'VISIBLE'),
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),
-        likeCount: json['like_count'] as int? ?? 0,
-        likedByMe: json['liked_by_me'] as bool? ?? false,
-        myReaction: json['my_reaction'] as String?,
+        likeCount: asInt(json, 'like_count'),
+        likedByMe: asBool(json, 'liked_by_me'),
+        myReaction: asStringOrNull(json, 'my_reaction'),
       );
 }

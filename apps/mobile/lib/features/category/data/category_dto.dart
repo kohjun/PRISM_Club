@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class CategoryDto {
   const CategoryDto({
     required this.id,
@@ -16,14 +18,14 @@ class CategoryDto {
   final String spaceName;
 
   factory CategoryDto.fromJson(Map<String, dynamic> json) {
-    final space = (json['space'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final space = asMap(json, 'space') ?? const {};
     return CategoryDto(
       id: json['id'] as String,
       slug: json['slug'] as String,
       name: json['name'] as String,
-      description: json['description'] as String?,
-      spaceSlug: (space['slug'] as String?) ?? '',
-      spaceName: (space['name'] as String?) ?? '',
+      description: asStringOrNull(json, 'description'),
+      spaceSlug: asString(space, 'slug'),
+      spaceName: asString(space, 'name'),
     );
   }
 }

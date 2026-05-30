@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class ReferenceDto {
   const ReferenceDto({
     required this.id,
@@ -28,10 +30,10 @@ class ReferenceDto {
         type: json['type'] as String,
         url: json['url'] as String,
         title: json['title'] as String,
-        sourceName: json['source_name'] as String?,
-        thumbnailUrl: json['thumbnail_url'] as String?,
-        summary: json['summary'] as String?,
-        status: json['status'] as String? ?? 'VISIBLE',
-        sourceTier: json['source_tier'] as String? ?? 'UNKNOWN',
+        sourceName: asStringOrNull(json, 'source_name'),
+        thumbnailUrl: asStringOrNull(json, 'thumbnail_url'),
+        summary: asStringOrNull(json, 'summary'),
+        status: asString(json, 'status', fallback: 'VISIBLE'),
+        sourceTier: asString(json, 'source_tier', fallback: 'UNKNOWN'),
       );
 }

@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class SpaceDto {
   const SpaceDto({
     required this.id,
@@ -20,6 +22,6 @@ class SpaceDto {
         slug: json['slug'] as String,
         name: json['name'] as String,
         audience: json['audience'] as String,
-        accessPolicy: json['access_policy'] as String? ?? 'PUBLIC',
+        accessPolicy: asString(json, 'access_policy', fallback: 'PUBLIC'),
       );
 }

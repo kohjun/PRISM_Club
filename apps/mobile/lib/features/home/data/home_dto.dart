@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../post/data/post_dto.dart';
 import '../../room/data/room_summary_dto.dart';
@@ -25,8 +26,8 @@ class TopicHubSummaryDto {
         id: json['id'] as String,
         categorySlug: json['category_slug'] as String,
         title: json['title'] as String,
-        summary: json['summary'] as String?,
-        blockCount: json['block_count'] as int? ?? 0,
+        summary: asStringOrNull(json, 'summary'),
+        blockCount: asInt(json, 'block_count'),
         updatedAt: DateTime.parse(json['updated_at'] as String),
       );
 }
@@ -51,8 +52,7 @@ class HomeBundleDto {
   final List<SavedItemDto> savedRecently;
 
   factory HomeBundleDto.fromJson(Map<String, dynamic> json) => HomeBundleDto(
-        unreadNotificationCount:
-            json['unread_notification_count'] as int? ?? 0,
+        unreadNotificationCount: asInt(json, 'unread_notification_count'),
         followedRoomUpdates: (json['followed_room_updates'] as List<dynamic>)
             .whereType<Map<String, dynamic>>()
             .map(PostDto.fromJson)
@@ -97,7 +97,7 @@ class HomeFeedItemDto {
         id: json['id'] as String,
         type: json['type'] as String,
         reason: json['reason'] as String,
-        payload: (json['payload'] as Map?)?.cast<String, dynamic>() ?? const {},
+        payload: asMap(json, 'payload') ?? const {},
       );
 }
 
@@ -112,6 +112,6 @@ class HomeFeedPageDto {
             .whereType<Map<String, dynamic>>()
             .map(HomeFeedItemDto.fromJson)
             .toList(growable: false),
-        nextCursor: json['next_cursor'] as String?,
+        nextCursor: asStringOrNull(json, 'next_cursor'),
       );
 }
