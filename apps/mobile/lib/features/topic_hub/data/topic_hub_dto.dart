@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../reference/data/reference_dto.dart';
 import '../../room/data/room_summary_dto.dart';
@@ -22,7 +23,7 @@ class KnowledgeBlockDto {
         blockType: json['block_type'] as String,
         title: json['title'] as String,
         body: json['body'] as String,
-        sortOrder: json['sort_order'] as int? ?? 0,
+        sortOrder: asInt(json, 'sort_order'),
       );
 }
 
@@ -50,7 +51,7 @@ class TopicSignalDto {
         id: json['id'] as String,
         signalType: json['signal_type'] as String,
         title: json['title'] as String,
-        payload: (json['payload'] as Map?)?.cast<String, dynamic>() ?? const {},
+        payload: asMap(json, 'payload') ?? const {},
       );
 }
 
@@ -81,11 +82,11 @@ class TopicHubBundle {
 
   factory TopicHubBundle.fromJson(Map<String, dynamic> json) {
     final cat = (json['category'] as Map).cast<String, dynamic>();
-    final hub = (json['hub'] as Map?)?.cast<String, dynamic>();
+    final hub = asMap(json, 'hub');
     return TopicHubBundle(
       categorySlug: cat['slug'] as String,
       categoryName: cat['name'] as String,
-      categoryDescription: cat['description'] as String?,
+      categoryDescription: asStringOrNull(cat, 'description'),
       hubTitle: hub?['title'] as String?,
       hubSummary: hub?['summary'] as String?,
       blocks: (json['blocks'] as List<dynamic>)

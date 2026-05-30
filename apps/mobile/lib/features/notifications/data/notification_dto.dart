@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class NotificationDto {
   const NotificationDto({
     required this.id,
@@ -74,16 +76,16 @@ class NotificationPreferencesDto {
 
   factory NotificationPreferencesDto.fromJson(Map<String, dynamic> json) =>
       NotificationPreferencesDto(
-        prefReplyOnPost: json['pref_reply_on_post'] as bool? ?? true,
-        prefNestedReply: json['pref_nested_reply'] as bool? ?? true,
+        prefReplyOnPost: asBool(json, 'pref_reply_on_post', fallback: true),
+        prefNestedReply: asBool(json, 'pref_nested_reply', fallback: true),
         prefNewPostInFollowedRoom:
-            json['pref_new_post_in_followed_room'] as bool? ?? true,
+            asBool(json, 'pref_new_post_in_followed_room', fallback: true),
         prefRecruitmentStatusChanged:
-            json['pref_recruitment_status_changed'] as bool? ?? true,
+            asBool(json, 'pref_recruitment_status_changed', fallback: true),
         prefContributionResolved:
-            json['pref_contribution_resolved'] as bool? ?? true,
-        prefPushEnabled: json['pref_push_enabled'] as bool? ?? true,
-        prefEmailEnabled: json['pref_email_enabled'] as bool? ?? true,
+            asBool(json, 'pref_contribution_resolved', fallback: true),
+        prefPushEnabled: asBool(json, 'pref_push_enabled', fallback: true),
+        prefEmailEnabled: asBool(json, 'pref_email_enabled', fallback: true),
       );
 
   NotificationPreferencesDto copyWith({
@@ -126,7 +128,7 @@ class NotificationListDto {
             .whereType<Map<String, dynamic>>()
             .map(NotificationDto.fromJson)
             .toList(growable: false),
-        nextCursor: json['next_cursor'] as String?,
-        unreadCount: json['unread_count'] as int? ?? 0,
+        nextCursor: asStringOrNull(json, 'next_cursor'),
+        unreadCount: asInt(json, 'unread_count'),
       );
 }

@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class ReportDto {
   const ReportDto({
     required this.id,
@@ -28,21 +30,19 @@ class ReportDto {
   final DateTime createdAt;
 
   factory ReportDto.fromJson(Map<String, dynamic> json) {
-    final reporter = (json['reporter'] as Map?)?.cast<String, dynamic>() ?? {};
+    final reporter = asMap(json, 'reporter') ?? {};
     return ReportDto(
       id: json['id'] as String,
-      reporterId: reporter['id'] as String? ?? '',
-      reporterNickname: reporter['nickname'] as String?,
+      reporterId: asString(reporter, 'id'),
+      reporterNickname: asStringOrNull(reporter, 'nickname'),
       targetType: json['target_type'] as String,
       targetId: json['target_id'] as String,
       reason: json['reason'] as String,
-      details: json['details'] as String?,
+      details: asStringOrNull(json, 'details'),
       status: json['status'] as String,
-      resolution: json['resolution'] as String?,
-      resolvedAt: json['resolved_at'] != null
-          ? DateTime.parse(json['resolved_at'] as String)
-          : null,
-      resolverNote: json['resolver_note'] as String?,
+      resolution: asStringOrNull(json, 'resolution'),
+      resolvedAt: asDateTimeOrNull(json, 'resolved_at'),
+      resolverNote: asStringOrNull(json, 'resolver_note'),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -53,10 +53,7 @@ class ReportListDto {
   final List<ReportDto> items;
 
   factory ReportListDto.fromJson(Map<String, dynamic> json) => ReportListDto(
-        items: ((json['items'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(ReportDto.fromJson)
-            .toList(growable: false),
+        items: asObjectList(json, 'items', ReportDto.fromJson),
       );
 }
 
@@ -76,12 +73,12 @@ class ModerationActionDto {
   final DateTime createdAt;
 
   factory ModerationActionDto.fromJson(Map<String, dynamic> json) {
-    final actor = (json['actor'] as Map?)?.cast<String, dynamic>() ?? {};
+    final actor = asMap(json, 'actor') ?? {};
     return ModerationActionDto(
       id: json['id'] as String,
-      actorNickname: actor['nickname'] as String?,
+      actorNickname: asStringOrNull(actor, 'nickname'),
       action: json['action'] as String,
-      note: json['note'] as String?,
+      note: asStringOrNull(json, 'note'),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -106,9 +103,9 @@ class ReportTargetSummaryDto {
       ReportTargetSummaryDto(
         type: json['type'] as String,
         id: json['id'] as String,
-        preview: json['preview'] as String? ?? '',
-        status: json['status'] as String?,
-        exists: json['exists'] as bool? ?? false,
+        preview: asString(json, 'preview'),
+        status: asStringOrNull(json, 'status'),
+        exists: asBool(json, 'exists'),
       );
 }
 
@@ -137,10 +134,7 @@ class ReportDetailDto extends ReportDto {
     final base = ReportDto.fromJson(json);
     final target = ReportTargetSummaryDto.fromJson(
         (json['target'] as Map).cast<String, dynamic>());
-    final actions = ((json['actions'] as List?) ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(ModerationActionDto.fromJson)
-        .toList(growable: false);
+    final actions = asObjectList(json, 'actions', ModerationActionDto.fromJson);
     return ReportDetailDto(
       id: base.id,
       reporterId: base.reporterId,

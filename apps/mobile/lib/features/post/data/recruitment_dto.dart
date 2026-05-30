@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class RecruitmentApplicationDto {
   const RecruitmentApplicationDto({
     required this.id,
@@ -25,8 +27,8 @@ class RecruitmentApplicationDto {
       id: j['id'] as String,
       postId: j['post_id'] as String,
       applicantId: applicant['id'] as String,
-      applicantNickname: applicant['nickname'] as String?,
-      message: j['message'] as String?,
+      applicantNickname: asStringOrNull(applicant, 'nickname'),
+      message: asStringOrNull(j, 'message'),
       status: j['status'] as String,
       createdAt: DateTime.parse(j['created_at'] as String),
       updatedAt: DateTime.parse(j['updated_at'] as String),
@@ -55,9 +57,11 @@ class ApplicationsListDto {
             .whereType<Map<String, dynamic>>()
             .map(RecruitmentApplicationDto.fromJson)
             .toList(growable: false),
-        nextCursor: j['next_cursor'] as String?,
-        recruitmentStatus: j['recruitment_status'] as String? ?? 'OPEN',
-        acceptedCount: j['accepted_count'] as int? ?? 0,
+        nextCursor: asStringOrNull(j, 'next_cursor'),
+        recruitmentStatus: asString(j, 'recruitment_status', fallback: 'OPEN'),
+        acceptedCount: asInt(j, 'accepted_count'),
+        // capacity stays a nullable hard cast — no asIntOrNull helper,
+        // and routing through asInt would turn a null capacity into 0.
         capacity: j['capacity'] as int?,
       );
 }
@@ -84,9 +88,9 @@ class MyApplicationEntryDto {
         (j['application'] as Map).cast<String, dynamic>(),
       ),
       postId: post['id'] as String,
-      bodyPreview: post['body_preview'] as String? ?? '',
-      roomSlug: post['room_slug'] as String? ?? '',
-      recruitmentStatus: post['status'] as String? ?? 'OPEN',
+      bodyPreview: asString(post, 'body_preview'),
+      roomSlug: asString(post, 'room_slug'),
+      recruitmentStatus: asString(post, 'status', fallback: 'OPEN'),
     );
   }
 }
@@ -106,6 +110,6 @@ class MyApplicationsListDto {
             .whereType<Map<String, dynamic>>()
             .map(MyApplicationEntryDto.fromJson)
             .toList(growable: false),
-        nextCursor: j['next_cursor'] as String?,
+        nextCursor: asStringOrNull(j, 'next_cursor'),
       );
 }

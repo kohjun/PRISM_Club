@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../post/data/post_dto.dart';
 
@@ -26,8 +27,8 @@ class RelatedRoomDto {
         name: json['name'] as String,
         origin: json['origin'] as String,
         roomType: json['room_type'] as String,
-        ownerNickname: json['owner_nickname'] as String?,
-        relation: json['relation'] as String? ?? 'PIN',
+        ownerNickname: asStringOrNull(json, 'owner_nickname'),
+        relation: asString(json, 'relation', fallback: 'PIN'),
       );
 }
 
@@ -53,12 +54,12 @@ class RsvpStateDto {
   );
 
   factory RsvpStateDto.fromJson(Map<String, dynamic> json) {
-    final counts = (json['counts'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final counts = asMap(json, 'counts') ?? const {};
     return RsvpStateDto(
-      myStatus: json['my_status'] as String?,
-      interestedCount: counts['interested'] as int? ?? 0,
-      goingCount: counts['going'] as int? ?? 0,
-      attendedCount: counts['attended'] as int? ?? 0,
+      myStatus: asStringOrNull(json, 'my_status'),
+      interestedCount: asInt(counts, 'interested'),
+      goingCount: asInt(counts, 'going'),
+      attendedCount: asInt(counts, 'attended'),
     );
   }
 }
@@ -87,10 +88,10 @@ class EventReviewDto {
     return EventReviewDto(
       id: j['id'] as String,
       userId: user['id'] as String,
-      userNickname: user['nickname'] as String?,
+      userNickname: asStringOrNull(user, 'nickname'),
       rating: j['rating'] as int,
       body: j['body'] as String,
-      status: j['status'] as String? ?? 'VISIBLE',
+      status: asString(j, 'status', fallback: 'VISIBLE'),
       createdAt: DateTime.parse(j['created_at'] as String),
     );
   }
@@ -142,22 +143,22 @@ class EventDetailBundleDto {
     final rsvp = rsvpRaw is Map
         ? RsvpStateDto.fromJson(rsvpRaw.cast<String, dynamic>())
         : RsvpStateDto.empty;
-    final reviews = (json['verified_reviews'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(EventReviewDto.fromJson)
-        .toList(growable: false);
+    final reviews =
+        asObjectList(json, 'verified_reviews', EventReviewDto.fromJson);
     final avgRaw = counts['review_average'];
     return EventDetailBundleDto(
       eventCard: card,
       relatedRooms: rooms,
       relatedPosts: posts,
-      relatedPostsNextCursor: relatedPostsRaw['next_cursor'] as String?,
-      defaultComposeRoomSlug: json['default_compose_room_slug'] as String?,
-      postCount: counts['post_count'] as int? ?? 0,
-      roomCount: counts['room_count'] as int? ?? 0,
+      relatedPostsNextCursor: asStringOrNull(relatedPostsRaw, 'next_cursor'),
+      defaultComposeRoomSlug: asStringOrNull(json, 'default_compose_room_slug'),
+      postCount: asInt(counts, 'post_count'),
+      roomCount: asInt(counts, 'room_count'),
       rsvp: rsvp,
       verifiedReviews: reviews,
-      reviewCount: counts['review_count'] as int? ?? 0,
+      reviewCount: asInt(counts, 'review_count'),
+      // reviewAverage stays bespoke nullable double (asDouble would
+      // coerce a null average into 0).
       reviewAverage: avgRaw is num ? avgRaw.toDouble() : null,
     );
   }

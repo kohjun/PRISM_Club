@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class OpsSummaryDto {
   const OpsSummaryDto({
     required this.pendingContributions,
@@ -31,25 +33,16 @@ class OpsSummaryDto {
     final rr = (json['recent_rooms'] as Map).cast<String, dynamic>();
     final rPosts = (json['recent_posts'] as Map).cast<String, dynamic>();
     return OpsSummaryDto(
-      pendingContributions: pc['count'] as int? ?? 0,
-      openReports: or['count'] as int? ?? 0,
-      recruitmentOpen: rp['count_open'] as int? ?? 0,
-      recruitmentTotal: rp['count_total'] as int? ?? 0,
-      recentUserCount: ru['count'] as int? ?? 0,
-      recentUsers: ((ru['items'] as List?) ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(OpsUserRow.fromJson)
-          .toList(growable: false),
-      recentRoomCount: rr['count'] as int? ?? 0,
-      recentRooms: ((rr['items'] as List?) ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(OpsRoomRow.fromJson)
-          .toList(growable: false),
-      recentPostCount: rPosts['count'] as int? ?? 0,
-      recentPosts: ((rPosts['items'] as List?) ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(OpsPostRow.fromJson)
-          .toList(growable: false),
+      pendingContributions: asInt(pc, 'count'),
+      openReports: asInt(or, 'count'),
+      recruitmentOpen: asInt(rp, 'count_open'),
+      recruitmentTotal: asInt(rp, 'count_total'),
+      recentUserCount: asInt(ru, 'count'),
+      recentUsers: asObjectList(ru, 'items', OpsUserRow.fromJson),
+      recentRoomCount: asInt(rr, 'count'),
+      recentRooms: asObjectList(rr, 'items', OpsRoomRow.fromJson),
+      recentPostCount: asInt(rPosts, 'count'),
+      recentPosts: asObjectList(rPosts, 'items', OpsPostRow.fromJson),
     );
   }
 }
@@ -65,7 +58,7 @@ class OpsUserRow {
   final DateTime createdAt;
   factory OpsUserRow.fromJson(Map<String, dynamic> j) => OpsUserRow(
         id: j['id'] as String,
-        nickname: j['nickname'] as String?,
+        nickname: asStringOrNull(j, 'nickname'),
         createdAt: DateTime.parse(j['created_at'] as String),
       );
 }
@@ -102,8 +95,8 @@ class OpsPostRow {
   final DateTime createdAt;
   factory OpsPostRow.fromJson(Map<String, dynamic> j) => OpsPostRow(
         id: j['id'] as String,
-        bodyPreview: j['body_preview'] as String? ?? '',
-        roomSlug: j['room_slug'] as String? ?? '',
+        bodyPreview: asString(j, 'body_preview'),
+        roomSlug: asString(j, 'room_slug'),
         createdAt: DateTime.parse(j['created_at'] as String),
       );
 }

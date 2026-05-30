@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import 'room_pin_dto.dart';
 
 class RoomDetailDto {
@@ -26,14 +27,14 @@ class RoomDetailDto {
   final int postCount;
 
   factory RoomDetailDto.fromJson(Map<String, dynamic> json) {
-    final ownerMap = (json['owner'] as Map?)?.cast<String, dynamic>();
-    final counts = (json['counts'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final ownerMap = asMap(json, 'owner');
+    final counts = asMap(json, 'counts') ?? const {};
     return RoomDetailDto(
       id: json['id'] as String,
       slug: json['slug'] as String,
       name: json['name'] as String,
-      description: json['description'] as String?,
-      rules: json['rules'] as String?,
+      description: asStringOrNull(json, 'description'),
+      rules: asStringOrNull(json, 'rules'),
       origin: json['origin'] as String,
       roomType: json['room_type'] as String,
       ownerNickname: ownerMap?['nickname'] as String?,
@@ -41,7 +42,7 @@ class RoomDetailDto {
           .whereType<Map<String, dynamic>>()
           .map(RoomPinDto.fromJson)
           .toList(growable: false),
-      postCount: counts['post_count'] as int? ?? 0,
+      postCount: asInt(counts, 'post_count'),
     );
   }
 }
