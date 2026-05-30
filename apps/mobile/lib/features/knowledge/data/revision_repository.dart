@@ -18,7 +18,7 @@ class RevisionRepository {
             '/knowledge-blocks/$blockId/revisions',
             queryParameters: {
               'limit': limit,
-              if (cursor != null) 'cursor': cursor,
+              'cursor': ?cursor,
             },
           );
       if (res.statusCode != 200) {

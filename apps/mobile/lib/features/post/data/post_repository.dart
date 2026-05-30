@@ -83,7 +83,7 @@ class PostRepository {
             'recruitment_fields': recruitmentFields.toJson(),
           if (attachments.isNotEmpty)
             'attachments': attachments.map((a) => a.toJson()).toList(),
-          if (quotedPostId != null) 'quoted_post_id': quotedPostId,
+          'quoted_post_id': ?quotedPostId,
         },
       );
       if (res.statusCode != 201) {

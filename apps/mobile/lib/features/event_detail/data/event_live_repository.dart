@@ -103,7 +103,7 @@ class EventLiveRepository {
         '/event-cards/$eventCardId/live',
         data: {
           'body': body,
-          if (imageMediaId != null) 'image_media_id': imageMediaId,
+          'image_media_id': ?imageMediaId,
         },
       );
       if (res.statusCode != 201 && res.statusCode != 200) {

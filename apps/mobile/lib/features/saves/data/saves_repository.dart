@@ -13,8 +13,8 @@ class SavesRepository {
       final res = await _ref.read(dioProvider).get<dynamic>(
             '/me/saves',
             queryParameters: {
-              if (type != null) 'type': type,
-              if (collectionId != null) 'collection_id': collectionId,
+              'type': ?type,
+              'collection_id': ?collectionId,
             },
           );
       if (res.statusCode != 200) {

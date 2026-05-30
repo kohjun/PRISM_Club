@@ -56,7 +56,7 @@ class UserProfileRepository {
       final res = await _ref.read(dioProvider).get<dynamic>(
         '/profiles/$userId/activity',
         queryParameters: {
-          if (cursor != null) 'cursor': cursor,
+          'cursor': ?cursor,
           'limit': limit,
         },
       );

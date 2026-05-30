@@ -27,9 +27,9 @@ class DeviceTokenRepository {
           'token': token,
           'platform': _platformName(),
           'provider': 'FCM',
-          if (appVersion != null) 'app_version': appVersion,
-          if (deviceModel != null) 'device_model': deviceModel,
-          if (locale != null) 'locale': locale,
+          'app_version': ?appVersion,
+          'device_model': ?deviceModel,
+          'locale': ?locale,
         },
       );
     } catch (e) {

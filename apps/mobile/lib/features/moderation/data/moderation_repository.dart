@@ -52,7 +52,7 @@ class ModerationRepository {
       final res = await _ref.read(dioProvider).get<dynamic>(
         '/admin/reports',
         queryParameters: {
-          if (status != null) 'status': status,
+          'status': ?status,
         },
       );
       if (res.statusCode != 200) {

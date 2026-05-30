@@ -51,8 +51,8 @@ class RecruitmentRepository {
       final res = await _ref.read(dioProvider).get<dynamic>(
             '/posts/$postId/applications',
             queryParameters: {
-              if (status != null) 'status': status,
-              if (cursor != null) 'cursor': cursor,
+              'status': ?status,
+              'cursor': ?cursor,
             },
           );
       if (res.statusCode != 200) {
@@ -100,8 +100,8 @@ class RecruitmentRepository {
       final res = await _ref.read(dioProvider).get<dynamic>(
             '/me/applications',
             queryParameters: {
-              if (status != null) 'status': status,
-              if (cursor != null) 'cursor': cursor,
+              'status': ?status,
+              'cursor': ?cursor,
             },
           );
       if (res.statusCode != 200) {

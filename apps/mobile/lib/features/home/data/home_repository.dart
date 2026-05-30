@@ -26,7 +26,7 @@ class HomeRepository {
             '/home/feed',
             queryParameters: {
               'limit': limit,
-              if (cursor != null) 'cursor': cursor,
+              'cursor': ?cursor,
             },
           );
       if (res.statusCode != 200) {

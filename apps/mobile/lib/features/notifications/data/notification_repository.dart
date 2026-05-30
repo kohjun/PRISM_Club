@@ -18,7 +18,7 @@ class NotificationRepository {
             '/me/notifications',
             queryParameters: {
               'limit': limit,
-              if (cursor != null) 'cursor': cursor,
+              'cursor': ?cursor,
               if (unreadOnly) 'unread_only': 'true',
             },
           );
