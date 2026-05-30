@@ -2,10 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/post/data/post_dto.dart';
+import 'package:mobile/features/user_profile/data/reputation_dto.dart';
+import 'package:mobile/features/user_profile/data/reputation_repository.dart';
 import 'package:mobile/features/user_profile/data/user_follow_repository.dart';
 import 'package:mobile/features/user_profile/data/user_profile_dto.dart';
 import 'package:mobile/features/user_profile/data/user_profile_repository.dart';
 import 'package:mobile/features/user_profile/ui/profile_screen.dart';
+
+ReputationDto _zeroRep() => const ReputationDto(
+      userId: 'u-haneul',
+      approvedCount: 0,
+      rejectedCount: 0,
+      needsChangesCount: 0,
+      withdrawnCount: 0,
+      weightedScore: 0,
+      lastResolvedAt: null,
+    );
 
 PostDto _post(String id) => PostDto(
       id: id,
@@ -77,7 +89,16 @@ class _FakeFollowRepo implements UserFollowRepository {
 }
 
 Widget _wrap(List<Override> overrides) => ProviderScope(
-      overrides: overrides,
+      overrides: [
+        // The profile screen renders the P2.2 reputation badge, which
+        // fires Dio via userReputationProvider. Stub it once here so
+        // each test's own override list stays focused on what it's
+        // actually asserting (and no network timer dangles past
+        // teardown). None of these tests override reputation, so there's
+        // no conflict.
+        userReputationProvider('u-haneul').overrideWith((_) async => _zeroRep()),
+        ...overrides,
+      ],
       child: const MaterialApp(home: ProfileScreen(userId: 'u-haneul')),
     );
 

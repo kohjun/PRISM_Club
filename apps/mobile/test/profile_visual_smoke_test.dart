@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/post/data/post_dto.dart';
+import 'package:mobile/features/user_profile/data/reputation_dto.dart';
+import 'package:mobile/features/user_profile/data/reputation_repository.dart';
 import 'package:mobile/features/user_profile/data/user_follow_repository.dart';
 import 'package:mobile/features/user_profile/data/user_profile_dto.dart';
 import 'package:mobile/features/user_profile/data/user_profile_repository.dart';
@@ -73,6 +75,19 @@ Widget _wrap() => ProviderScope(
       overrides: [
         userProfileProvider('u-haneul').overrideWith((_) async => _bundle()),
         userFollowRepositoryProvider.overrideWithValue(_FakeFollowRepo()),
+        // P2.2 reputation badge fires Dio via userReputationProvider;
+        // stub so no network timer dangles past the smoke teardown.
+        userReputationProvider('u-haneul').overrideWith(
+          (_) async => const ReputationDto(
+            userId: 'u-haneul',
+            approvedCount: 0,
+            rejectedCount: 0,
+            needsChangesCount: 0,
+            withdrawnCount: 0,
+            weightedScore: 0,
+            lastResolvedAt: null,
+          ),
+        ),
       ],
       child: const MaterialApp(home: ProfileScreen(userId: 'u-haneul')),
     );

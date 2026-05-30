@@ -171,9 +171,13 @@ void main() {
       await expectNoOverflow(tester, () async {
         await tester.pumpWidget(ProviderScope(
           overrides: [
-            savedItemsProvider(null).overrideWith(
+            // Screen reads filteredSavedItemsProvider(_filter) +
+            // savedCollectionsProvider after P4.4 collections; the
+            // legacy savedItemsProvider(null) override no longer matches.
+            filteredSavedItemsProvider(const SavedItemsFilter()).overrideWith(
               (_) async => const SavedItemListDto(items: []),
             ),
+            savedCollectionsProvider.overrideWith((_) async => const []),
           ],
           child: const MaterialApp(home: SavedItemsScreen()),
         ));

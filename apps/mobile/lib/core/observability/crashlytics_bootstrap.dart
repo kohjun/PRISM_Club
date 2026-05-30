@@ -22,7 +22,12 @@ class CrashlyticsBootstrap {
   /// Whether the build was instructed to collect crashes. Computed once at
   /// boot so the UI can show a "Crashlytics OFF" hint in the hidden ops menu
   /// during QA.
-  static late final bool collectionEnabled;
+  ///
+  /// Defaults to `false` (not `late`) so any reader that runs before
+  /// `initialize()` — widget tests, or a screen built while Firebase
+  /// bootstrap is still pending — observes "collection off" instead of
+  /// throwing a LateInitializationError.
+  static bool collectionEnabled = false;
 
   /// Wire Firebase + Crashlytics. Idempotent: safe to call twice (Firebase
   /// throws `[core/duplicate-app]` on the second `initializeApp`, which we

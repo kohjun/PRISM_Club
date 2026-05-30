@@ -74,12 +74,18 @@ SavedItemDto _savedEvent(String id) => SavedItemDto(
 
 Widget _wrap() => ProviderScope(
       overrides: [
-        // null = "all types" filter, the default tab on this screen.
-        savedItemsProvider(null).overrideWith(
+        // The screen reads filteredSavedItemsProvider(_filter) — its
+        // default `_filter` is `const SavedItemsFilter()` (all types,
+        // all collections, after P4.4 collections landed). Overriding
+        // the legacy savedItemsProvider(null) no longer matches what
+        // the screen watches, which is why this smoke went stale.
+        filteredSavedItemsProvider(const SavedItemsFilter()).overrideWith(
           (_) async => SavedItemListDto(
             items: [_savedPost('p-1'), _savedReference('r-1'), _savedEvent('e-1')],
           ),
         ),
+        // The folder-chip row watches collections; empty avoids real Dio.
+        savedCollectionsProvider.overrideWith((_) async => const []),
       ],
       child: const MaterialApp(home: SavedItemsScreen()),
     );

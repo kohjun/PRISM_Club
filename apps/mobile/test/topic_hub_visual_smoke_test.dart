@@ -4,12 +4,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/event_card/data/event_card_dto.dart';
 import 'package:mobile/features/reference/data/reference_dto.dart';
 import 'package:mobile/features/room/data/room_summary_dto.dart';
+import 'package:mobile/features/knowledge/data/validation_dto.dart';
+import 'package:mobile/features/knowledge/data/validation_repository.dart';
 import 'package:mobile/features/search/data/search_repository.dart';
+import 'package:mobile/features/topic_hub/data/digest_repository.dart';
+import 'package:mobile/features/topic_hub/data/similar_hub_repository.dart';
 import 'package:mobile/features/topic_hub/data/topic_hub_dto.dart';
 import 'package:mobile/features/topic_hub/data/topic_hub_repository.dart';
 import 'package:mobile/features/topic_hub/ui/topic_hub_screen.dart';
 
 import 'helpers/visual_smoke.dart';
+
+/// Resolves every block's validation badge synchronously so the P7.2
+/// `blockValidationProvider` family doesn't fire real Dio (one call per
+/// block) and dangle a timer past teardown.
+class _StubValidationRepo extends ValidationRepository {
+  _StubValidationRepo(super.ref);
+  @override
+  Future<ValidationDto> getForBlock(String blockId) async => ValidationDto(
+        blockId: blockId,
+        score: 0,
+        label: '검증 부족',
+        signals: const ValidationSignalsDto(
+          revisions: 0,
+          approvals: 0,
+          avgReputation: 0,
+          ageDays: 0,
+        ),
+        computedAt: '',
+      );
+}
 
 KnowledgeBlockDto _block(String id, String blockType, String title, String body) =>
     KnowledgeBlockDto(
@@ -90,6 +114,13 @@ Widget _wrap(TopicHubBundle bundle) => ProviderScope(
         // for the chip row; empty list is fine and avoids real Dio.
         searchSuggestionsProvider('love-content')
             .overrideWith((_) async => const <String>[]),
+        // WeeklyDigestSection + SimilarTopicHubStrip each watch a
+        // FutureProvider that fires real Dio. Stub both so no network
+        // timer dangles past teardown (the sections self-hide on
+        // null / empty, which is the desired smoke state anyway).
+        categoryDigestProvider('love-content').overrideWith((_) async => null),
+        similarHubsProvider('love-content').overrideWith((_) async => const []),
+        validationRepositoryProvider.overrideWith((ref) => _StubValidationRepo(ref)),
       ],
       child: const MaterialApp(
         home: TopicHubScreen(categorySlug: 'love-content'),
