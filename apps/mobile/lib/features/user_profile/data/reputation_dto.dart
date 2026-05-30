@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 class ReputationDto {
   const ReputationDto({
     required this.userId,
@@ -25,13 +27,11 @@ class ReputationDto {
 
   factory ReputationDto.fromJson(Map<String, dynamic> json) => ReputationDto(
         userId: json['user_id'] as String,
-        approvedCount: json['approved_count'] as int? ?? 0,
-        rejectedCount: json['rejected_count'] as int? ?? 0,
-        needsChangesCount: json['needs_changes_count'] as int? ?? 0,
-        withdrawnCount: json['withdrawn_count'] as int? ?? 0,
-        weightedScore: (json['weighted_score'] as num? ?? 0).toDouble(),
-        lastResolvedAt: json['last_resolved_at'] != null
-            ? DateTime.parse(json['last_resolved_at'] as String)
-            : null,
+        approvedCount: asInt(json, 'approved_count'),
+        rejectedCount: asInt(json, 'rejected_count'),
+        needsChangesCount: asInt(json, 'needs_changes_count'),
+        withdrawnCount: asInt(json, 'withdrawn_count'),
+        weightedScore: asDouble(json, 'weighted_score'),
+        lastResolvedAt: asDateTimeOrNull(json, 'last_resolved_at'),
       );
 }

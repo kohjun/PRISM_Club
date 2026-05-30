@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 /// Response from `GET /v1/topic-hubs/:slug/similar`. Each entry pairs
 /// a hub summary with the Jaccard score and a small "why" reason so
 /// the strip card can render an explanation chip without a follow-up
@@ -22,19 +24,16 @@ class SimilarHubDto {
   final int sharedRoomCount;
 
   factory SimilarHubDto.fromJson(Map<String, dynamic> json) {
-    final hub = (json['topic_hub'] as Map?)?.cast<String, dynamic>() ??
-        const <String, dynamic>{};
-    final reason = (json['reason'] as Map?)?.cast<String, dynamic>() ??
-        const <String, dynamic>{};
+    final hub = asMap(json, 'topic_hub') ?? const <String, dynamic>{};
+    final reason = asMap(json, 'reason') ?? const <String, dynamic>{};
     return SimilarHubDto(
-      id: hub['id'] as String? ?? '',
-      slug: hub['slug'] as String? ?? '',
-      title: hub['title'] as String? ?? '',
-      categorySlug: hub['category_slug'] as String? ?? '',
-      score: (json['score'] as num?)?.toDouble() ?? 0,
-      sharedContributorCount:
-          (reason['shared_contributor_count'] as num?)?.toInt() ?? 0,
-      sharedRoomCount: (reason['shared_room_count'] as num?)?.toInt() ?? 0,
+      id: asString(hub, 'id'),
+      slug: asString(hub, 'slug'),
+      title: asString(hub, 'title'),
+      categorySlug: asString(hub, 'category_slug'),
+      score: asDouble(json, 'score'),
+      sharedContributorCount: asInt(reason, 'shared_contributor_count'),
+      sharedRoomCount: asInt(reason, 'shared_room_count'),
     );
   }
 }

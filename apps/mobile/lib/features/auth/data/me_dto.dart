@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 /// Response from `GET /v1/me`. Carries roles so role-gated UI surfaces
 /// (e.g., the curator banner on SpaceList) can show/hide themselves.
 class MeDto {
@@ -30,14 +32,14 @@ class MeDto {
   bool get isOps => isCurator || isModerator;
 
   factory MeDto.fromJson(Map<String, dynamic> json) => MeDto(
+        // id is intentionally a hard cast (no fallback): a response
+        // without an id is a contract violation we want to surface.
         id: json['id'] as String,
-        status: json['status'] as String? ?? 'ACTIVE',
-        nickname: json['nickname'] as String?,
-        region: json['region'] as String?,
-        avatarUrl: json['avatar_url'] as String?,
-        bio: json['bio'] as String?,
-        roles: ((json['roles'] as List?) ?? const [])
-            .whereType<String>()
-            .toList(growable: false),
+        status: asString(json, 'status', fallback: 'ACTIVE'),
+        nickname: asStringOrNull(json, 'nickname'),
+        region: asStringOrNull(json, 'region'),
+        avatarUrl: asStringOrNull(json, 'avatar_url'),
+        bio: asStringOrNull(json, 'bio'),
+        roles: asStringList(json, 'roles'),
       );
 }

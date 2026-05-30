@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 /// Response from `POST /v1/event-cards/:id/recap/suggest`.
 ///
 /// The server returns a deterministic markdown-shaped body the organizer
@@ -20,16 +22,13 @@ class RecapSuggestionDto {
   factory RecapSuggestionDto.fromJson(Map<String, dynamic> json) {
     return RecapSuggestionDto(
       event: RecapEventDto.fromJson(json['event'] as Map<String, dynamic>),
-      suggestedBody: json['suggested_body'] as String? ?? '',
-      suggestedAttachments: ((json['suggested_attachments'] as List?) ??
-              const [])
-          .whereType<Map<String, dynamic>>()
-          .map(RecapAttachmentDto.fromJson)
-          .toList(growable: false),
-      suggestedRoomSlugs:
-          ((json['suggested_room_slugs'] as List?) ?? const [])
-              .whereType<String>()
-              .toList(growable: false),
+      suggestedBody: asString(json, 'suggested_body'),
+      suggestedAttachments: asObjectList(
+        json,
+        'suggested_attachments',
+        RecapAttachmentDto.fromJson,
+      ),
+      suggestedRoomSlugs: asStringList(json, 'suggested_room_slugs'),
     );
   }
 }
@@ -51,10 +50,10 @@ class RecapEventDto {
 
   factory RecapEventDto.fromJson(Map<String, dynamic> json) => RecapEventDto(
         id: json['id'] as String,
-        title: json['title'] as String? ?? '',
-        startsAt: json['starts_at'] as String? ?? '',
-        venueName: json['venue_name'] as String? ?? '',
-        region: json['region'] as String? ?? '',
+        title: asString(json, 'title'),
+        startsAt: asString(json, 'starts_at'),
+        venueName: asString(json, 'venue_name'),
+        region: asString(json, 'region'),
       );
 }
 
@@ -69,7 +68,7 @@ class RecapAttachmentDto {
 
   factory RecapAttachmentDto.fromJson(Map<String, dynamic> json) =>
       RecapAttachmentDto(
-        attachmentType: json['attachment_type'] as String? ?? '',
-        targetId: json['target_id'] as String? ?? '',
+        attachmentType: asString(json, 'attachment_type'),
+        targetId: asString(json, 'target_id'),
       );
 }

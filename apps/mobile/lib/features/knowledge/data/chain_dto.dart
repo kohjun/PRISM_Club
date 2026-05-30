@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 /// Response from `GET /v1/knowledge-blocks/:blockId/chain`.
 ///
 /// Person-centric timeline complementing the existing
@@ -13,11 +15,8 @@ class ChainDto {
   final List<ChainEntryDto> items;
 
   factory ChainDto.fromJson(Map<String, dynamic> json) => ChainDto(
-        blockId: json['block_id'] as String? ?? '',
-        items: ((json['items'] as List?) ?? const [])
-            .whereType<Map<String, dynamic>>()
-            .map(ChainEntryDto.fromJson)
-            .toList(growable: false),
+        blockId: asString(json, 'block_id'),
+        items: asObjectList(json, 'items', ChainEntryDto.fromJson),
       );
 }
 
@@ -39,11 +38,11 @@ class ChainEntryDto {
   final String? contributionId;
 
   factory ChainEntryDto.fromJson(Map<String, dynamic> json) => ChainEntryDto(
-        userId: json['user_id'] as String?,
-        nickname: json['nickname'] as String?,
-        roleInChain: json['role_in_chain'] as String? ?? 'SEED',
-        actedAt: json['acted_at'] as String? ?? '',
-        revisionVersion: (json['revision_version'] as num?)?.toInt() ?? 0,
-        contributionId: json['contribution_id'] as String?,
+        userId: asStringOrNull(json, 'user_id'),
+        nickname: asStringOrNull(json, 'nickname'),
+        roleInChain: asString(json, 'role_in_chain', fallback: 'SEED'),
+        actedAt: asString(json, 'acted_at'),
+        revisionVersion: asInt(json, 'revision_version'),
+        contributionId: asStringOrNull(json, 'contribution_id'),
       );
 }

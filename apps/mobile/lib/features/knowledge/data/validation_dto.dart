@@ -1,3 +1,5 @@
+import '../../../core/json_helpers.dart';
+
 /// Response from `GET /v1/knowledge-blocks/:blockId/validation`.
 ///
 /// The score is the deterministic composite (revisions × 2 + approvals
@@ -21,14 +23,13 @@ class ValidationDto {
   final String computedAt;
 
   factory ValidationDto.fromJson(Map<String, dynamic> json) => ValidationDto(
-        blockId: json['block_id'] as String? ?? '',
-        score: (json['score'] as num?)?.toDouble() ?? 0,
-        label: json['label'] as String? ?? '',
+        blockId: asString(json, 'block_id'),
+        score: asDouble(json, 'score'),
+        label: asString(json, 'label'),
         signals: ValidationSignalsDto.fromJson(
-          (json['signals'] as Map?)?.cast<String, dynamic>() ??
-              const <String, dynamic>{},
+          asMap(json, 'signals') ?? const <String, dynamic>{},
         ),
-        computedAt: json['computed_at'] as String? ?? '',
+        computedAt: asString(json, 'computed_at'),
       );
 }
 
@@ -47,9 +48,9 @@ class ValidationSignalsDto {
 
   factory ValidationSignalsDto.fromJson(Map<String, dynamic> json) =>
       ValidationSignalsDto(
-        revisions: (json['revisions'] as num?)?.toInt() ?? 0,
-        approvals: (json['approvals'] as num?)?.toInt() ?? 0,
-        avgReputation: (json['avg_reputation'] as num?)?.toDouble() ?? 0,
-        ageDays: (json['age_days'] as num?)?.toInt() ?? 0,
+        revisions: asInt(json, 'revisions'),
+        approvals: asInt(json, 'approvals'),
+        avgReputation: asDouble(json, 'avg_reputation'),
+        ageDays: asInt(json, 'age_days'),
       );
 }
