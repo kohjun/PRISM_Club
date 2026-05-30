@@ -3,12 +3,15 @@
 A single document inventorying what's between today's tree and a
 Play Internal-testing upload, classified by who owns the next move.
 
-> **Reset (current branch `feat/p1-foundation`).** Phases 1–6 +
-> F-series have landed since the prior snapshot at `d195ac3
-> docs(mobile): add physical device qa log template` (2026-05-20).
-> Most of what this doc previously tagged "Decision deferred" (push,
-> crash reporting, media R2, login picker) is now code-complete and
-> waiting on operator-owned external setup — not engineering.
+> **Reset (current branch `feat/p1-foundation`).** Phases 1–7 +
+> F-series + refactor A/B/D have landed since the prior snapshot at
+> `d195ac3 docs(mobile): add physical device qa log template`
+> (2026-05-20). Most of what this doc previously tagged "Decision
+> deferred" (push, crash reporting, media R2, login picker) is now
+> code-complete and waiting on operator-owned external setup — not
+> engineering. Phase 7 added the identity-strengthening algorithm
+> layer (similar-hub strip, knowledge validation badge/chain, event
+> recap CTA) — see §1.7.
 
 Pairs with:
 
@@ -113,7 +116,18 @@ that landed it; refer to the commit log for surrounding context.
 | Reply controls (P6.7) | `posts.reply_policy` enum (ANYONE/FOLLOWERS/MENTIONED_ONLY/DISABLED), `assertReplyAllowed()` gate, composer chip. |
 | Event live mode (P6.8) | `event_live_posts` table, RSVP=ATTENDED + IN_PROGRESS window write, +48h archive cron on advisory lock 854_303. |
 
-### 1.7 F-series follow-ups
+### 1.7 Phase 7 — identity-strengthening algorithm layer
+
+All three are deterministic + explainable (no ML, no For-You feed —
+each surface shows the user WHY it recommended something).
+
+| Item | Note |
+|---|---|
+| Topic Hub similarity (P7.1) | `topic_hub_similarity` table + Jaccard scorer (contributor 0.7 + room 0.3), daily 03:30 KST cron on advisory lock 854_305, `GET /v1/topic-hubs/:slug/similar` (Public, accessPolicy-filtered), mobile `SimilarTopicHubStrip` with "공통 기여자 N명 / 공통 방 K개" reason chip. |
+| Knowledge validation + chain (P7.2) | `GET /v1/knowledge-blocks/:id/validation` (deterministic score → 검증 부족/진행 중/충분히 검증됨 label + 4 signals) + `/chain` (person-centric timeline), index `knowledge_contributions_target_status_idx`, mobile validation badge + signals sheet + `BlockChainTimelineScreen`. |
+| Event recap auto-draft (P7.3) | `POST /v1/event-cards/:id/recap/suggest` (organizer gate: room owner OR VERIFIED_PLANNER, COMPLETED-only), no new schema (synthesizes EventReview/EventLivePost/EventRsvp), mobile `RecapDraftCallToAction` → composer prefill via `PostComposerArgs`. |
+
+### 1.8 F-series follow-ups
 
 | Item | Note |
 |---|---|
@@ -124,11 +138,13 @@ that landed it; refer to the commit log for surrounding context.
 | Drill-down back-button (F14) | Detail navigations use `push` not `go` so the back arrow always works. |
 | Backfill scripts (F11) | Five idempotent scripts (`backfill_revisions`, `backfill_reputation`, `backfill_reference_tiers`, `migrate-uploads-to-r2`, `backfill_recruitment_posts`) with dry-run option. |
 
-### 1.8 Current green gates
+### 1.9 Current green gates
 
-Re-run against HEAD before each release attempt. Numeric counts in the
-previous revision of this doc predate Phase 1–6; refresh them in the
-next mobile-stabilization PR (improvement plan §2).
+Re-run against HEAD before each release attempt. After refactor A the
+mobile baseline is **157 passing tests, 0 failing** (the 12
+pre-existing brittle visual-smoke / ops / profile failures were fixed
+by stubbing the Dio-firing providers + the `CrashlyticsBootstrap`
+late-init guard).
 
 | Gate | Command |
 |---|---|

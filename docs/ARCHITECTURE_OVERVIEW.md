@@ -93,14 +93,14 @@ flowchart TB
 
     subgraph Knowledge["Knowledge & content"]
         Community["CommunityModule<br/>(space/category/room)"]
-        Knowledge["KnowledgeModule<br/>(topic hub + contributions<br/>+ P2.1 revisions + P2.2 reputation<br/>+ P2.4 digests)"]
+        Knowledge["KnowledgeModule<br/>(topic hub + contributions<br/>+ P2.1 revisions + P2.2 reputation<br/>+ P2.4 digests + P7.1 similarity<br/>+ P7.2 validation/chain)"]
         Reference["ReferenceModule<br/>+ P2.3 source-tier rules"]
         Posts["PostsModule<br/>post / reply / reaction palette (P6.4)<br/>poll (P6.5) / boost (P6.6) / recruitment (P3.6)"]
     end
 
     subgraph Events
         EvtLink["EventLinkModule<br/>(M15/M20 PrismEventsClient<br/>+ event_cards upsert)"]
-        EvtDetail["EventDetailModule<br/>P3.1 RSVP / P3.3 review / P3.4 ICS<br/>P3.5 digest / P6.8 live + cron"]
+        EvtDetail["EventDetailModule<br/>P3.1 RSVP / P3.3 review / P3.4 ICS<br/>P3.5 digest / P6.8 live + cron<br/>+ P7.3 recap suggest"]
     end
 
     subgraph Discovery
@@ -332,27 +332,34 @@ flowchart LR
         D4["WeeklyDigestCron<br/>(P4.6 every Sunday 18 KST)"]
         D5["FollowRecommendationCron<br/>(P4.3 daily 03 KST)"]
         D6["AnalyticsRetentionCron<br/>(P5.5 daily, 180d horizon)"]
+        D7["TopicHubSimilarityCron<br/>(P7.1 daily 03:30 KST)"]
     end
 
-    subgraph "Advisory lock IDs (shared/cron-locks)"
+    subgraph "CRON_LOCK_IDS (shared/cron-lock.service)"
         L1["854_301 reminder"]
         L2["854_302 status refresh"]
         L3["854_303 live archive"]
         L4["854_304 weekly digest"]
-        L5["854_311 follow recs"]
-        L6["854_401 analytics retention"]
+        L5["854_305 topic-hub similarity"]
+        L6["854_311 follow recs"]
+        L7["854_401 analytics retention"]
     end
 
     D1 --- L1
     D2 --- L2
     D3 --- L3
     D4 --- L4
-    D5 --- L5
-    D6 --- L6
+    D5 --- L6
+    D6 --- L7
+    D7 --- L5
 ```
 
 Single-worker deployments can ignore the lock; multi-replica picks up
-whichever instance wins the lock first.
+whichever instance wins the lock first. The lock ids are no longer
+inlined per handler — they live in the canonical `CRON_LOCK_IDS`
+registry in `apps/api/src/shared/cron-lock.service.ts` (refactor B),
+which is what makes a duplicate id a compile error rather than a
+silent runtime collision.
 
 ---
 
@@ -400,6 +407,7 @@ erDiagram
     CATEGORIES ||--o{ TOPIC_HUBS : ""
     CATEGORIES ||--o{ ROOMS : ""
     TOPIC_HUBS ||--o{ KNOWLEDGE_BLOCKS : ""
+    TOPIC_HUBS ||--o{ TOPIC_HUB_SIMILARITY : "P7.1 hub→hub"
     KNOWLEDGE_BLOCKS ||--o{ KNOWLEDGE_BLOCK_REVISIONS : "P2.1"
 
     ROOMS ||--o{ POSTS : ""
@@ -446,7 +454,11 @@ not the same as the *visibility* graph.
 | Poll sidecar | `apps/api/src/modules/posts/poll.service.ts` |
 | Reply policy gate | `apps/api/src/modules/posts/reply.service.ts:assertReplyAllowed` |
 | Event live mode | `apps/api/src/modules/event-detail/event-live.service.ts` |
-| Cron registrations | `apps/api/src/modules/event-detail/event-reminder.cron.ts` + `notifications/weekly-digest.cron.ts` + `follows/follow-recommendation.cron.ts` |
+| Event recap auto-draft | `apps/api/src/modules/event-detail/event-recap-suggest.service.ts` (P7.3) |
+| Topic Hub similarity | `apps/api/src/modules/knowledge/topic-hub-similarity.service.ts` + `.cron.ts` (P7.1) |
+| Knowledge validation score + chain | `apps/api/src/modules/knowledge/knowledge-validation.service.ts` (P7.2) |
+| Cron registrations | `event-detail/event-reminder.cron.ts` + `notifications/weekly-digest.cron.ts` + `follows/follow-recommendation.cron.ts` + `knowledge/topic-hub-similarity.cron.ts` |
+| Cron advisory locks | `apps/api/src/shared/cron-lock.service.ts` (`CronLockService` + `CRON_LOCK_IDS` registry, refactor B) |
 | System Health dashboard | `apps/api/src/shared/metrics.service.ts` + `modules/ops/system-health.controller.ts` |
 | Backfill scripts | `scripts/backfill_*.ts` + `scripts/migrate-uploads-to-r2.ts` |
 

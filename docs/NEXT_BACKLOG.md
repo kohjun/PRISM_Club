@@ -4,11 +4,13 @@ What we know we want to add after Beta. Prioritized loosely; each item
 sketches the scope so the team can pick it up without re-discovering the
 why.
 
-> **Status note (post Phase 1–6 + F-series).** What this doc previously
-> listed as §1-§5 ("real auth", "wire notification providers",
-> "analytics retention", "media storage polish", "admin bulk ops +
-> audit log") has all landed — see
-> [ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md) and
+> **Status note (post Phase 1–7 + F-series + refactor A/B/D).** What
+> this doc previously listed as §1-§5 ("real auth", "wire notification
+> providers", "analytics retention", "media storage polish", "admin
+> bulk ops + audit log") has all landed, and so has Phase 7's
+> identity-strengthening algorithm layer (P7.1 Topic Hub similarity,
+> P7.2 knowledge validation + chain, P7.3 event recap auto-draft) —
+> see [ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md) and
 > [MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §1 for the
 > ship status. The items that remain are below.
 

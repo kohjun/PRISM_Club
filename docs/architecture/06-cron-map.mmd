@@ -6,20 +6,23 @@ flowchart LR
         D4["WeeklyDigestCron<br/>(P4.6, Sun 18 KST)"]
         D5["FollowRecommendationCron<br/>(P4.3, daily 03 KST)"]
         D6["AnalyticsRetentionCron<br/>(P5.5, daily 180d horizon)"]
+        D7["TopicHubSimilarityCron<br/>(P7.1, daily 03:30 KST)"]
     end
 
-    subgraph Locks["Advisory lock IDs"]
+    subgraph Locks["CRON_LOCK_IDS (shared/cron-lock.service)"]
         L1["854_301 reminder"]
         L2["854_302 status refresh"]
         L3["854_303 live archive"]
         L4["854_304 weekly digest"]
-        L5["854_311 follow recs"]
-        L6["854_401 analytics retention"]
+        L5["854_305 topic-hub similarity"]
+        L6["854_311 follow recs"]
+        L7["854_401 analytics retention"]
     end
 
     D1 --- L1
     D2 --- L2
     D3 --- L3
     D4 --- L4
-    D5 --- L5
-    D6 --- L6
+    D5 --- L6
+    D6 --- L7
+    D7 --- L5
