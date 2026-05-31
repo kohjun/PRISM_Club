@@ -19,6 +19,7 @@ import {
   assertNotBlocked,
 } from '../../shared/block-mute.service';
 import { NotificationService } from '../notifications/notification.service';
+import { AutoModerationService } from '../moderation/auto-moderation.service';
 import {
   CreateDmChannelInput,
   DmChannelDTO,
@@ -70,6 +71,7 @@ export class DmService {
     private readonly rateLimit: RateLimitService,
     private readonly blockMute: BlockMuteService,
     private readonly notifications: NotificationService,
+    private readonly autoMod: AutoModerationService,
   ) {}
 
   // ---- Channel resolve / create ---------------------------------------
@@ -262,34 +264,49 @@ export class DmService {
       );
     }
 
-    // NOTE: D2 inserts the auto-moderation dup-hide gate here.
+    // P6.9 dup-spam gate (enforced day-1). A hidden message still
+    // persists (the sender sees it as a placeholder) but does not
+    // surface to, or notify, the recipient.
+    const mod = await this.autoMod.evaluateDmMessageBeforeCreate({
+      viewer,
+      channelId,
+      body,
+    });
     const msg = await this.prisma.dmMessage.create({
-      data: { channelId, senderId: viewer.id, body },
-    });
-    await this.prisma.dmChannel.update({
-      where: { id: channelId },
-      data: { lastMessageAt: msg.createdAt },
-    });
-
-    // Notify the recipient — grouped per channel so a burst collapses
-    // into a single inbox entry. spaceAccessPolicy + actorId let the
-    // notification read-side filter hide it from a demoted/blocking
-    // recipient.
-    await this.notifications.createOrGroup({
-      userId: counterpartId,
-      type: 'DM_MESSAGE_RECEIVED',
-      actorId: viewer.id,
-      groupKey: `DM:${channelId}`,
-      payload: {
+      data: {
         channelId,
-        spaceAccessPolicy: channel.spaceAccessPolicy,
+        senderId: viewer.id,
+        body,
+        status: mod.hide ? 'HIDDEN' : 'VISIBLE',
+        autoModerationReason: mod.reason,
       },
     });
+
+    if (!mod.hide) {
+      await this.prisma.dmChannel.update({
+        where: { id: channelId },
+        data: { lastMessageAt: msg.createdAt },
+      });
+      // Notify the recipient — grouped per channel so a burst collapses
+      // into one inbox entry. spaceAccessPolicy + actorId let the
+      // notification read-side filter hide it from a demoted/blocking
+      // recipient.
+      await this.notifications.createOrGroup({
+        userId: counterpartId,
+        type: 'DM_MESSAGE_RECEIVED',
+        actorId: viewer.id,
+        groupKey: `DM:${channelId}`,
+        payload: {
+          channelId,
+          spaceAccessPolicy: channel.spaceAccessPolicy,
+        },
+      });
+    }
 
     this.analytics.record({
       actorId: viewer.id,
       eventType: 'DM_MESSAGE_SENT',
-      payload: { channel_id: channelId },
+      payload: { channel_id: channelId, hidden: mod.hide },
     });
     return this._toMessageDTO(msg, viewer.id);
   }

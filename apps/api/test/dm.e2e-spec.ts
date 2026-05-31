@@ -155,6 +155,68 @@ describe('P6.9 — scoped DM (e2e)', () => {
     });
   });
 
+  test('a reported DM message can be globally hidden and drops from the thread', async () => {
+    const server = ctx.app.getHttpServer();
+    const open = await request(server)
+      .post('/v1/dm/channels')
+      .set(HEAD(ctx.uuids.user.joon))
+      .send({ scope: 'RECRUITMENT', ref_id: recruitPostId });
+    const channelId = open.body.id;
+
+    const msg = await request(server)
+      .post(`/v1/dm/channels/${channelId}/messages`)
+      .set(HEAD(ctx.uuids.user.haneul))
+      .send({ body: '신고 대상 메시지' });
+    expect(msg.status).toBe(201);
+    const messageId = msg.body.id;
+
+    // A party reports the message (DM_MESSAGE reports are global-only).
+    const report = await request(server)
+      .post('/v1/reports')
+      .set(HEAD(ctx.uuids.user.joon))
+      .send({ target_type: 'DM_MESSAGE', target_id: messageId, reason: 'harassment' });
+    expect(report.status).toBe(201);
+
+    // A global moderator hides it.
+    const resolve = await request(server)
+      .post(`/v1/admin/reports/${report.body.id}/resolve`)
+      .set(HEAD(ctx.uuids.user.coral))
+      .send({ action: 'HIDE', note: 'confirmed' });
+    expect(resolve.status).toBe(201);
+    expect(resolve.body.resolution).toBe('HIDDEN');
+
+    // The counterpart no longer sees the hidden message.
+    const thread = await request(server)
+      .get(`/v1/dm/channels/${channelId}/messages`)
+      .set(HEAD(ctx.uuids.user.joon));
+    expect(
+      (thread.body.items as Array<{ id: string }>).some((m) => m.id === messageId),
+    ).toBe(false);
+  });
+
+  test('an identical DM body sent repeatedly is auto-hidden', async () => {
+    const server = ctx.app.getHttpServer();
+    const open = await request(server)
+      .post('/v1/dm/channels')
+      .set(HEAD(ctx.uuids.user.joon))
+      .send({ scope: 'RECRUITMENT', ref_id: recruitPostId });
+    const channelId = open.body.id;
+    const body = '동일한 스팸 메시지 본문';
+    const send = () =>
+      request(server)
+        .post(`/v1/dm/channels/${channelId}/messages`)
+        .set(HEAD(ctx.uuids.user.joon))
+        .send({ body });
+
+    const first = await send();
+    expect(first.body.status).toBe('VISIBLE');
+    const second = await send();
+    expect(second.body.status).toBe('VISIBLE');
+    // 3rd identical (threshold 2 prior matches) → auto-hidden.
+    const third = await send();
+    expect(third.body.status).toBe('HIDDEN');
+  });
+
   test('blocked parties cannot message each other', async () => {
     const server = ctx.app.getHttpServer();
     const open = await request(server)

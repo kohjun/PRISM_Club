@@ -131,6 +131,51 @@ export class AutoModerationService {
     return { dismiss: true, reason: 'REPORT_FLOOD' };
   }
 
+  /**
+   * P6.9 — DM dup-spam gate. Unlike the post/report evaluators this
+   * ENFORCES day-1 (no AUTO_MODERATION_ENFORCE shadow gate) and applies
+   * to every tier, because DM is the highest-abuse surface and an
+   * identical body repeated within one channel is an unambiguous spam
+   * signal. Falls back to defaults when no rule row is seeded. Default
+   * threshold 2 = the 3rd identical message is hidden (matches the
+   * DUPLICATE_POST_HASH semantics).
+   */
+  async evaluateDmMessageBeforeCreate(opts: {
+    viewer: Viewer & { id: string };
+    channelId: string;
+    body: string;
+  }): Promise<PostDecision> {
+    const rule = await this._loadRule('DUPLICATE_DM_HASH');
+    const params = (rule?.params as RulesParams) ?? {};
+    const windowHours = params.window_hours ?? 24;
+    const threshold = params.threshold ?? 2;
+
+    const bodyHash = this._normalizedHash(opts.body);
+    const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
+    const recent = await this.prisma.dmMessage.findMany({
+      where: {
+        senderId: opts.viewer.id,
+        channelId: opts.channelId,
+        createdAt: { gte: since },
+      },
+      select: { body: true },
+      take: 50,
+    });
+    const matches = recent.filter(
+      (r) => this._normalizedHash(r.body) === bodyHash,
+    ).length;
+    if (matches < threshold) {
+      return { hide: false, reason: null };
+    }
+    this.metrics.inc('auto_moderation.dm_hide');
+    this.analytics.record({
+      actorId: opts.viewer.id,
+      eventType: 'AUTO_MODERATION_TRIGGERED',
+      payload: { kind: 'DUPLICATE_DM_HASH', matches, threshold },
+    });
+    return { hide: true, reason: 'DUPLICATE_DM_HASH' };
+  }
+
   private async _loadRule(kind: string): Promise<{
     params: unknown;
   } | null> {

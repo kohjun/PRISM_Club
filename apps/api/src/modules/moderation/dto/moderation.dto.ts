@@ -3,7 +3,8 @@ export type ReportTargetType =
   | 'REPLY'
   | 'ROOM'
   | 'USER'
-  | 'REFERENCE';
+  | 'REFERENCE'
+  | 'DM_MESSAGE';
 
 export type ReportStatus = 'OPEN' | 'RESOLVED' | 'DISMISSED';
 

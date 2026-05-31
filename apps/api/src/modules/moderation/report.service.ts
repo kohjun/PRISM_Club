@@ -29,6 +29,7 @@ const VALID_TARGET_TYPES: ReportTargetType[] = [
   'ROOM',
   'USER',
   'REFERENCE',
+  'DM_MESSAGE',
 ];
 
 const VALID_ACTIONS = ['HIDE', 'RESTORE', 'DISMISS'] as const;
@@ -327,6 +328,11 @@ export class ReportService {
             where: { id: report.targetId },
             data: { status: 'HIDDEN' },
           });
+        } else if (targetType === 'DM_MESSAGE') {
+          await tx.dmMessage.updateMany({
+            where: { id: report.targetId },
+            data: { status: 'HIDDEN' },
+          });
         }
         // ROOM/USER/REFERENCE hide are deferred (no schema flag yet).
       } else if (action === 'RESTORE') {
@@ -337,6 +343,11 @@ export class ReportService {
           });
         } else if (targetType === 'REPLY') {
           await tx.reply.updateMany({
+            where: { id: report.targetId, status: 'HIDDEN' },
+            data: { status: 'VISIBLE' },
+          });
+        } else if (targetType === 'DM_MESSAGE') {
+          await tx.dmMessage.updateMany({
             where: { id: report.targetId, status: 'HIDDEN' },
             data: { status: 'VISIBLE' },
           });
@@ -413,6 +424,18 @@ export class ReportService {
         exists: !!r,
       };
     }
+    if (type === 'DM_MESSAGE') {
+      // Ungated raw read: a moderator must see the body regardless of
+      // channel status / block relationships.
+      const m = await this.prisma.dmMessage.findUnique({ where: { id } });
+      return {
+        type,
+        id,
+        preview: m ? m.body.slice(0, 80) : '(deleted)',
+        status: m?.status ?? null,
+        exists: !!m,
+      };
+    }
     if (type === 'ROOM') {
       const r = await this.prisma.room.findUnique({ where: { id } });
       return {
@@ -483,6 +506,16 @@ export class ReportService {
         where: { id },
         select: { id: true },
       }));
+    } else if (type === 'DM_MESSAGE') {
+      // Only a party to the channel may report a message in it.
+      const m = await this.prisma.dmMessage.findUnique({
+        where: { id },
+        select: { channel: { select: { partyAId: true, partyBId: true } } },
+      });
+      found =
+        !!m &&
+        (m.channel.partyAId === viewer.id ||
+          m.channel.partyBId === viewer.id);
     }
     if (!found) {
       throw new NotFoundException(`${type} not found: ${id}`);
