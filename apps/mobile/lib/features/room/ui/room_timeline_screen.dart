@@ -41,6 +41,16 @@ class RoomTimelineScreen extends ConsumerWidget {
           orElse: () => const Text('방'),
         ),
         actions: [
+          // P6.12: owner-only moderator management entry.
+          if (detail.valueOrNull?.ownerId != null &&
+              me != null &&
+              detail.valueOrNull!.ownerId == me.id)
+            IconButton(
+              key: const Key('manage-moderators'),
+              tooltip: '모더 관리',
+              icon: const Icon(Icons.manage_accounts_outlined),
+              onPressed: () => context.push('/rooms/$roomSlug/moderators'),
+            ),
           Consumer(
             builder: (ctx, ref, _) {
               final state = ref.watch(roomFollowProvider(roomSlug));

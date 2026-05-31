@@ -21,6 +21,7 @@ import '../features/post/ui/recruitment_applicants_screen.dart';
 import '../features/post/ui/recruitment_composer_screen.dart';
 import '../features/search/ui/search_screen.dart';
 import '../features/room/ui/room_creator_screen.dart';
+import '../features/room/ui/room_moderators_screen.dart';
 import '../features/room/ui/room_timeline_screen.dart';
 import '../features/space/ui/space_list_screen.dart';
 import '../features/home/ui/home_shell_screen.dart';
@@ -97,6 +98,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/rooms/:roomSlug',
         builder: (_, st) => RoomTimelineScreen(
           roomSlug: st.pathParameters['roomSlug']!,
+        ),
+      ),
+      // P6.12: owner-only room moderator management.
+      GoRoute(
+        path: '/rooms/:roomSlug/moderators',
+        builder: (_, st) => RoomModeratorsScreen(
+          slug: st.pathParameters['roomSlug']!,
         ),
       ),
       GoRoute(

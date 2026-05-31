@@ -10,6 +10,7 @@ class RoomDetailDto {
     required this.rules,
     required this.origin,
     required this.roomType,
+    required this.ownerId,
     required this.ownerNickname,
     required this.pins,
     required this.postCount,
@@ -22,6 +23,9 @@ class RoomDetailDto {
   final String? rules;
   final String origin;
   final String roomType;
+  /// P6.12: needed so the client can show the owner-only moderator
+  /// management entry (compare against the current user's id).
+  final String? ownerId;
   final String? ownerNickname;
   final List<RoomPinDto> pins;
   final int postCount;
@@ -37,6 +41,7 @@ class RoomDetailDto {
       rules: asStringOrNull(json, 'rules'),
       origin: json['origin'] as String,
       roomType: json['room_type'] as String,
+      ownerId: ownerMap?['id'] as String?,
       ownerNickname: ownerMap?['nickname'] as String?,
       pins: (json['pins'] as List<dynamic>)
           .whereType<Map<String, dynamic>>()

@@ -40,6 +40,7 @@ RoomDetailDto _roomDetail() => const RoomDetailDto(
       rules: null,
       origin: 'OFFICIAL',
       roomType: 'EVENT_REACTION',
+      ownerId: 'u-haneul',
       ownerNickname: 'haneul',
       pins: [],
       postCount: 42,
