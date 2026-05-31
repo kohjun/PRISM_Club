@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { bootstrapTestApp, TestContext, teardownTestApp } from './test-app';
+import { DmLifecycleCron } from '../src/modules/dm/dm-lifecycle.cron';
 
 /**
  * P6.9 — Scoped DM (e2e). Workflow-bounded private 1:1 channels.
@@ -240,5 +241,31 @@ describe('P6.9 — scoped DM (e2e)', () => {
     await request(server)
       .delete(`/v1/me/blocks/${ctx.uuids.user.joon}`)
       .set(HEAD(ctx.uuids.user.haneul));
+  });
+
+  test('lifecycle cron closes channels past the 30-day grace', async () => {
+    const server = ctx.app.getHttpServer();
+    const cron = ctx.app.get(DmLifecycleCron);
+    const open = await request(server)
+      .post('/v1/dm/channels')
+      .set(HEAD(ctx.uuids.user.joon))
+      .send({ scope: 'RECRUITMENT', ref_id: recruitPostId });
+    const channelId = open.body.id;
+    // Stamp the workflow as ended 31 days ago → past the grace window.
+    await ctx.prisma.dmChannel.update({
+      where: { id: channelId },
+      data: {
+        status: 'OPEN',
+        closedReason: null,
+        workflowEndedAt: new Date(Date.now() - 31 * 86_400_000),
+      },
+    });
+    const result = await cron.run(new Date());
+    expect(result.closed).toBeGreaterThanOrEqual(1);
+    const after = await ctx.prisma.dmChannel.findUnique({
+      where: { id: channelId },
+    });
+    expect(after?.status).toBe('CLOSED');
+    expect(after?.closedReason).toBe('WORKFLOW_ENDED_GRACE');
   });
 });

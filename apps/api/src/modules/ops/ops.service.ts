@@ -9,6 +9,9 @@ export interface OpsSummaryDTO {
   recent_users: { count: number; items: Array<{ id: string; nickname: string | null; created_at: string }> };
   recent_rooms: { count: number; items: Array<{ id: string; slug: string; name: string; created_at: string }> };
   recent_posts: { count: number; items: Array<{ id: string; body_preview: string; room_slug: string; created_at: string }> };
+  // P6.9: scoped-DM moderation visibility (closed channels are a
+  // potential moderation blind spot — surface report volume + live load).
+  dm: { reports_24h: number; channels_open: number };
 }
 
 const RECENT_WINDOW_DAYS = 30;
@@ -32,6 +35,7 @@ export class OpsService {
     }
 
     const since = new Date(Date.now() - RECENT_WINDOW_DAYS * 86_400_000);
+    const since24h = new Date(Date.now() - 86_400_000);
 
     const [
       pendingContribs,
@@ -44,6 +48,8 @@ export class OpsService {
       recentRoomRows,
       recentPostCount,
       recentPostRows,
+      dmReports24h,
+      dmChannelsOpen,
     ] = await Promise.all([
       this.prisma.knowledgeContribution.count({ where: { status: 'PENDING' } }),
       this.prisma.report.count({ where: { status: 'OPEN' } }),
@@ -88,6 +94,10 @@ export class OpsService {
         take: RECENT_TAKE,
         include: { room: true },
       }),
+      this.prisma.report.count({
+        where: { targetType: 'DM_MESSAGE', createdAt: { gte: since24h } },
+      }),
+      this.prisma.dmChannel.count({ where: { status: 'OPEN' } }),
     ]);
 
     return {
@@ -123,6 +133,7 @@ export class OpsService {
           created_at: p.createdAt.toISOString(),
         })),
       },
+      dm: { reports_24h: dmReports24h, channels_open: dmChannelsOpen },
     };
   }
 }

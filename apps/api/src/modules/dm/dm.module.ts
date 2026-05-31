@@ -3,6 +3,7 @@ import { PrismaModule } from '../../shared/prisma.module';
 import { AccessControlModule } from '../../shared/access-control.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DmService } from './dm.service';
+import { DmLifecycleCron } from './dm-lifecycle.cron';
 import { DmController } from './dm.controller';
 
 /**
@@ -12,7 +13,7 @@ import { DmController } from './dm.controller';
  */
 @Module({
   imports: [PrismaModule, AccessControlModule, NotificationsModule],
-  providers: [DmService],
+  providers: [DmService, DmLifecycleCron],
   controllers: [DmController],
   exports: [DmService],
 })
