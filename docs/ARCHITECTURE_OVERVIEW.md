@@ -115,6 +115,7 @@ flowchart TB
         Notif["NotificationsModule<br/>P1.2 device_tokens + prefs<br/>P6.1 mention fanout<br/>P6.3 grouping upsert"]
         Delivery["LocalNoop / Email / Push<br/>(env-selected at boot)"]
         Digest["WeeklyDigestService + cron (P4.6)"]
+        Dm["DmModule<br/>P6.9 scoped 1:1 channels<br/>+ lifecycle cron (854_312)"]
     end
 
     subgraph Ops & safety
@@ -138,6 +139,8 @@ flowchart TB
     Posts --> Moderation
     EvtDetail --> Notif
     Knowledge --> Notif
+    Dm --> Notif
+    Dm --> Moderation
 ```
 
 What's a "Module" vs "Service":
@@ -333,6 +336,7 @@ flowchart LR
         D5["FollowRecommendationCron<br/>(P4.3 daily 03 KST)"]
         D6["AnalyticsRetentionCron<br/>(P5.5 daily, 180d horizon)"]
         D7["TopicHubSimilarityCron<br/>(P7.1 daily 03:30 KST)"]
+        D8["DmLifecycleCron<br/>(P6.9 daily 03 KST)"]
     end
 
     subgraph "CRON_LOCK_IDS (shared/cron-lock.service)"
@@ -343,6 +347,7 @@ flowchart LR
         L5["854_305 topic-hub similarity"]
         L6["854_311 follow recs"]
         L7["854_401 analytics retention"]
+        L8["854_312 dm lifecycle"]
     end
 
     D1 --- L1
@@ -352,6 +357,7 @@ flowchart LR
     D5 --- L6
     D6 --- L7
     D7 --- L5
+    D8 --- L8
 ```
 
 Single-worker deployments can ignore the lock; multi-replica picks up
@@ -402,6 +408,7 @@ erDiagram
     USERS ||--o{ EVENT_RSVPS : ""
     USERS ||--o{ EVENT_LIVE_POSTS : "P6.8"
     USERS ||--o{ ROOM_ROLES : "P6.12 grantee"
+    USERS ||--o{ DM_CHANNELS : "P6.9 party"
     USERS ||--o{ NOTIFICATIONS : "recipient"
 
     SPACES ||--o{ CATEGORIES : ""
@@ -431,6 +438,7 @@ erDiagram
     NOTIFICATIONS }o--|| USERS : "group_key (P6.3)"
     REPORTS }o--|| USERS : "reporter"
     MODERATION_ACTIONS }o--|| USERS : "actor"
+    DM_CHANNELS ||--o{ DM_MESSAGES : "P6.9"
 ```
 
 `USERS ↔ everything-else` is the most fan-out node, but every read path is
@@ -460,6 +468,7 @@ not the same as the *visibility* graph.
 | Topic Hub similarity | `apps/api/src/modules/knowledge/topic-hub-similarity.service.ts` + `.cron.ts` (P7.1) |
 | Knowledge validation score + chain | `apps/api/src/modules/knowledge/knowledge-validation.service.ts` (P7.2) |
 | Room roles + delegated moderation | `apps/api/src/modules/community/room-role.service.ts` (`canModerateRoom`) (P6.12) |
+| Scoped DM (channels + lifecycle) | `apps/api/src/modules/dm/dm.service.ts` + `dm-lifecycle.cron.ts` (P6.9) |
 | Curator portfolio | `apps/api/src/modules/user-profile/curator-portfolio.service.ts` (P6.10) |
 | Topic Hub Memory ("오늘의 기록") | `apps/api/src/modules/memories/memories.service.ts` (P6.11) |
 | Cron registrations | `event-detail/event-reminder.cron.ts` + `notifications/weekly-digest.cron.ts` + `follows/follow-recommendation.cron.ts` + `knowledge/topic-hub-similarity.cron.ts` |
@@ -478,8 +487,9 @@ and the Phase 6 plan:
   (`likeCount×3 + replyCount×2 + bookmarkCount`).
 - **No 24h Stories.** Event live mode (P6.8) is the bounded alternative —
   it's tied to an EventCard, not to time-of-day.
-- **No open 1:N group DMs.** Workflow-scoped DMs are deferred to a future
-  P6.9 (recruitment + contribution closed channels).
+- **No open 1:N group DMs.** Only workflow-scoped DMs (P6.9, shipped):
+  recruitment applicant↔author and contribution proposer↔curator
+  channels, auto-closed 30 days after the workflow ends.
 - **No Reels / short video.** Out of scope; PRISM Event video is external
   link only.
 - **No ActivityPub / Fediverse.** Single-tenant Korean app.

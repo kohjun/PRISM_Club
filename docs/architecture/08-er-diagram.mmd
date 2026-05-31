@@ -11,6 +11,7 @@ erDiagram
     USERS ||--o{ EVENT_RSVPS : ""
     USERS ||--o{ EVENT_LIVE_POSTS : "P6.8"
     USERS ||--o{ ROOM_ROLES : "P6.12 grantee"
+    USERS ||--o{ DM_CHANNELS : "P6.9 party"
     USERS ||--o{ NOTIFICATIONS : "recipient"
 
     SPACES ||--o{ CATEGORIES : ""
@@ -40,3 +41,4 @@ erDiagram
     NOTIFICATIONS }o--|| USERS : "group_key (P6.3)"
     REPORTS }o--|| USERS : "reporter"
     MODERATION_ACTIONS }o--|| USERS : "actor"
+    DM_CHANNELS ||--o{ DM_MESSAGES : "P6.9"

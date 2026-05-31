@@ -18,35 +18,35 @@ why.
 
 ## 1. Phase 6 — Tier 3
 
-Four Tier-3 items were carried out of the Phase 6 launch bundle. Three
-have since shipped on `feat/p1-foundation` (P6.10 curator portfolio,
-P6.11 Topic Hub Memory, P6.12 room roles — see
-[MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §1.6). Only
-**P6.9 Scoped DM** remains deferred to post-Beta. One P6.12 follow-up
-(wiring delegated moderation into the report-resolve path) is still
-open and is described in §1.4.
+Four Tier-3 items were carried out of the Phase 6 launch bundle. All
+four have now shipped on `feat/p1-foundation` (P6.9 Scoped DM, P6.10
+curator portfolio, P6.11 Topic Hub Memory, P6.12 room roles — see
+[MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §1.6). The per-item
+ship notes are below; the only remaining bits are optional follow-ups
+(e.g. an admin-web DM moderation surface, §4).
 
-### 1.1 Scoped DM (workflow-bounded only) — P6.9
+### 1.1 Scoped DM (workflow-bounded only) — P6.9 ✅ SHIPPED
 
-Open 1:N group DM stays intentionally omitted ([MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §4).
-This adds **scoped private channels** for recruitment applicants ↔
-authors and contribution NEEDS_CHANGES proposers ↔ curators.
+Workflow-bounded private 1:1 channels — no open DM. `dm_channels` +
+`dm_messages` (`UNIQUE(scope, ref_id, party_a_id)`, party_a-canonical),
+with creation gated on a live workflow + a legitimate party (RECRUITMENT
+applicant ↔ post author; CONTRIBUTION proposer ↔ NEEDS_CHANGES curator).
+Send is gated by party + channel OPEN + access policy + `assertNotBlocked`
++ a **day-1-enforced** DM rate limit (20/min); the recipient gets a
+per-channel grouped notification. Messages are reportable
+(`Report.target_type='DM_MESSAGE'`, global-moderator-only) with a day-1
+dup auto-hide, and the lifecycle cron (advisory lock 854_312) closes
+channels 30 days after the workflow ends — reading the author-canonical
+`recruitmentFields` JSON status, never hard-deleting (a reported message
+stays resolvable). Mobile: `/dm` inbox + `/dm/:channelId` thread
+(composer, CLOSED → read-only, long-press to report) + 메시지 entry points
+on recruitment applicants / my-applications / curation detail. Ops
+dashboard surfaces `dm_reports_24h` + `dm_channels_open` (the
+closed-channel blind-spot mitigation). See `apps/api/src/modules/dm/` +
+e2e `dm.e2e-spec.ts`.
 
-**Scope sketch:**
-
-- `dm_channels(id, scope, ref_id, party_a_id, party_b_id, status,
-  closed_reason?)` UNIQUE on `(scope, ref_id, party_a_id, party_b_id)`.
-- `dm_messages(id, channel_id FK CASCADE, sender_id, body,
-  read_by_recipient_at?)`.
-- Auto-close on workflow exit (recruitment FILLED/CLOSED, contribution
-  APPROVED/REJECTED) plus 30-day grace.
-- Per-message report → `Report.target_type = 'DM_MESSAGE'`.
-- Mobile inbox `/me/dm` + entry-point button on recruitment detail +
-  contribution curation detail.
-- Auto-mod rule: identical DM body 3× → auto-hide.
-
-**Risk:** closed channels are a moderation blind spot. Mitigation in
-the plan: separate ops-dashboard card for DM report counts.
+**Remaining (optional):** an admin-web DM moderation surface (§4) — the
+ops metric exists; only the dedicated admin card is unbuilt.
 
 ### 1.2 Curator profile / portfolio — P6.10 ✅ SHIPPED
 
