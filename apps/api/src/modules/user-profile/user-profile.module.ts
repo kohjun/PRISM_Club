@@ -10,6 +10,8 @@ import { UserFollowController } from './user-follow.controller';
 import { ProfileShareService } from './profile-share.service';
 import { ProfileShareController } from './profile-share.controller';
 import { BlockMuteController } from './block-mute.controller';
+import { CuratorPortfolioService } from './curator-portfolio.service';
+import { CuratorPortfolioController } from './curator-portfolio.controller';
 
 @Module({
   imports: [PrismaModule, AccessControlModule, PostsModule, KnowledgeModule],
@@ -18,7 +20,13 @@ import { BlockMuteController } from './block-mute.controller';
     UserFollowController,
     ProfileShareController,
     BlockMuteController,
+    CuratorPortfolioController,
   ],
-  providers: [UserProfileService, UserFollowService, ProfileShareService],
+  providers: [
+    UserProfileService,
+    UserFollowService,
+    ProfileShareService,
+    CuratorPortfolioService,
+  ],
 })
 export class UserProfileModule {}
