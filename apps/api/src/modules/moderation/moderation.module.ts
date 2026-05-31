@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { PrismaModule } from '../../shared/prisma.module';
 import { AccessControlModule } from '../../shared/access-control.module';
+import { CommunityModule } from '../community/community.module';
 import { ReportService } from './report.service';
 import { ReportController } from './report.controller';
 import { AutoModerationService } from './auto-moderation.service';
@@ -12,7 +13,7 @@ import { AutoModerationService } from './auto-moderation.service';
  */
 @Global()
 @Module({
-  imports: [PrismaModule, AccessControlModule],
+  imports: [PrismaModule, AccessControlModule, CommunityModule],
   controllers: [ReportController],
   providers: [ReportService, AutoModerationService],
   exports: [ReportService, AutoModerationService],

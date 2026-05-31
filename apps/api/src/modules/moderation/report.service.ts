@@ -10,6 +10,7 @@ import { PrismaService } from '../../shared/prisma.service';
 import { AccessControlService, Viewer } from '../../shared/access-control.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { AutoModerationService } from './auto-moderation.service';
+import { RoomRoleService } from '../community/room-role.service';
 import {
   CreateReportInput,
   ModerationActionDTO,
@@ -44,12 +45,54 @@ export class ReportService {
     private readonly access: AccessControlService,
     private readonly analytics: AnalyticsService,
     private readonly autoMod: AutoModerationService,
+    private readonly roomRoles: RoomRoleService,
   ) {}
 
   isModerator(viewer: Viewer): boolean {
     return (
       viewer.roles.includes('MODERATOR') || viewer.roles.includes('ADMIN')
     );
+  }
+
+  /**
+   * P6.12 — additive authorization for the report resolve / detail path.
+   * A global MODERATOR/ADMIN may act on any report. In addition, a room
+   * owner or a delegated room MODERATOR may act on POST/REPLY reports
+   * whose target lives in *their* room. The room is always derived from
+   * the report target (never from caller input), so a room moderator
+   * can never reach another room's content. ROOM/USER/REFERENCE targets
+   * have no room scope and stay global-moderator-only.
+   */
+  private async canModerateReport(
+    targetType: ReportTargetType,
+    targetId: string,
+    viewer: Viewer & { id: string },
+  ): Promise<boolean> {
+    if (this.isModerator(viewer)) return true;
+    const roomId = await this.roomIdForTarget(targetType, targetId);
+    if (!roomId) return false;
+    return this.roomRoles.canModerateRoom(viewer, roomId);
+  }
+
+  private async roomIdForTarget(
+    targetType: ReportTargetType,
+    targetId: string,
+  ): Promise<string | null> {
+    if (targetType === 'POST') {
+      const p = await this.prisma.post.findUnique({
+        where: { id: targetId },
+        select: { roomId: true },
+      });
+      return p?.roomId ?? null;
+    }
+    if (targetType === 'REPLY') {
+      const r = await this.prisma.reply.findUnique({
+        where: { id: targetId },
+        select: { post: { select: { roomId: true } } },
+      });
+      return r?.post?.roomId ?? null;
+    }
+    return null;
   }
 
   async createReport(
@@ -154,15 +197,65 @@ export class ReportService {
     return { items: rows.map((r) => this.toDTO(r)) };
   }
 
-  async getDetail(id: string, viewer: Viewer): Promise<ReportDetailDTO> {
-    if (!this.isModerator(viewer)) {
-      throw new ForbiddenException('Moderator access required');
+  /**
+   * P6.12 — room-scoped report queue. Lets a room owner or delegated
+   * room MODERATOR see OPEN POST/REPLY reports whose target lives in
+   * *their* room, without exposing the global queue (which would leak
+   * other rooms' reports). Gated by `canModerateRoom`.
+   */
+  async listReportsForRoom(
+    slug: string,
+    viewer: Viewer & { id: string },
+  ): Promise<ReportListDTO> {
+    const room = await this.prisma.room.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!room) throw new NotFoundException(`Room not found: ${slug}`);
+    if (!(await this.roomRoles.canModerateRoom(viewer, room.id))) {
+      throw new ForbiddenException('Room moderator access required');
     }
+    const [posts, replies] = await Promise.all([
+      this.prisma.post.findMany({
+        where: { roomId: room.id },
+        select: { id: true },
+      }),
+      this.prisma.reply.findMany({
+        where: { post: { roomId: room.id } },
+        select: { id: true },
+      }),
+    ]);
+    const postIds = posts.map((p) => p.id);
+    const replyIds = replies.map((r) => r.id);
+    const rows = await this.prisma.report.findMany({
+      where: {
+        status: 'OPEN',
+        OR: [
+          { targetType: 'POST', targetId: { in: postIds } },
+          { targetType: 'REPLY', targetId: { in: replyIds } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { reporter: { include: { profile: true } } },
+    });
+    return { items: rows.map((r) => this.toDTO(r)) };
+  }
+
+  async getDetail(id: string, viewer: Viewer & { id: string }): Promise<ReportDetailDTO> {
     const row = await this.prisma.report.findUnique({
       where: { id },
       include: { reporter: { include: { profile: true } } },
     });
     if (!row) throw new NotFoundException(`Report not found: ${id}`);
+    if (
+      !(await this.canModerateReport(
+        row.targetType as ReportTargetType,
+        row.targetId,
+        viewer,
+      ))
+    ) {
+      throw new ForbiddenException('Moderator access required');
+    }
 
     const target = await this.resolveTargetSummary(
       row.targetType as ReportTargetType,
@@ -187,7 +280,17 @@ export class ReportService {
     viewer: Viewer & { id: string },
     opts: { batchId?: string } = {},
   ): Promise<ReportDetailDTO> {
-    if (!this.isModerator(viewer)) {
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+    });
+    if (!report) {
+      throw new NotFoundException(`Report not found: ${reportId}`);
+    }
+    const targetType = report.targetType as ReportTargetType;
+    // P6.12: global moderators may act on any report; a room owner or a
+    // delegated room MODERATOR may act on POST/REPLY reports in their
+    // own room (room derived from the target, so no cross-room reach).
+    if (!(await this.canModerateReport(targetType, report.targetId, viewer))) {
       throw new ForbiddenException('Moderator access required');
     }
     const action = input.action as ActionType;
@@ -199,18 +302,9 @@ export class ReportService {
         `note must be at most ${NOTE_MAX} characters`,
       );
     }
-
-    const report = await this.prisma.report.findUnique({
-      where: { id: reportId },
-    });
-    if (!report) {
-      throw new NotFoundException(`Report not found: ${reportId}`);
-    }
     if (report.status !== 'OPEN') {
       throw new BadRequestException('Report is already resolved');
     }
-
-    const targetType = report.targetType as ReportTargetType;
     const newStatus: ReportStatus = 'RESOLVED';
     const resolution =
       action === 'HIDE'

@@ -43,6 +43,20 @@ export class ReportController {
     return this.svc.getDetail(id, user);
   }
 
+  /**
+   * P6.12 — room-scoped report queue for a room owner or delegated room
+   * MODERATOR. Distinct from the global `admin/reports` queue: it only
+   * returns OPEN POST/REPLY reports whose target lives in this room, so
+   * a room moderator never sees other rooms' reports.
+   */
+  @Get('rooms/:slug/reports')
+  listForRoom(
+    @CurrentUser() user: RequestUser,
+    @Param('slug') slug: string,
+  ) {
+    return this.svc.listReportsForRoom(slug, user);
+  }
+
   @Post('admin/reports/:id/resolve')
   resolve(
     @CurrentUser() user: RequestUser,
