@@ -1,4 +1,4 @@
-# PRISM Club — Architecture Overview (Phase 1–6 + F-series)
+# PRISM Club — Architecture Overview (Phase 1–7 + F-series)
 
 > **Canonical current-state architecture document.** Other architecture
 > texts in this folder are scoped or historical:
@@ -401,6 +401,7 @@ erDiagram
     USERS ||--o{ POLL_VOTES : "P6.5"
     USERS ||--o{ EVENT_RSVPS : ""
     USERS ||--o{ EVENT_LIVE_POSTS : "P6.8"
+    USERS ||--o{ ROOM_ROLES : "P6.12 grantee"
     USERS ||--o{ NOTIFICATIONS : "recipient"
 
     SPACES ||--o{ CATEGORIES : ""
@@ -411,6 +412,7 @@ erDiagram
     KNOWLEDGE_BLOCKS ||--o{ KNOWLEDGE_BLOCK_REVISIONS : "P2.1"
 
     ROOMS ||--o{ POSTS : ""
+    ROOMS ||--o{ ROOM_ROLES : "P6.12 delegated mod"
     POSTS ||--o{ REPLIES : "depth 2"
     POSTS ||--o{ POST_ATTACHMENTS : ""
     POSTS ||--o{ POST_QUOTES : "P4.2"
@@ -457,6 +459,9 @@ not the same as the *visibility* graph.
 | Event recap auto-draft | `apps/api/src/modules/event-detail/event-recap-suggest.service.ts` (P7.3) |
 | Topic Hub similarity | `apps/api/src/modules/knowledge/topic-hub-similarity.service.ts` + `.cron.ts` (P7.1) |
 | Knowledge validation score + chain | `apps/api/src/modules/knowledge/knowledge-validation.service.ts` (P7.2) |
+| Room roles + delegated moderation | `apps/api/src/modules/community/room-role.service.ts` (`canModerateRoom`) (P6.12) |
+| Curator portfolio | `apps/api/src/modules/user-profile/curator-portfolio.service.ts` (P6.10) |
+| Topic Hub Memory ("오늘의 기록") | `apps/api/src/modules/memories/memories.service.ts` (P6.11) |
 | Cron registrations | `event-detail/event-reminder.cron.ts` + `notifications/weekly-digest.cron.ts` + `follows/follow-recommendation.cron.ts` + `knowledge/topic-hub-similarity.cron.ts` |
 | Cron advisory locks | `apps/api/src/shared/cron-lock.service.ts` (`CronLockService` + `CRON_LOCK_IDS` registry, refactor B) |
 | System Health dashboard | `apps/api/src/shared/metrics.service.ts` + `modules/ops/system-health.controller.ts` |
@@ -479,7 +484,7 @@ and the Phase 6 plan:
   link only.
 - **No ActivityPub / Fediverse.** Single-tenant Korean app.
 - **No marketplace / payment.** PRISM Event handles its own checkout.
-- **No public Pages model.** Curator portfolios (P6.10 follow-up) fill the
+- **No public Pages model.** Curator portfolios (P6.10, shipped) fill the
   "creator surface" gap in a way that matches Club's role model.
 
 When someone proposes one of the above in a future PR, this section is the

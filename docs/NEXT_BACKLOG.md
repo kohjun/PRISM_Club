@@ -16,10 +16,15 @@ why.
 
 ---
 
-## 1. Phase 6 — Tier 3 (deferred to post-Beta)
+## 1. Phase 6 — Tier 3
 
-These were carried out of the Phase 6 plan but not into the Sprint A–D
-launch bundle. Each is roughly backend 7–10 days + mobile 5–7 days.
+Four Tier-3 items were carried out of the Phase 6 launch bundle. Three
+have since shipped on `feat/p1-foundation` (P6.10 curator portfolio,
+P6.11 Topic Hub Memory, P6.12 room roles — see
+[MOBILE_BETA_GAP_AUDIT.md](MOBILE_BETA_GAP_AUDIT.md) §1.6). Only
+**P6.9 Scoped DM** remains deferred to post-Beta. One P6.12 follow-up
+(wiring delegated moderation into the report-resolve path) is still
+open and is described in §1.4.
 
 ### 1.1 Scoped DM (workflow-bounded only) — P6.9
 
@@ -43,53 +48,45 @@ authors and contribution NEEDS_CHANGES proposers ↔ curators.
 **Risk:** closed channels are a moderation blind spot. Mitigation in
 the plan: separate ops-dashboard card for DM report counts.
 
-### 1.2 Curator profile / portfolio — P6.10
+### 1.2 Curator profile / portfolio — P6.10 ✅ SHIPPED
 
-Surface a user's curation work in one place. Reuses P2.1 + P2.2 data.
+`GET /v1/profiles/:userId/curator-portfolio` aggregates contributions
+the user resolved (APPROVED only, so a later admin revert self-prunes
+the entry), `reference_source_rules` they introduced, and P2.2
+weighted-score. Mobile `CuratorPortfolioScreen` is gated to curator
+roles. No new schema — entirely read-side.
+See `apps/api/src/modules/user-profile/curator-portfolio.service.ts`.
 
-**Scope sketch:**
+### 1.3 Topic Hub Memory ("오늘의 기록") — P6.11 ✅ SHIPPED
 
-- `GET /v1/profiles/:userId/curator-portfolio` aggregating contributions
-  the user resolved, source-tier rules they introduced, weighted score
-  trend (P2.2 reputation).
-- Profile screen "큐레이터 포트폴리오" section visible only when the
-  user has CURATOR/MODERATOR/ADMIN role.
-- Owner can toggle which sections are public.
-- Auto-prune entries whose underlying contribution gets reverted by a
-  later admin action.
+`GET /v1/me/memories` returns 365/730d-ago anniversaries (RoomFollow,
+APPROVED KnowledgeContribution, EventRsvp; SavedItem excluded),
+accessPolicy-gated with HIDDEN/DELETED filtered out. Home "오늘의 기록"
+card auto-hides on empty days. No new schema — pure query.
+See `apps/api/src/modules/memories/memories.service.ts`.
 
-No new schema; entirely read-side.
+### 1.4 Room roles — P6.12 ✅ SHIPPED (one follow-up remaining)
 
-### 1.3 Topic Hub Memory ("오늘의 기록") — P6.11
+`room_roles` table + owner-only grant/revoke
+(`POST`/`DELETE /v1/rooms/:slug/roles`) + `RoomRoleService.canModerateRoom`
+(owner OR room-MODERATOR OR global MODERATOR/ADMIN). Mobile owner-only
+`RoomModeratorsScreen` (nickname-search add + revoke) and a moderator
+badge. Grant guards — no self-grant, role ∈ {MODERATOR, MEMBER}, target
+ACTIVE, upsert un-revokes — are covered by `room-role.e2e-spec.ts`.
+See `apps/api/src/modules/community/room-role.service.ts`.
 
-FB Memories variant. Surface a user's anniversary activity in the
-Topic Hubs they care about.
-
-**Scope sketch:**
-
-- `GET /v1/me/memories?date=YYYY-MM-DD` querying 365/730d-ago activity
-  rows (room follow, contribution resolved, save, RSVP).
-- Home top card "오늘의 기록" (hides automatically on empty days).
-- All source queries filter HIDDEN/DELETED.
-
-No new schema; pure query.
-
-### 1.4 Room roles — P6.12
-
-Owner can delegate moderation to trusted members without granting the
-global MODERATOR role.
-
-**Scope sketch:**
-
-- `room_roles(id, room_id FK, user_id FK, role ENUM, granted_by FK,
-  granted_at, revoked_at?)` UNIQUE `(room_id, user_id)`.
-- `AccessControlService.canModerateRoom(viewer, roomId)` = owner OR
-  room-MODERATOR OR global MODERATOR/ADMIN.
-- Owner-only UI on the room settings screen for grant/revoke; moderator
-  badge on member chips.
-
-**Risk:** escalation bug. Mitigation: e2e regression on grant guard +
-audit log via P5.4.
+**Remaining follow-up — `canModerateRoom` → report-resolve wiring
+(plan-mode).** `canModerateRoom` exists but is not yet consumed by the
+moderation hide path. `ReportService.resolve()`, `getDetail()`, and
+`listQueue()` are all gated by the global `isModerator(viewer)` check,
+and the report queue is global. Letting a room owner / delegated room
+moderator resolve a POST/REPLY report **in their own room** requires
+making that authorization room-aware across all three methods, plus a
+room-scoped `GET /v1/rooms/:slug/reports` queue (a global queue would
+leak other rooms' reports). This touches the app's most
+security-sensitive authorization surface, so it is a deliberate
+plan-mode change, not an auto-mode edit. Until it lands, delegated room
+moderators can be granted/revoked but cannot yet action reports.
 
 ---
 
