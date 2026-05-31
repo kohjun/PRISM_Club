@@ -65,7 +65,7 @@ accessPolicy-gated with HIDDEN/DELETED filtered out. Home "오늘의 기록"
 card auto-hides on empty days. No new schema — pure query.
 See `apps/api/src/modules/memories/memories.service.ts`.
 
-### 1.4 Room roles — P6.12 ✅ SHIPPED (one follow-up remaining)
+### 1.4 Room roles — P6.12 ✅ SHIPPED
 
 `room_roles` table + owner-only grant/revoke
 (`POST`/`DELETE /v1/rooms/:slug/roles`) + `RoomRoleService.canModerateRoom`
@@ -73,20 +73,22 @@ See `apps/api/src/modules/memories/memories.service.ts`.
 `RoomModeratorsScreen` (nickname-search add + revoke) and a moderator
 badge. Grant guards — no self-grant, role ∈ {MODERATOR, MEMBER}, target
 ACTIVE, upsert un-revokes — are covered by `room-role.e2e-spec.ts`.
-See `apps/api/src/modules/community/room-role.service.ts`.
 
-**Remaining follow-up — `canModerateRoom` → report-resolve wiring
-(plan-mode).** `canModerateRoom` exists but is not yet consumed by the
-moderation hide path. `ReportService.resolve()`, `getDetail()`, and
-`listQueue()` are all gated by the global `isModerator(viewer)` check,
-and the report queue is global. Letting a room owner / delegated room
-moderator resolve a POST/REPLY report **in their own room** requires
-making that authorization room-aware across all three methods, plus a
-room-scoped `GET /v1/rooms/:slug/reports` queue (a global queue would
-leak other rooms' reports). This touches the app's most
-security-sensitive authorization surface, so it is a deliberate
-plan-mode change, not an auto-mode edit. Until it lands, delegated room
-moderators can be granted/revoked but cannot yet action reports.
+`canModerateRoom` is now consumed by the moderation hide path:
+`ReportService.resolve()` / `getDetail()` authorize a room owner or
+delegated room MODERATOR for POST/REPLY reports in their own room
+(additive — global moderators are unchanged; the room is derived from
+the report target, so there is no cross-room reach), and a room-scoped
+`GET /v1/rooms/:slug/reports` queue keeps the global queue private to
+global staff. Covered by `room-report.e2e-spec.ts`. See
+`apps/api/src/modules/community/room-role.service.ts` +
+`apps/api/src/modules/moderation/report.service.ts`.
+
+**Optional remaining surface (mobile).** The room-scoped report queue
+has no mobile consumer yet — room owners/mods can resolve via the
+existing admin moderation detail screen, but a dedicated in-app
+"이 방 신고함" list (reusing `ModerationDetailScreen` for the resolve
+action) would let them discover room reports without the global queue.
 
 ---
 

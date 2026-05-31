@@ -13,8 +13,10 @@ Play Internal-testing upload, classified by who owns the next move.
 > layer (similar-hub strip, knowledge validation badge/chain, event
 > recap CTA) — see §1.7. Phase 6 Tier-3 also closed three of its four
 > items (P6.10 curator portfolio, P6.11 Topic Hub Memory, P6.12 room
-> roles — see §1.6); only P6.9 Scoped DM stays deferred, plus one
-> P6.12 report-resolve wiring follow-up (§3).
+> roles — see §1.6); only P6.9 Scoped DM stays deferred. The P6.12
+> report-resolve wiring has since shipped (delegated room moderators
+> resolve in-room reports); only an optional mobile room report queue
+> remains (§3).
 
 Pairs with:
 
@@ -120,7 +122,7 @@ that landed it; refer to the commit log for surrounding context.
 | Event live mode (P6.8) | `event_live_posts` table, RSVP=ATTENDED + IN_PROGRESS window write, +48h archive cron on advisory lock 854_303. |
 | Curator portfolio (P6.10, Tier 3) | `GET /v1/profiles/:userId/curator-portfolio` (resolved APPROVED contributions + introduced source-tier rules + P2.2 reputation; admin reverts self-prune), mobile `CuratorPortfolioScreen` gated to curator roles. No new schema. |
 | Topic Hub Memory (P6.11, Tier 3) | `GET /v1/me/memories` (365/730d-ago RoomFollow / APPROVED contribution / EventRsvp anniversaries, accessPolicy-gated + HIDDEN/DELETED filtered, SavedItem excluded), Home "오늘의 기록" card auto-hiding on empty days. No new schema. |
-| Room roles (P6.12, Tier 3) | `room_roles` table + owner-only grant/revoke (`POST`/`DELETE /v1/rooms/:slug/roles`) + `RoomRoleService.canModerateRoom`, mobile owner-only `RoomModeratorsScreen` + moderator badge. Follow-up: wiring `canModerateRoom` into the report-resolve path is plan-mode — see §3 + NEXT_BACKLOG §1.4. |
+| Room roles (P6.12, Tier 3) | `room_roles` table + owner-only grant/revoke (`POST`/`DELETE /v1/rooms/:slug/roles`) + `RoomRoleService.canModerateRoom`, mobile owner-only `RoomModeratorsScreen` + moderator badge. Delegated mods now resolve in-room POST/REPLY reports (additive authz on `ReportService.resolve()`/`getDetail()`) via room-scoped `GET /v1/rooms/:slug/reports`; the global queue is untouched. e2e `room-report.e2e-spec.ts`. |
 
 ### 1.7 Phase 7 — identity-strengthening algorithm layer
 
@@ -197,7 +199,7 @@ has NOT landed. These are the canonical post-Beta follow-ups; refer to
 | Item | Source | Note |
 |---|---|---|
 | P6.9 — Scoped DM (workflow-bounded) | Phase 6 plan §Tier 3 | Recruitment + contribution closed channels only. Deferred to post-Beta. (P6.10/6.11/6.12 have shipped — see §1.6.) |
-| P6.12 follow-up — delegated moderation → report-resolve wiring | Phase 6 plan §Tier 3 | `canModerateRoom` ships but isn't consumed by `ReportService.resolve()`/`getDetail()`/`listQueue()` yet (all global `isModerator`-gated, queue is global). Room-aware authz + a room-scoped `GET /v1/rooms/:slug/reports` queue is a plan-mode change on the security-critical path. See NEXT_BACKLOG §1.4. |
+| P6.12 mobile — in-app room report queue | Phase 6 plan §Tier 3 | Backend shipped (`GET /v1/rooms/:slug/reports` + room-aware resolve — see §1.6). Optional: a dedicated mobile "이 방 신고함" list; room mods can already resolve via the admin moderation detail screen. |
 | iOS scaffold (`apps/mobile/ios/`) | this doc historically | `flutter create --platforms=ios .` from a macOS host. Out of scope for Play Internal — separate workstream. |
 | Scroll-aware visual smoke for Home / Room / PostDetail / Profile | improvement plan §2 | Today only Sliver-based screens use `expectNoOverflowWhileScrolling`; ListView screens fall back to the simpler helper. Defensive. |
 | Mobile login picker swap | improvement plan §3 | Real `/auth/login` form is implemented (`features/auth/ui/login_screen.dart`). The dev persona picker remains under `/dev/login` for tests + smoke; only the route-mounting decision is left. |
