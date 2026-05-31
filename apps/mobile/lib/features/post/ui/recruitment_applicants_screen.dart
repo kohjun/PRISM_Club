@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
+import '../../dm/ui/dm_actions.dart';
 import '../data/recruitment_dto.dart';
 import '../data/recruitment_repository.dart';
 
@@ -180,6 +181,24 @@ class _ApplicantTileState extends ConsumerState<_ApplicantTile> {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (a.status == 'PENDING' || a.status == 'ACCEPTED') ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => openScopedDm(
+                  context,
+                  ref,
+                  scope: 'RECRUITMENT',
+                  refId: widget.postId,
+                  counterpartId: a.applicantId,
+                  peerName: a.applicantNickname,
+                ),
+                icon: const Icon(Icons.mail_outline, size: 16),
+                label: const Text('메시지'),
+              ),
             ),
           ],
         ],

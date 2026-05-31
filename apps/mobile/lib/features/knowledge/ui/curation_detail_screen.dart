@@ -8,6 +8,7 @@ import '../../../widgets/event_card_widget.dart';
 import '../../../widgets/reference_card_widget.dart';
 import '../../../widgets/state_views.dart';
 import '../../../widgets/status_pill.dart';
+import '../../dm/ui/dm_actions.dart';
 import '../../topic_hub/data/topic_hub_repository.dart';
 import '../data/contribution_dto.dart';
 import '../data/contribution_repository.dart';
@@ -140,6 +141,8 @@ class _Body extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = detail.summary;
     final isPending = summary.status == ContributionStatus.pending;
+    final isNeedsChanges =
+        summary.status == ContributionStatus.needsChanges;
 
     return Column(
       children: [
@@ -325,6 +328,38 @@ class _Body extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ),
+          ),
+        if (isNeedsChanges)
+          Container(
+            decoration: const BoxDecoration(
+              color: PrismColors.bg,
+              border: Border(top: BorderSide(color: PrismColors.line)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  PrismSpacing.cardPad,
+                  PrismSpacing.md,
+                  PrismSpacing.cardPad,
+                  PrismSpacing.md,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => openScopedDm(
+                      context,
+                      ref,
+                      scope: 'CONTRIBUTION',
+                      refId: contributionId,
+                      peerName: summary.contributor.nickname,
+                    ),
+                    icon: const Icon(Icons.mail_outline, size: 18),
+                    label: const Text('제안자에게 메시지'),
+                  ),
                 ),
               ),
             ),

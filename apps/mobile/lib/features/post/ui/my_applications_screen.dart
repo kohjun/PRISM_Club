@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/design_tokens.dart';
 import '../../../core/api_error.dart';
 import '../../../widgets/state_views.dart';
+import '../../dm/ui/dm_actions.dart';
 import '../data/recruitment_dto.dart';
 import '../data/recruitment_repository.dart';
 
@@ -41,12 +42,12 @@ class MyApplicationsScreen extends ConsumerWidget {
   }
 }
 
-class _Tile extends StatelessWidget {
+class _Tile extends ConsumerWidget {
   const _Tile({required this.entry});
   final MyApplicationEntryDto entry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final a = entry.application;
     return InkWell(
       onTap: () => GoRouter.of(context).go('/posts/${entry.postId}'),
@@ -97,6 +98,22 @@ class _Tile extends StatelessWidget {
                   fontSize: 12,
                   color: PrismColors.ink2,
                   height: 1.4,
+                ),
+              ),
+            ],
+            if (a.status == 'PENDING' || a.status == 'ACCEPTED') ...[
+              const SizedBox(height: PrismSpacing.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => openScopedDm(
+                    context,
+                    ref,
+                    scope: 'RECRUITMENT',
+                    refId: entry.postId,
+                  ),
+                  icon: const Icon(Icons.mail_outline, size: 16),
+                  label: const Text('작성자에게 메시지'),
                 ),
               ),
             ],
