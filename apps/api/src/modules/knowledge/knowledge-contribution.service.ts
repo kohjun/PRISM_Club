@@ -238,8 +238,7 @@ export class KnowledgeContributionService {
       );
     }
 
-    const spaceAccessPolicy =
-      (existing.hub as any)?.category?.space?.accessPolicy ?? 'PUBLIC';
+    const spaceAccessPolicy = existing.hub.category.space.accessPolicy;
 
     if (input.decision === 'APPROVE') {
       await this._applyApprove(existing, resolverId, input.note, spaceAccessPolicy);

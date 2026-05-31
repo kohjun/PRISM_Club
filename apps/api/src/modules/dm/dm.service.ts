@@ -2,8 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-  HttpException,
-  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -245,24 +243,10 @@ export class DmService {
     // Bidirectional block check (mirrors reply/mention write paths).
     await assertNotBlocked(this.blockMute, viewer.id, counterpartId);
     // DM rate limit: tighter cap + enforced day-1 (force).
-    const decision = this.rateLimit.consume({
-      scope: 'dm.send',
-      viewer,
-      limitPerMin: DM_RATE_PER_MIN,
-      force: true,
-    });
-    if (!decision.allowed) {
-      throw new HttpException(
-        {
-          error: {
-            code: 'RATE_LIMITED',
-            message: '메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 시도해주세요.',
-            retry_after_seconds: Math.ceil(decision.ttl_ms / 1000),
-          },
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
+    this.rateLimit.consumeOrThrow(
+      { scope: 'dm.send', viewer, limitPerMin: DM_RATE_PER_MIN, force: true },
+      '메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 시도해주세요.',
+    );
 
     // P6.9 dup-spam gate (enforced day-1). A hidden message still
     // persists (the sender sees it as a placeholder) but does not

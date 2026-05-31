@@ -148,13 +148,15 @@ export class EventDetailService {
       },
     });
 
-    const rsvpState = await this.rsvps.getState(cardId, viewer.id);
-    const topReviews = await this.reviews.topForEvent(cardId, 3);
-    const reviewAgg = await this.prisma.eventReview.aggregate({
-      where: { eventCardId: cardId, status: 'VISIBLE' },
-      _avg: { rating: true },
-      _count: { _all: true },
-    });
+    const [rsvpState, topReviews, reviewAgg] = await Promise.all([
+      this.rsvps.getState(cardId, viewer.id),
+      this.reviews.topForEvent(cardId, 3),
+      this.prisma.eventReview.aggregate({
+        where: { eventCardId: cardId, status: 'VISIBLE' },
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+    ]);
 
     return {
       event_card: this.rooms.toEventCardDTO(card),

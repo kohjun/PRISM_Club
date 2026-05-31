@@ -1,8 +1,6 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpException,
-  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -98,22 +96,7 @@ export class PostService {
     // P5.1: tier-aware rate limit. Shadow mode (default) records the
     // hit but lets the request through; enforce mode (RATE_LIMIT_ENABLED=1)
     // returns 429 with Retry-After.
-    const decision = this.rateLimit.consume({
-      scope: 'post.create',
-      viewer,
-    });
-    if (!decision.allowed) {
-      throw new HttpException(
-        {
-          error: {
-            code: 'RATE_LIMITED',
-            message: '잠시 후 다시 시도해주세요.',
-            retry_after_seconds: Math.ceil(decision.ttl_ms / 1000),
-          },
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
+    this.rateLimit.consumeOrThrow({ scope: 'post.create', viewer });
     await this.access.assertCanReadRoomBySlug(roomSlug, viewer);
     const room = await this.rooms.getRoomBySlug(roomSlug);
     await this.validateAttachmentTargets(input.attachments ?? []);

@@ -1,4 +1,10 @@
-import { Global, Injectable, Module } from '@nestjs/common';
+import {
+  Global,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Module,
+} from '@nestjs/common';
 import { MetricsService } from './metrics.service';
 import { TrustScoreService, TrustTier } from './trust-score.service';
 import { Viewer } from './access-control.service';
@@ -126,6 +132,27 @@ export class RateLimitService {
       ttl_ms: ttlMs,
       reason: 'OK',
     };
+  }
+
+  /**
+   * consume() + throw the canonical 429 when the limit is exceeded. Keeps
+   * the RATE_LIMITED error contract in one place so a throttled write
+   * handler stays a single line.
+   */
+  consumeOrThrow(opts: ConsumeOpts, message = '잠시 후 다시 시도해주세요.'): void {
+    const decision = this.consume(opts);
+    if (!decision.allowed) {
+      throw new HttpException(
+        {
+          error: {
+            code: 'RATE_LIMITED',
+            message,
+            retry_after_seconds: Math.ceil(decision.ttl_ms / 1000),
+          },
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
   }
 
   /** Manual reset — useful in tests and admin "release this user" ops. */
