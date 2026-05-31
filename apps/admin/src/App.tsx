@@ -291,6 +291,17 @@ function Dashboard({
             </div>
 
             <div className="card">
+              <h3>Scoped DM (P6.9)</h3>
+              <div className="big">{summary.dm.reports_24h}</div>
+              <div className="row">
+                <span className="label">24h 신고 / 열린 채널</span>
+                <span className="value">
+                  {summary.dm.reports_24h} / {summary.dm.channels_open}
+                </span>
+              </div>
+            </div>
+
+            <div className="card">
               <h3>Signals</h3>
               <p style={{ color: 'var(--muted)', margin: '0 0 8px' }}>
                 Recalculate TopicSignal entries from real activity.

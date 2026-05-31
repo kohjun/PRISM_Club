@@ -122,6 +122,9 @@ export interface OpsSummary {
       created_at: string;
     }[];
   };
+  // P6.9: scoped-DM moderation visibility (closed channels are a
+  // potential blind spot — surface report volume + live load).
+  dm: { reports_24h: number; channels_open: number };
 }
 
 export async function fetchOpsSummary(): Promise<OpsSummary> {
