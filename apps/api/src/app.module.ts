@@ -37,6 +37,7 @@ import { SignalsModule } from './modules/signals/signals.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ShareModule } from './modules/share/share.module';
 import { MemoriesModule } from './modules/memories/memories.module';
+import { DmModule } from './modules/dm/dm.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { MemoriesModule } from './modules/memories/memories.module';
     AnalyticsModule,
     ShareModule,
     MemoriesModule,
+    DmModule,
   ],
   providers: [
     // Order matters: AuthGuard runs first to populate req.user, RolesGuard

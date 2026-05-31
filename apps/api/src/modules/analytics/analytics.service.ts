@@ -39,7 +39,9 @@ export type EventType =
   | 'POLL_VOTED'
   | 'POST_BOOSTED'
   | 'EVENT_LIVE_POSTED'
-  | 'EVENT_RECAP_SUGGESTED';
+  | 'EVENT_RECAP_SUGGESTED'
+  | 'DM_CHANNEL_CREATED'
+  | 'DM_MESSAGE_SENT';
 
 export interface EventInput {
   actorId?: string | null;

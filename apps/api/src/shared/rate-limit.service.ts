@@ -17,6 +17,17 @@ interface ConsumeOpts {
   /** Either a viewer (preferred) or an opaque tracker key (IP for anon). */
   viewer?: Viewer & { id: string };
   trackerKey?: string;
+  /**
+   * Override the tier-derived per-minute limit. Used by higher-abuse
+   * scopes (e.g. P6.9 DM) that want a tighter cap than the tier default.
+   */
+  limitPerMin?: number;
+  /**
+   * Enforce even when `RATE_LIMIT_ENABLED!=1`. The rest of the app ships
+   * rate limiting in shadow mode; DM (P6.9) opts into day-1 enforcement
+   * because it is the highest-abuse surface.
+   */
+  force?: boolean;
 }
 
 // Defaults per tier per minute. Override per scope via the service's
@@ -61,11 +72,12 @@ export class RateLimitService {
    * its handler when allowed=false.
    */
   consume(opts: ConsumeOpts): RateLimitDecision {
-    const enforced = process.env.RATE_LIMIT_ENABLED === '1';
+    const enforced =
+      opts.force === true || process.env.RATE_LIMIT_ENABLED === '1';
     const tier: TrustTier = opts.viewer
       ? this.trust.syncTierFor(opts.viewer)
       : 'NEW'; // anonymous → tightest tier
-    const limit = TIER_LIMITS_PER_MIN[tier];
+    const limit = opts.limitPerMin ?? TIER_LIMITS_PER_MIN[tier];
     const ttlMs = WINDOW_MS_DEFAULT;
     const trackerKey =
       opts.viewer?.id ?? opts.trackerKey ?? 'anonymous';

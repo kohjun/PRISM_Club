@@ -53,6 +53,9 @@ model User {
   notificationPreference  NotificationPreference?
   knowledgeRevisions      KnowledgeBlockRevision[]
   contributionReputation  ContributionReputation?
+  dmChannelsAsA           DmChannel[]              @relation("DmPartyA")
+  dmChannelsAsB           DmChannel[]              @relation("DmPartyB")
+  dmMessagesSent          DmMessage[]              @relation("DmSender")
   referenceSourceRules    ReferenceSourceRule[]
   eventRsvps              EventRsvp[]
   recruitmentApplications RecruitmentApplication[]
@@ -694,6 +697,54 @@ model RecruitmentApplication {
   @@unique([postId, applicantId])
   @@index([applicantId, createdAt(sort: Desc)])
   @@map("recruitment_applications")
+}
+
+// P6.9 — Scoped DM: workflow-bounded private 1:1 channels.
+// scope=RECRUITMENT (applicant ↔ post author), scope=CONTRIBUTION
+// (proposer ↔ NEEDS_CHANGES curator). party_a = applicant/proposer,
+// party_b = author/curator — role-canonicalized so the pair never
+// duplicates (UNIQUE on scope+ref_id+party_a). Channels close via the
+// lifecycle cron at workflow-end + 30d grace and are NEVER hard-deleted
+// (reported messages must survive for moderation).
+model DmChannel {
+  id                String    @id @default(uuid()) @db.Uuid
+  scope             String // RECRUITMENT | CONTRIBUTION
+  refId             String    @map("ref_id") @db.Uuid
+  partyAId          String    @map("party_a_id") @db.Uuid
+  partyBId          String    @map("party_b_id") @db.Uuid
+  spaceAccessPolicy String    @default("PUBLIC") @map("space_access_policy")
+  status            String    @default("OPEN") // OPEN | CLOSED
+  workflowEndedAt   DateTime? @map("workflow_ended_at") @db.Timestamptz(6)
+  lastMessageAt     DateTime? @map("last_message_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  closedAt          DateTime? @map("closed_at") @db.Timestamptz(6)
+  closedReason      String?   @map("closed_reason")
+
+  partyA   User        @relation("DmPartyA", fields: [partyAId], references: [id], onDelete: Cascade)
+  partyB   User        @relation("DmPartyB", fields: [partyBId], references: [id], onDelete: Cascade)
+  messages DmMessage[]
+
+  @@unique([scope, refId, partyAId])
+  @@index([partyAId, lastMessageAt(sort: Desc)])
+  @@index([partyBId, lastMessageAt(sort: Desc)])
+  @@map("dm_channels")
+}
+
+model DmMessage {
+  id                   String    @id @default(uuid()) @db.Uuid
+  channelId            String    @map("channel_id") @db.Uuid
+  senderId             String    @map("sender_id") @db.Uuid
+  body                 String
+  status               String    @default("VISIBLE") // VISIBLE | HIDDEN
+  autoModerationReason String?   @map("auto_moderation_reason")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  readByRecipientAt    DateTime? @map("read_by_recipient_at") @db.Timestamptz(6)
+
+  channel DmChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender  User      @relation("DmSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([channelId, createdAt(sort: Desc)])
+  @@map("dm_messages")
 }
 
 model PostAttachment {
