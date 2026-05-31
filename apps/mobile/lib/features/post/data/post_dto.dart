@@ -1,3 +1,4 @@
+import '../../../core/json_helpers.dart';
 import '../../event_card/data/event_card_dto.dart';
 import '../../media/data/media_dto.dart';
 import '../../reference/data/reference_dto.dart';
@@ -14,9 +15,9 @@ class PostAuthorDto {
   final String? avatarUrl;
 
   factory PostAuthorDto.fromJson(Map<String, dynamic> json) => PostAuthorDto(
-        id: json['id'] as String? ?? '',
-        nickname: json['nickname'] as String? ?? '',
-        avatarUrl: json['avatar_url'] as String?,
+        id: asString(json, 'id'),
+        nickname: asString(json, 'nickname'),
+        avatarUrl: asStringOrNull(json, 'avatar_url'),
       );
 }
 
@@ -74,11 +75,11 @@ class QuotedPostRefDto {
 
   factory QuotedPostRefDto.fromJson(Map<String, dynamic> json) =>
       QuotedPostRefDto(
-        id: json['id'] as String? ?? '',
-        bodyPreview: json['body_preview'] as String? ?? '',
-        authorNickname: json['author_nickname'] as String? ?? '',
-        roomSlug: json['room_slug'] as String? ?? '',
-        available: json['available'] as bool? ?? true,
+        id: asString(json, 'id'),
+        bodyPreview: asString(json, 'body_preview'),
+        authorNickname: asString(json, 'author_nickname'),
+        roomSlug: asString(json, 'room_slug'),
+        available: asBool(json, 'available', fallback: true),
       );
 }
 
@@ -98,8 +99,8 @@ class PollOptionDto {
   factory PollOptionDto.fromJson(Map<String, dynamic> json) => PollOptionDto(
         id: json['id'] as String,
         label: json['label'] as String,
-        sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
-        voteCount: (json['vote_count'] as num?)?.toInt() ?? 0,
+        sortOrder: asInt(json, 'sort_order'),
+        voteCount: asInt(json, 'vote_count'),
       );
 }
 
@@ -128,25 +129,16 @@ class PollDto {
   bool get isOpen => status == 'OPEN' && !isExpired;
   bool hasVotedFor(String optionId) => myVoteOptionIds.contains(optionId);
 
-  factory PollDto.fromJson(Map<String, dynamic> json) {
-    final expiresRaw = json['expires_at'] as String?;
-    return PollDto(
-      id: json['id'] as String,
-      question: json['question'] as String,
-      expiresAt: expiresRaw != null ? DateTime.parse(expiresRaw) : null,
-      allowMultiple: json['allow_multiple'] as bool? ?? false,
-      status: json['status'] as String? ?? 'OPEN',
-      options: ((json['options'] as List<dynamic>?) ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .map(PollOptionDto.fromJson)
-          .toList(growable: false),
-      totalVotes: (json['total_votes'] as num?)?.toInt() ?? 0,
-      myVoteOptionIds:
-          ((json['my_vote_option_ids'] as List<dynamic>?) ?? const [])
-              .whereType<String>()
-              .toList(growable: false),
-    );
-  }
+  factory PollDto.fromJson(Map<String, dynamic> json) => PollDto(
+        id: json['id'] as String,
+        question: json['question'] as String,
+        expiresAt: asDateTimeOrNull(json, 'expires_at'),
+        allowMultiple: asBool(json, 'allow_multiple'),
+        status: asString(json, 'status', fallback: 'OPEN'),
+        options: asObjectList(json, 'options', PollOptionDto.fromJson),
+        totalVotes: asInt(json, 'total_votes'),
+        myVoteOptionIds: asStringList(json, 'my_vote_option_ids'),
+      );
 }
 
 class PostDto {
@@ -245,8 +237,8 @@ class PostDto {
       author: PostAuthorDto.fromJson(
           (json['author'] as Map).cast<String, dynamic>()),
       body: json['body'] as String,
-      status: json['status'] as String? ?? 'VISIBLE',
-      postType: json['post_type'] as String? ?? 'GENERAL',
+      status: asString(json, 'status', fallback: 'VISIBLE'),
+      postType: asString(json, 'post_type', fallback: 'GENERAL'),
       recruitmentFields: rfRaw is Map
           ? RecruitmentFieldsDto.fromJson(rfRaw.cast<String, dynamic>())
           : null,
@@ -256,10 +248,10 @@ class PostDto {
           .whereType<Map<String, dynamic>>()
           .map(PostAttachmentDto.fromJson)
           .toList(growable: false),
-      replyCount: counts['reply_count'] as int? ?? 0,
-      likeCount: counts['like_count'] as int? ?? 0,
-      likedByMe: json['liked_by_me'] as bool? ?? false,
-      myReaction: json['my_reaction'] as String?,
+      replyCount: asInt(counts, 'reply_count'),
+      likeCount: asInt(counts, 'like_count'),
+      likedByMe: asBool(json, 'liked_by_me'),
+      myReaction: asStringOrNull(json, 'my_reaction'),
       quotedPost: quotedRaw is Map
           ? QuotedPostRefDto.fromJson(quotedRaw.cast<String, dynamic>())
           : null,
@@ -268,9 +260,9 @@ class PostDto {
               (json['poll'] as Map).cast<String, dynamic>(),
             )
           : null,
-      replyPolicy: json['reply_policy'] as String? ?? 'ANYONE',
-      boostCount: (counts['boost_count'] as int?) ?? 0,
-      boostedByMe: json['boosted_by_me'] as bool? ?? false,
+      replyPolicy: asString(json, 'reply_policy', fallback: 'ANYONE'),
+      boostCount: asInt(counts, 'boost_count'),
+      boostedByMe: asBool(json, 'boosted_by_me'),
     );
   }
 }
@@ -285,6 +277,6 @@ class TimelinePage {
             .whereType<Map<String, dynamic>>()
             .map(PostDto.fromJson)
             .toList(growable: false),
-        nextCursor: json['next_cursor'] as String?,
+        nextCursor: asStringOrNull(json, 'next_cursor'),
       );
 }
