@@ -37,7 +37,7 @@ class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
           IconButton(
             tooltip: '새 폴더',
             icon: const Icon(Icons.create_new_folder_outlined),
-            onPressed: () => _promptCreateCollection(context),
+            onPressed: () => _promptCreateCollection(),
           ),
         ],
       ),
@@ -92,7 +92,7 @@ class _SavedItemsScreenState extends ConsumerState<SavedItemsScreen> {
     );
   }
 
-  Future<void> _promptCreateCollection(BuildContext context) async {
+  Future<void> _promptCreateCollection() async {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
