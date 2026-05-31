@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -21,7 +22,40 @@ function resolveUploadsDir(): string {
   return isAbsolute(env) ? env : join(process.cwd(), env);
 }
 
+/**
+ * Fail fast on a production deploy missing critical security config,
+ * rather than booting with insecure dev defaults: a public JWT secret
+ * would let anyone forge an admin token, and an open CORS origin
+ * reflects any site. No-op outside production.
+ */
+function assertProductionConfig(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  const problems: string[] = [];
+  const secret = process.env.JWT_SECRET;
+  if (
+    !secret ||
+    secret.length < 32 ||
+    secret === 'prism-club-dev-secret-do-not-use-in-prod'
+  ) {
+    problems.push(
+      'JWT_SECRET must be set to a strong (32+ char) value — not the dev fallback',
+    );
+  }
+  const cors = (process.env.CORS_ORIGINS ?? '').trim();
+  if (cors === '' || cors === '*') {
+    problems.push(
+      'CORS_ORIGINS must be an explicit allow-list (not empty or "*")',
+    );
+  }
+  if (problems.length > 0) {
+    throw new Error(
+      `Refusing to boot in production with unsafe config:\n  - ${problems.join('\n  - ')}`,
+    );
+  }
+}
+
 async function bootstrap(): Promise<void> {
+  assertProductionConfig();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('v1');
 
@@ -64,8 +98,9 @@ async function bootstrap(): Promise<void> {
   const port = Number(process.env.API_PORT ?? 3000);
   await app.listen(port);
 
-  // eslint-disable-next-line no-console
-  console.log(`PRISM Club API listening on http://localhost:${port}/v1`);
+  new Logger('Bootstrap').log(
+    `PRISM Club API listening on http://localhost:${port}/v1`,
+  );
 }
 
 void bootstrap();

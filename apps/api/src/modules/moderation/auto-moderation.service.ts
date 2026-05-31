@@ -58,7 +58,7 @@ export class AutoModerationService {
       return { hide: false, reason: null };
     }
     const rule = await this._loadRule('DUPLICATE_POST_HASH');
-    if (!rule) return { hide: false, reason: null };
+    if (!rule || rule.enabled === false) return { hide: false, reason: null };
     const params = rule.params as RulesParams;
     const windowHours = params.window_hours ?? 24;
     const threshold = params.threshold ?? 2;
@@ -106,7 +106,7 @@ export class AutoModerationService {
       return { dismiss: false, reason: null };
     }
     const rule = await this._loadRule('REPORT_FLOOD');
-    if (!rule) return { dismiss: false, reason: null };
+    if (!rule || rule.enabled === false) return { dismiss: false, reason: null };
     const params = rule.params as RulesParams;
     const windowHours = params.window_hours ?? 1;
     const threshold = params.threshold ?? 10;
@@ -146,6 +146,9 @@ export class AutoModerationService {
     body: string;
   }): Promise<PostDecision> {
     const rule = await this._loadRule('DUPLICATE_DM_HASH');
+    // An explicit disable stops enforcement; a missing rule row still
+    // enforces with defaults (DM dup-hide is day-1 on).
+    if (rule && rule.enabled === false) return { hide: false, reason: null };
     const params = (rule?.params as RulesParams) ?? {};
     const windowHours = params.window_hours ?? 24;
     const threshold = params.threshold ?? 2;
@@ -178,6 +181,7 @@ export class AutoModerationService {
 
   private async _loadRule(kind: string): Promise<{
     params: unknown;
+    enabled: boolean;
   } | null> {
     return this.prisma.autoModerationRule.findUnique({
       where: { kind },
