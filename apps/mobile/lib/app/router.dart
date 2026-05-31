@@ -32,6 +32,8 @@ import '../features/topic_hub/ui/topic_hub_screen.dart';
 import '../features/moderation/ui/moderation_detail_screen.dart';
 import '../features/moderation/ui/moderation_queue_screen.dart';
 import '../features/memories/ui/memories_screen.dart';
+import '../features/dm/ui/dm_inbox_screen.dart';
+import '../features/dm/ui/dm_thread_screen.dart';
 import '../features/moderation/ui/my_reports_screen.dart';
 import '../features/ops/ui/ops_dashboard_screen.dart';
 import '../features/user_profile/ui/blocks_screen.dart';
@@ -221,6 +223,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/me/mutes', builder: (_, _) => const MuteListScreen()),
       // P6.11: "오늘의 기록" anniversary timeline.
       GoRoute(path: '/me/memories', builder: (_, _) => const MemoriesScreen()),
+      // P6.9: scoped-DM inbox + thread.
+      GoRoute(path: '/dm', builder: (_, _) => const DmInboxScreen()),
+      GoRoute(
+        path: '/dm/:channelId',
+        builder: (_, st) => DmThreadScreen(
+          channelId: st.pathParameters['channelId']!,
+          peerName: st.uri.queryParameters['peer'],
+        ),
+      ),
       // Milestone 9: moderation
       GoRoute(path: '/me/reports', builder: (_, _) => const MyReportsScreen()),
       GoRoute(

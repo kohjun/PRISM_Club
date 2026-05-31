@@ -20,6 +20,11 @@ class NotificationScreen extends ConsumerWidget {
         title: const Text('알림'),
         actions: [
           IconButton(
+            tooltip: '메시지함',
+            icon: const Icon(Icons.mail_outline),
+            onPressed: () => context.push('/dm'),
+          ),
+          IconButton(
             tooltip: '알림 설정',
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.push('/me/notifications/settings'),
@@ -76,6 +81,9 @@ class NotificationScreen extends ConsumerWidget {
       if (postId != null) context.push('/posts/$postId');
     } else if (type == 'CONTRIBUTION_RESOLVED') {
       context.push('/me/contributions');
+    } else if (type == 'DM_MESSAGE_RECEIVED') {
+      final channelId = notif.payload['channelId'] as String?;
+      if (channelId != null) context.push('/dm/$channelId');
     }
   }
 }
@@ -296,6 +304,12 @@ class _NotificationTile extends StatelessWidget {
           bg: PrismColors.pp100,
           fg: PrismColors.pp700,
         );
+      case 'DM_MESSAGE_RECEIVED':
+        return (
+          icon: Icons.mail_outline,
+          bg: PrismColors.pp100,
+          fg: PrismColors.pp700,
+        );
       default:
         return (
           icon: Icons.circle_notifications_outlined,
@@ -333,6 +347,8 @@ class _NotificationTile extends StatelessWidget {
         return '$author님이 글에서 회원님을 언급했어요.';
       case 'MENTIONED_IN_REPLY':
         return '$author님이 댓글에서 회원님을 언급했어요.';
+      case 'DM_MESSAGE_RECEIVED':
+        return '새 메시지가 도착했어요.';
       default:
         return '새 알림이 있어요.';
     }
