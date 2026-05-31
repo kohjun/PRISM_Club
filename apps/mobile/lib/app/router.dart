@@ -34,6 +34,7 @@ import '../features/memories/ui/memories_screen.dart';
 import '../features/moderation/ui/my_reports_screen.dart';
 import '../features/ops/ui/ops_dashboard_screen.dart';
 import '../features/user_profile/ui/blocks_screen.dart';
+import '../features/user_profile/ui/curator_portfolio_screen.dart';
 import '../features/user_profile/ui/profile_activity_screen.dart';
 import '../features/user_profile/ui/profile_screen.dart';
 
@@ -199,6 +200,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           userId: st.pathParameters['id']!,
           title: st.uri.queryParameters['nickname'],
         ),
+      ),
+      // P6.10: curator portfolio (resolved contributions, source rules,
+      // reputation). Entry shown on the profile only for curator roles.
+      GoRoute(
+        path: '/users/:id/curator-portfolio',
+        builder: (_, st) =>
+            CuratorPortfolioScreen(userId: st.pathParameters['id']!),
       ),
       // P6.2: viewer-managed block + mute lists.
       GoRoute(path: '/me/blocks', builder: (_, _) => const BlockListScreen()),

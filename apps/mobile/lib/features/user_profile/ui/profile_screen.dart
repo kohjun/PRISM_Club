@@ -356,6 +356,23 @@ class _HeroBlock extends ConsumerWidget {
           // resolved contributions yet so a fresh profile doesn't show
           // a "0점" bar that adds noise.
           _ReputationLine(userId: userId),
+          // P6.10: curator portfolio entry — only for users holding a
+          // curation role (CURATOR / MODERATOR / ADMIN).
+          if (bundle.roles.any(_isCuratorRole)) ...[
+            const SizedBox(height: PrismSpacing.sm),
+            OutlinedButton.icon(
+              key: const Key('curator-portfolio-entry'),
+              onPressed: () =>
+                  context.push('/users/$userId/curator-portfolio'),
+              icon: const Icon(Icons.workspace_premium_outlined, size: 16),
+              label: const Text('큐레이터 포트폴리오'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: PrismColors.pp700,
+                side: const BorderSide(color: PrismColors.pp200),
+                minimumSize: const Size.fromHeight(40),
+              ),
+            ),
+          ],
           if (bundle.profile.bio != null &&
               bundle.profile.bio!.isNotEmpty) ...[
             const SizedBox(height: PrismSpacing.md),
@@ -565,6 +582,10 @@ class _ReputationLine extends ConsumerWidget {
     );
   }
 }
+
+/// P6.10: roles that own a curation portfolio.
+bool _isCuratorRole(String role) =>
+    role == 'CURATOR' || role == 'MODERATOR' || role == 'ADMIN';
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
