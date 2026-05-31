@@ -70,6 +70,8 @@ model User {
   pollVotes               PollVote[]
   boosts                  PostBoost[]
   eventLivePosts          EventLivePost[]
+  roomRolesHeld           RoomRole[]               @relation("RoomRoleMember")
+  roomRolesGranted        RoomRole[]               @relation("RoomRoleGranter")
 
   @@map("users")
 }
@@ -494,9 +496,33 @@ model Room {
   pins      RoomPin[]
   posts     Post[]
   followers RoomFollow[]
+  roomRoles RoomRole[]
 
   @@index([categoryId])
   @@map("rooms")
+}
+
+// P6.12 delegated per-room moderation. A room owner can grant trusted
+// members the room-scoped MODERATOR role without the heavyweight global
+// MODERATOR. `revoked_at` soft-revokes (row kept for audit). UNIQUE
+// (room_id, user_id) makes the grant idempotent — re-granting reuses
+// the row.
+model RoomRole {
+  id        String    @id @default(uuid()) @db.Uuid
+  roomId    String    @map("room_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  role      String // MODERATOR | MEMBER
+  grantedBy String?   @map("granted_by") @db.Uuid
+  grantedAt DateTime  @default(now()) @map("granted_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  room    Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user    User  @relation("RoomRoleMember", fields: [userId], references: [id], onDelete: Cascade)
+  granter User? @relation("RoomRoleGranter", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@unique([roomId, userId])
+  @@index([roomId, revokedAt])
+  @@map("room_roles")
 }
 
 // target_type: EVENT_CARD | REFERENCE; target_id has no FK (resolved at read time).
