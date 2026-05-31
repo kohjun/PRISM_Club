@@ -9,6 +9,7 @@ import '../../../widgets/post_card_widget.dart';
 import '../../../widgets/state_views.dart';
 import '../../../widgets/topic_block.dart';
 import '../../event_card/data/event_card_dto.dart';
+import '../../memories/ui/widgets/memories_card.dart';
 import '../../post/data/post_dto.dart';
 import '../../room/data/room_summary_dto.dart';
 import '../../saves/data/saved_item_dto.dart';
@@ -136,6 +137,10 @@ class _HomeBody extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       children: [
+        // P6.11: "오늘의 기록" anniversary card. Self-hides when today
+        // has no 1/2-years-ago activity, so the empty-home check below
+        // (which ignores it) stays accurate.
+        const MemoriesCard(),
         if (bundle.activeTopicHubs.isNotEmpty) ...[
           const _OverlineHeader(text: '내가 들어간 TOPIC HUB'),
           _TopicHubStrip(hubs: bundle.activeTopicHubs),

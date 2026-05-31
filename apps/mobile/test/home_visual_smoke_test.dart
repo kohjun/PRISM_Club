@@ -5,6 +5,8 @@ import 'package:mobile/features/event_card/data/event_card_dto.dart';
 import 'package:mobile/features/home/data/home_dto.dart';
 import 'package:mobile/features/home/data/home_repository.dart';
 import 'package:mobile/features/home/ui/home_screen.dart';
+import 'package:mobile/features/memories/data/memories_dto.dart';
+import 'package:mobile/features/memories/data/memories_repository.dart';
 import 'package:mobile/features/post/data/post_dto.dart';
 import 'package:mobile/features/room/data/room_summary_dto.dart';
 
@@ -101,6 +103,10 @@ HomeBundleDto _populatedBundle() => HomeBundleDto(
 
 Widget _wrap(HomeBundleDto bundle) => ProviderScope(
       overrides: [
+        // P6.11: stub the home top-card's memories provider (Dio) so it
+        // self-hides and no network timer dangles past teardown.
+        todayMemoriesProvider.overrideWith(
+            (_) async => const MemoriesDto(date: '2026-01-01', items: [])),
         homeBundleProvider.overrideWith((_) async => bundle),
       ],
       child: const MaterialApp(home: HomeScreen()),

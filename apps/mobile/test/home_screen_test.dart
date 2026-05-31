@@ -6,6 +6,8 @@ import 'package:mobile/features/event_card/data/event_card_dto.dart';
 import 'package:mobile/features/home/data/home_dto.dart';
 import 'package:mobile/features/home/data/home_repository.dart';
 import 'package:mobile/features/home/ui/home_screen.dart';
+import 'package:mobile/features/memories/data/memories_dto.dart';
+import 'package:mobile/features/memories/data/memories_repository.dart';
 import 'package:mobile/features/post/data/post_dto.dart';
 import 'package:mobile/features/room/data/room_summary_dto.dart';
 import 'package:mobile/features/saves/data/saved_item_dto.dart';
@@ -59,6 +61,10 @@ HomeBundleDto _bundleWithSections({
 
 Widget _wrap(HomeBundleDto bundle) => ProviderScope(
       overrides: [
+        // P6.11: the home top-card watches todayMemoriesProvider (Dio);
+        // stub it empty so the card self-hides and no timer dangles.
+        todayMemoriesProvider.overrideWith(
+            (_) async => const MemoriesDto(date: '2026-01-01', items: [])),
         homeBundleProvider.overrideWith((_) async => bundle),
       ],
       child: const MaterialApp(home: HomeScreen()),
@@ -116,6 +122,10 @@ void main() {
       (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
+        // P6.11: the home top-card watches todayMemoriesProvider (Dio);
+        // stub it empty so the card self-hides and no timer dangles.
+        todayMemoriesProvider.overrideWith(
+            (_) async => const MemoriesDto(date: '2026-01-01', items: [])),
         homeBundleProvider.overrideWith((_) async {
           throw ApiError('SERVER_ERROR', '서버에 연결할 수 없어요', 503);
         }),
@@ -134,6 +144,10 @@ void main() {
       (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
+        // P6.11: the home top-card watches todayMemoriesProvider (Dio);
+        // stub it empty so the card self-hides and no timer dangles.
+        todayMemoriesProvider.overrideWith(
+            (_) async => const MemoriesDto(date: '2026-01-01', items: [])),
         homeBundleProvider.overrideWith((_) async {
           throw Exception('lower-level details should NOT be shown to users');
         }),

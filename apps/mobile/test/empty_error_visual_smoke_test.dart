@@ -8,6 +8,8 @@ import 'package:mobile/features/event_detail/data/event_detail_repository.dart';
 import 'package:mobile/features/event_detail/ui/event_detail_screen.dart';
 import 'package:mobile/features/home/data/home_dto.dart';
 import 'package:mobile/features/home/data/home_repository.dart';
+import 'package:mobile/features/memories/data/memories_dto.dart';
+import 'package:mobile/features/memories/data/memories_repository.dart';
 import 'package:mobile/features/home/ui/home_screen.dart';
 import 'package:mobile/features/notifications/data/notification_dto.dart';
 import 'package:mobile/features/notifications/data/notification_repository.dart';
@@ -66,6 +68,11 @@ Widget _home({required Object Function() throwOrReturn}) {
         if (r is HomeBundleDto) return r;
         throw r;
       }),
+      // P6.11: the home top-card watches todayMemoriesProvider (Dio);
+      // stub empty so the card self-hides and the empty-state smoke
+      // stays accurate.
+      todayMemoriesProvider.overrideWith(
+          (_) async => const MemoriesDto(date: '2026-01-01', items: [])),
     ],
     child: const MaterialApp(home: HomeScreen()),
   );
